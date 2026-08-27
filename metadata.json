@@ -1,0 +1,8 @@
+{
+  "name": "Tabla Ouija Interactiva - Vidas Pasadas",
+  "description": "Revela tus vidas pasadas y consulta a los espíritus con esta mística e hiperrealista Tabla Ouija interactiva.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

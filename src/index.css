@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-cinzel: 'Syne', sans-serif;
+    --font-decorative: 'Syne', sans-serif;
+    --font-gothic: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    letter-spacing: 0.01em;
+  }
+
+  h1, h2, h3, .font-cinzel {
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+  }
+
+  .font-decorative {
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.03em;
+    font-weight: 800;
+  }
+
+  .font-gothic {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  .font-serif-ancient {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@keyframes kenburns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.12) translate(-1.5%, -1%);
+  }
+  100% {
+    transform: scale(1) translate(0, 0);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.5deg);
+  }
+}
+
+@keyframes fogDrift {
+  0% {
+    transform: translateX(-10%) translateY(0%);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateX(10%) translateY(-5%);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateX(-10%) translateY(0%);
+    opacity: 0.25;
+  }
+}
+
+@keyframes spiritPulse {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.4), inset 0 0 15px rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.9);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(245, 158, 11, 0.8), inset 0 0 30px rgba(245, 158, 11, 0.5);
+    border-color: rgba(253, 230, 138, 1);
+  }
+}
+
+.animate-kenburns {
+  animation: kenburns 22s ease-in-out infinite alternate;
+}
+
+.animate-float-slow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+.animate-fog-drift {
+  animation: fogDrift 18s ease-in-out infinite;
+}
+
+.animate-spirit-pulse {
+  animation: spiritPulse 4s ease-in-out infinite;
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.6), 0 0 25px rgba(217, 119, 6, 0.4);
+}
+
