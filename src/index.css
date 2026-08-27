@@ -101,3 +101,189 @@
   text-shadow: 0 0 12px rgba(245, 158, 11, 0.6), 0 0 25px rgba(217, 119, 6, 0.4);
 }
 
+/* === Marseille Card Flickering & Shimmer Animations ("Titilante") === */
+@keyframes candleFlicker {
+  0%, 100% {
+    opacity: 0.92;
+    filter: brightness(1.02) contrast(1.05) drop-shadow(0 0 16px rgba(251, 191, 36, 0.5));
+  }
+  14% {
+    opacity: 0.78;
+    filter: brightness(0.9) contrast(1.02) drop-shadow(0 0 10px rgba(245, 158, 11, 0.35));
+  }
+  26% {
+    opacity: 1;
+    filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 28px rgba(251, 191, 36, 0.75));
+  }
+  41% {
+    opacity: 0.84;
+    filter: brightness(0.95) contrast(1.03) drop-shadow(0 0 14px rgba(217, 119, 6, 0.45));
+  }
+  57% {
+    opacity: 0.98;
+    filter: brightness(1.12) contrast(1.08) drop-shadow(0 0 24px rgba(252, 211, 77, 0.65));
+  }
+  71% {
+    opacity: 0.75;
+    filter: brightness(0.88) contrast(1.01) drop-shadow(0 0 9px rgba(245, 158, 11, 0.3));
+  }
+  85% {
+    opacity: 1;
+    filter: brightness(1.16) contrast(1.09) drop-shadow(0 0 25px rgba(251, 191, 36, 0.7));
+  }
+  94% {
+    opacity: 0.86;
+    filter: brightness(0.96) contrast(1.04) drop-shadow(0 0 15px rgba(217, 119, 6, 0.45));
+  }
+}
+
+@keyframes flameDancing {
+  0%, 100% {
+    transform: scale(1) translateY(0px) rotate(0deg);
+    opacity: 0.7;
+  }
+  25% {
+    transform: scale(1.08, 0.95) translateY(-2px) rotate(0.8deg);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(0.96, 1.04) translateY(1px) rotate(-0.6deg);
+    opacity: 0.65;
+  }
+  75% {
+    transform: scale(1.05, 0.98) translateY(-1.5px) rotate(0.4deg);
+    opacity: 0.9;
+  }
+}
+
+@keyframes holographicShimmer {
+  0% {
+    transform: translateX(-150%) rotate(25deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(150%) rotate(25deg);
+    opacity: 0.8;
+  }
+  55% {
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(150%) rotate(25deg);
+    opacity: 0;
+  }
+}
+
+@keyframes flameGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 22px rgba(245, 158, 11, 0.4), inset 0 0 18px rgba(217, 119, 6, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 42px rgba(251, 191, 36, 0.75), inset 0 0 28px rgba(245, 158, 11, 0.55);
+  }
+}
+
+@keyframes sparkTwinkle {
+  0%, 100% {
+    transform: scale(0.7) rotate(0deg);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scale(1.35) rotate(45deg);
+    opacity: 1;
+  }
+}
+
+.animate-candle-flicker {
+  animation: candleFlicker 3.2s ease-in-out infinite;
+}
+
+.animate-candle-flicker-fast {
+  animation: candleFlicker 1.8s ease-in-out infinite;
+}
+
+.animate-flame-dancing {
+  animation: flameDancing 2.6s ease-in-out infinite;
+}
+
+.animate-holo-shimmer {
+  animation: holographicShimmer 4.5s ease-in-out infinite;
+}
+
+.animate-flame-glow {
+  animation: flameGlowPulse 2.8s ease-in-out infinite;
+}
+
+.animate-spark-twinkle {
+  animation: sparkTwinkle 2.4s ease-in-out infinite;
+}
+
+/* === Mystic Coffee Animated Floating & Steam === */
+@keyframes coffeeCupHover {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-5px) rotate(-3deg) scale(1.02);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1deg) scale(1.04);
+  }
+  75% {
+    transform: translateY(-4px) rotate(3deg) scale(1.01);
+  }
+}
+
+@keyframes steamFlow {
+  0% {
+    transform: translateY(2px) scaleX(0.7) scaleY(0.8);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  60% {
+    transform: translateY(-14px) scaleX(1.3) scaleY(1.1) translateX(3px);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-26px) scaleX(1.9) scaleY(1.3) translateX(-4px);
+    opacity: 0;
+  }
+}
+
+@keyframes coffeeLiquidShimmer {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.1);
+  }
+}
+
+.animate-coffee-cup {
+  animation: coffeeCupHover 3.2s ease-in-out infinite;
+}
+
+.animate-steam-1 {
+  animation: steamFlow 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-steam-2 {
+  animation: steamFlow 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.5s;
+}
+
+.animate-steam-3 {
+  animation: steamFlow 2.1s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.1s;
+}
+
+.animate-coffee-shimmer {
+  animation: coffeeLiquidShimmer 2.2s ease-in-out infinite;
+}
+
+

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 import { audio } from "../lib/audio";
+import { useLanguage } from "../context/LanguageContext";
 import akashicCoverImg from "../assets/images/akashic_portal_violet_1785780487126.jpg";
 import pastLifeSoulImg from "../assets/images/past_life_soul_1785774959422.jpg";
 import planchetteSealImg from "../assets/images/planchette_seal_1785715428714.jpg";
@@ -11,11 +12,11 @@ interface WelcomeVoiceModalProps {
   onClose: () => void;
 }
 
-export const WELCOME_SPEECH_TEXT = 
-  "Te damos la bienvenida a la consulta de Registros Akáshicos y Vidas Pasadas. Descubre quién fuiste en tus encarnaciones anteriores y la sabiduría ancestral de tu alma a través de la canalización de la plancheta.";
-
 export const WelcomeVoiceModal: React.FC<WelcomeVoiceModalProps> = ({ isOpen, onClose }) => {
+  const { t, language, setLanguage, options } = useLanguage();
   const [isPlayingWelcome, setIsPlayingWelcome] = useState(false);
+
+  const welcomeSpeech = t("welcomeVoiceText");
 
   const handleClose = useCallback(() => {
     try {
@@ -30,14 +31,15 @@ export const WelcomeVoiceModal: React.FC<WelcomeVoiceModalProps> = ({ isOpen, on
   const triggerSpontaneousSpeech = useCallback(() => {
     try {
       audio.speakSpiritText(
-        WELCOME_SPEECH_TEXT,
+        welcomeSpeech,
         () => setIsPlayingWelcome(true),
-        () => setIsPlayingWelcome(false)
+        () => setIsPlayingWelcome(false),
+        language
       );
     } catch (e) {
       console.warn("Spontaneous speech error:", e);
     }
-  }, []);
+  }, [welcomeSpeech, language]);
 
   // Handle Escape key to exit modal anytime
   useEffect(() => {
@@ -101,6 +103,29 @@ export const WelcomeVoiceModal: React.FC<WelcomeVoiceModalProps> = ({ isOpen, on
           backgroundImage: `radial-gradient(circle at 50% 0%, #1e1132 0%, #090510 100%)`,
         }}
       >
+        {/* Language Switcher in Welcome Modal */}
+        <div className="absolute top-3.5 left-3.5 z-20 flex items-center bg-black/80 border border-purple-500/50 rounded-2xl p-1 backdrop-blur-md shadow-2xl">
+          {options.map((opt) => {
+            const isSelected = opt.code === language;
+            return (
+              <button
+                key={opt.code}
+                type="button"
+                onClick={() => setLanguage(opt.code)}
+                title={`${opt.nativeName} (${opt.label})`}
+                className={`px-2 py-1 rounded-xl text-xs font-cinzel transition flex items-center space-x-1 cursor-pointer ${
+                  isSelected
+                    ? "bg-purple-800 text-white font-bold border border-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.5)] scale-105"
+                    : "text-purple-300/80 hover:text-purple-100 hover:bg-purple-950/60"
+                }`}
+              >
+                <span className="text-sm leading-none">{opt.flag}</span>
+                <span className="text-[11px] uppercase font-bold">{opt.code}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Close Button */}
         <button
           type="button"
@@ -150,10 +175,10 @@ export const WelcomeVoiceModal: React.FC<WelcomeVoiceModalProps> = ({ isOpen, on
           {/* Main Title & Subtitle */}
           <div className="flex flex-col items-center text-center space-y-2">
             <h2 className="font-decorative font-bold text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-purple-100 via-purple-200 to-indigo-200 tracking-wide drop-shadow-md">
-              Registros Akáshicos
+              {t("welcomeModalTitle")}
             </h2>
             <p className="text-xs sm:text-sm font-gothic text-purple-200/90 font-normal tracking-wide max-w-md leading-relaxed">
-              Descubre quién fuiste en tus encarnaciones pasadas y la sabiduría ancestral de tu alma
+              {t("welcomeModalSubtitle")}
             </p>
           </div>
 
@@ -170,7 +195,7 @@ export const WelcomeVoiceModal: React.FC<WelcomeVoiceModalProps> = ({ isOpen, on
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
               </div>
               <span className="text-xs font-medium text-purple-200 tracking-wide font-gothic">
-                Encarnaciones Pasadas
+                {t("welcomeCard1")}
               </span>
             </div>
 
@@ -185,7 +210,7 @@ export const WelcomeVoiceModal: React.FC<WelcomeVoiceModalProps> = ({ isOpen, on
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
               </div>
               <span className="text-xs font-medium text-purple-200 tracking-wide font-gothic">
-                Codex de Tu Alma
+                {t("welcomeCard2")}
               </span>
             </div>
           </div>
@@ -197,14 +222,14 @@ export const WelcomeVoiceModal: React.FC<WelcomeVoiceModalProps> = ({ isOpen, on
               onClick={handleClose}
               className="w-full py-4 bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-600 hover:to-indigo-500 text-white font-cinzel font-bold uppercase text-xs sm:text-sm tracking-wider rounded-2xl shadow-[0_0_25px_rgba(168,85,247,0.4)] border border-purple-400/30 transition cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
             >
-              Ingresar a la Tabla Ouija
+              {t("enterBoardBtn")}
             </button>
             <button
               type="button"
               onClick={handleClose}
               className="w-full py-2 text-xs font-gothic text-purple-300/80 hover:text-purple-100 transition cursor-pointer text-center"
             >
-              Saltar e ir directamente a la consulta
+              {t("skipWelcomeBtn")}
             </button>
           </div>
         </div>
@@ -212,4 +237,3 @@ export const WelcomeVoiceModal: React.FC<WelcomeVoiceModalProps> = ({ isOpen, on
     </div>
   );
 };
-

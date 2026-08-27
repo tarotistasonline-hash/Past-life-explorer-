@@ -1,24 +1,35 @@
 import React, { useState, useEffect, useRef } from "react";
 import { User, Calendar, MessageSquare, Mic, MicOff, Radio, Compass } from "lucide-react";
 import { audio } from "../lib/audio";
+import { useLanguage } from "../context/LanguageContext";
 
 interface SpiritOracleFormProps {
   onPastLifeConsult: (data: { name: string; birthYear: string; focusQuery: string; feeling: string }) => void;
   onGeneralConsult: (question: string, name: string) => void;
   isLoading: boolean;
+  externalPreFillQuery?: string;
 }
 
 export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
   onPastLifeConsult,
   onGeneralConsult,
   isLoading,
+  externalPreFillQuery,
 }) => {
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<"PAST_LIFE" | "SPIRIT_ORACLE">("PAST_LIFE");
   const [name, setName] = useState("");
   const [birthYear, setBirthYear] = useState("");
   const [focusQuery, setFocusQuery] = useState("");
   const [feeling, setFeeling] = useState("");
   const [generalQuestion, setGeneralQuestion] = useState("");
+
+  useEffect(() => {
+    if (externalPreFillQuery) {
+      setActiveTab("SPIRIT_ORACLE");
+      setGeneralQuestion(externalPreFillQuery);
+    }
+  }, [externalPreFillQuery]);
 
   // Speech Recognition States
   const [isListening, setIsListening] = useState(false);
@@ -27,13 +38,23 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Check if browser supports SpeechRecognition
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setMicSupported(false);
     }
   }, []);
+
+  const getRecognitionLang = () => {
+    switch (language) {
+      case "en": return "en-US";
+      case "pt": return "pt-BR";
+      case "fr": return "fr-FR";
+      case "it": return "it-IT";
+      case "de": return "de-DE";
+      default: return "es-ES";
+    }
+  };
 
   const toggleMicrophone = () => {
     setMicError("");
@@ -42,7 +63,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
 
     if (!SpeechRecognition) {
       setMicSupported(false);
-      setMicError("El reconocimiento de voz no está soportado en este navegador. Puedes escribir tu consulta.");
+      setMicError(t("micNotSupported"));
       return;
     }
 
@@ -56,7 +77,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.lang = "es-ES";
+      recognition.lang = getRecognitionLang();
       recognition.interimResults = true;
       recognition.continuous = false;
 
@@ -82,9 +103,9 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
         console.error("Speech recognition error:", event.error);
         setIsListening(false);
         if (event.error === "not-allowed") {
-          setMicError("Permiso de micrófono denegado. Por favor aprueba el acceso al micrófono.");
+          setMicError(t("micDenied"));
         } else {
-          setMicError("No se pudo detectar voz clara. Intenta pulsar de nuevo e intentar hablar.");
+          setMicError(t("micError"));
         }
       };
 
@@ -108,7 +129,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
       recognitionRef.current.stop();
     }
     onPastLifeConsult({
-      name: name.trim() || "Buscador de la Verdad",
+      name: name.trim() || "Buscador",
       birthYear: birthYear.trim() || "Desconocido",
       focusQuery: focusQuery.trim() || "¿Quién fui en mi vida pasada?",
       feeling: feeling.trim() || "Intención de autoconocimiento",
@@ -127,10 +148,10 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
   const handlePresetPastLife = (queryText: string) => {
     setFocusQuery(queryText);
     onPastLifeConsult({
-      name: name.trim() || "Buscador de la Verdad",
+      name: name.trim() || "Buscador",
       birthYear: birthYear.trim() || "Desconocido",
       focusQuery: queryText,
-      feeling: "Consulta rápida a los Registros",
+      feeling: "Consulta rápida",
     });
   };
 
@@ -143,7 +164,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             <div className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
             <Radio className="w-5 h-5 text-red-400 animate-bounce" />
             <span className="font-gothic text-xs sm:text-sm font-semibold tracking-wide">
-              Escuchando tu voz... Formula tu consulta a los Registros Akáshicos
+              {t("listeningVoice")}
             </span>
           </div>
           <button
@@ -151,7 +172,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             onClick={toggleMicrophone}
             className="px-2.5 py-1 bg-red-900/80 hover:bg-red-800 text-red-100 rounded-lg text-xs font-bold transition cursor-pointer"
           >
-            Detener
+            {t("stopMic")}
           </button>
         </div>
       )}
@@ -173,7 +194,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
               : "border-transparent text-neutral-400 hover:text-purple-200"
           }`}
         >
-          <span>Lectura Vidas Pasadas</span>
+          <span>{t("tabPastLife")}</span>
         </button>
 
         <button
@@ -185,7 +206,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
               : "border-transparent text-neutral-400 hover:text-indigo-200"
           }`}
         >
-          <span>Consulta Akáshica Abierta</span>
+          <span>{t("tabSpiritOracle")}</span>
         </button>
       </div>
 
@@ -195,11 +216,11 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             <div>
               <label className="block text-xs font-gothic text-purple-300 font-medium mb-1.5 flex items-center space-x-1.5 tracking-wide">
                 <User className="w-3.5 h-3.5 text-purple-400" />
-                <span>Nombre o Apodo (Opcional)</span>
+                <span>{t("inputNameLabel")}</span>
               </label>
               <input
                 type="text"
-                placeholder="Ej: Sofia / Alejandro"
+                placeholder={t("inputYourName")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-[#080410] border border-purple-900/50 rounded-xl px-3.5 py-2.5 text-sm text-purple-100 placeholder-purple-900/60 focus:outline-none focus:border-purple-400 font-gothic"
@@ -209,7 +230,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             <div>
               <label className="block text-xs font-gothic text-purple-300 font-medium mb-1.5 flex items-center space-x-1.5 tracking-wide">
                 <Calendar className="w-3.5 h-3.5 text-purple-400" />
-                <span>Año de Nacimiento (Opcional)</span>
+                <span>{t("inputBirthYearLabel")}</span>
               </label>
               <input
                 type="text"
@@ -222,19 +243,19 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
           </div>
 
           <p className="text-xs text-purple-200/80 font-gothic text-center py-2 px-3 bg-purple-950/40 border border-purple-900/40 rounded-xl">
-            Los Registros Akáshicos revelarán la vida pasada y memoria ancestral que habita en tu alma.
+            {t("pastLifeDescBanner")}
           </p>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-gothic text-purple-300 font-medium flex items-center space-x-1.5 tracking-wide">
-                <span>Pregunta o Intención Especial (Opcional)</span>
+                <span>{t("inputFocusQueryLabel")}</span>
               </label>
               {/* Mic Indicator Button */}
               <button
                 type="button"
                 onClick={toggleMicrophone}
-                title="Hablar por Micrófono"
+                title={t("useMic")}
                 className={`px-2.5 py-1 rounded-lg text-xs font-gothic font-medium flex items-center space-x-1.5 transition border cursor-pointer ${
                   isListening
                     ? "bg-red-950 border-red-500 text-red-300 animate-pulse"
@@ -244,12 +265,12 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
                 {isListening ? (
                   <>
                     <Mic className="w-3.5 h-3.5 text-red-400 animate-bounce" />
-                    <span>Escuchando...</span>
+                    <span>{t("listeningVoice")}</span>
                   </>
                 ) : (
                   <>
                     <Mic className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Usar Micrófono</span>
+                    <span>{t("useMic")}</span>
                   </>
                 )}
               </button>
@@ -258,7 +279,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             <div className="relative">
               <input
                 type="text"
-                placeholder={isListening ? "Escuchando tu voz... Habla ahora..." : "Opcional: Ej. ¿Dónde viví? ¿Qué talento heredé?"}
+                placeholder={isListening ? t("listeningVoice") : t("inputFeeling")}
                 value={focusQuery}
                 onChange={(e) => setFocusQuery(e.target.value)}
                 className={`w-full bg-[#080410] border rounded-xl pl-3.5 pr-10 py-2.5 text-sm text-purple-100 placeholder-purple-900/60 focus:outline-none font-gothic ${
@@ -278,14 +299,14 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
           {/* Preset Buttons */}
           <div className="pt-1">
             <div className="text-[11px] font-gothic text-purple-300/80 mb-1.5 font-medium tracking-wide">
-              Consultas Rápidas a los Registros:
+              {t("quickConsultsTitle")}
             </div>
             <div className="flex flex-wrap gap-1.5">
               {[
-                "¿Quién fui en mi vida anterior?",
-                "¿Cuál es mi lección kármica principal?",
-                "¿Dónde viví en mi vida pasada?",
-                "¿Qué talento traigo de otra época?"
+                t("preset1"),
+                t("preset2"),
+                t("preset3"),
+                t("preset4")
               ].map((preset, idx) => (
                 <button
                   key={idx}
@@ -312,7 +333,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
               }`}
             >
               <Mic className={`w-4 h-4 ${isListening ? "animate-bounce text-white" : "text-purple-400"}`} />
-              <span>{isListening ? "Escuchando Voz..." : "Consultar por Micrófono"}</span>
+              <span>{isListening ? t("listeningVoice") : t("consultByVoice")}</span>
             </button>
 
             <button
@@ -323,10 +344,10 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
               {isLoading ? (
                 <>
                   <Compass className="w-4 h-4 animate-spin text-purple-200" />
-                  <span>Canalizando Registros Akáshicos...</span>
+                  <span>{t("channelingMsg")}</span>
                 </>
               ) : (
-                <span>Revelar Vida Pasada</span>
+                <span>{t("revealPastLifeBtn")}</span>
               )}
             </button>
           </div>
@@ -337,7 +358,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-gothic text-indigo-300 font-medium flex items-center space-x-1.5 tracking-wide">
                 <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Formula tu Pregunta por Voz o Texto</span>
+                <span>{t("oracleQuestionLabel")}</span>
               </label>
               <button
                 type="button"
@@ -351,12 +372,12 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
                 {isListening ? (
                   <>
                     <Mic className="w-3.5 h-3.5 text-red-400 animate-bounce" />
-                    <span>Escuchando...</span>
+                    <span>{t("listeningVoice")}</span>
                   </>
                 ) : (
                   <>
                     <Mic className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Usar Micrófono</span>
+                    <span>{t("useMic")}</span>
                   </>
                 )}
               </button>
@@ -365,7 +386,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             <div className="relative">
               <textarea
                 rows={3}
-                placeholder={isListening ? "Escuchando tu voz... Di tu pregunta libremente..." : "Ej: ¿Cuál es el aprendizaje o propósito de mi alma en esta encarnación?"}
+                placeholder={isListening ? t("listeningVoice") : t("oracleQuestionPlaceholder")}
                 value={generalQuestion}
                 onChange={(e) => setGeneralQuestion(e.target.value)}
                 className={`w-full bg-[#080410] border rounded-xl p-3 pr-10 text-sm text-indigo-100 placeholder-indigo-900/60 focus:outline-none font-gothic resize-none ${
@@ -393,7 +414,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
               }`}
             >
               <Mic className={`w-4 h-4 ${isListening ? "animate-bounce text-white" : "text-indigo-400"}`} />
-              <span>{isListening ? "Escuchando..." : "Dictar por Micrófono"}</span>
+              <span>{isListening ? t("listeningVoice") : t("consultByVoice")}</span>
             </button>
 
             <button
@@ -404,10 +425,10 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
               {isLoading ? (
                 <>
                   <Compass className="w-4 h-4 animate-spin text-indigo-200" />
-                  <span>Canalizando respuesta...</span>
+                  <span>{t("channelingMsg")}</span>
                 </>
               ) : (
-                <span>Preguntar a la Tabla</span>
+                <span>{t("askOuijaBtn")}</span>
               )}
             </button>
           </div>

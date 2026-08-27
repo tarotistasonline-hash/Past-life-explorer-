@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { LetterCoord, BoardMode } from "../types";
 import { BOARD_COORDS, getCoordForChar } from "../lib/constants";
 import { audio } from "../lib/audio";
+import { useLanguage } from "../context/LanguageContext";
 import { Sparkles, Compass, Volume2, Eye } from "lucide-react";
 
 interface OuijaBoardProps {
@@ -19,6 +20,7 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
   activeChar,
   setActiveChar,
 }) => {
+  const { t } = useLanguage();
   const boardRef = useRef<HTMLDivElement>(null);
   const [planchettePos, setPlanchettePos] = useState<{ x: number; y: number }>({ x: 50, y: 56 });
   const [isSpelling, setIsSpelling] = useState(false);
@@ -88,7 +90,7 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
       <div className="w-full max-w-2xl mb-3 px-4 py-2 bg-neutral-900/90 border border-amber-900/60 rounded-xl backdrop-blur-md flex items-center justify-between shadow-xl">
         <div className="flex items-center space-x-2 text-amber-300/80 text-xs sm:text-sm font-serif">
           <Eye className="w-4 h-4 text-amber-400 animate-pulse" />
-          <span>Símbolos Canalizados:</span>
+          <span>{t("channeledSymbols")}</span>
         </div>
         <div className="flex items-center space-x-1 font-mono tracking-widest text-amber-200 text-sm sm:text-base font-bold min-h-[24px]">
           {spelledCharsSoFar.length > 0 ? (
@@ -99,7 +101,7 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
             ))
           ) : (
             <span className="text-neutral-500 italic text-xs font-serif">
-              {isSpelling ? "Invocando espíritus..." : "Haz tu consulta mediante el micrófono o el formulario..."}
+              {isSpelling ? t("invokingSpirits") : t("makeYourConsultation")}
             </span>
           )}
         </div>
@@ -128,27 +130,27 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
         {/* Board Top Center Emblem: Eye of Providence & Mystic Sun/Moon */}
         <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 flex items-center space-x-6 text-amber-500/80 pointer-events-none">
           <div className="text-center font-cinzel text-[10px] sm:text-xs tracking-widest text-amber-600 font-bold uppercase">
-            ☽ LUNA
+            ☽ {t("moon")}
           </div>
           <div className="relative flex items-center justify-center w-8 h-8 sm:w-12 sm:h-12 border border-amber-600/50 rounded-full bg-amber-950/40 shadow-[0_0_15px_rgba(217,119,6,0.3)]">
             <Compass className="w-5 h-5 sm:w-7 sm:h-7 text-amber-400 animate-spin" style={{ animationDuration: "25s" }} />
           </div>
           <div className="text-center font-cinzel text-[10px] sm:text-xs tracking-widest text-amber-600 font-bold uppercase">
-            SOL ☼
+            {t("sun")} ☼
           </div>
         </div>
 
         {/* YES (SÍ) & NO Emblems */}
         <div className="absolute top-[14%] left-[18%] -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
           <div className={`font-cinzel text-lg sm:text-2xl font-black tracking-wider ${activeChar === "SÍ" ? "text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,1)] scale-110" : "text-amber-600/90"} transition-all duration-300`}>
-            SÍ
+            {t("yes")}
           </div>
           <div className="text-[9px] sm:text-xs text-amber-800/80 font-cinzel">YES</div>
         </div>
 
         <div className="absolute top-[14%] right-[18%] translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
           <div className={`font-cinzel text-lg sm:text-2xl font-black tracking-wider ${activeChar === "NO" ? "text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,1)] scale-110" : "text-amber-600/90"} transition-all duration-300`}>
-            NO
+            {t("no")}
           </div>
           <div className="text-[9px] sm:text-xs text-amber-800/80 font-cinzel">NO</div>
         </div>
@@ -179,7 +181,7 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
         {/* ADIÓS (GOODBYE) Emblem */}
         <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 text-center pointer-events-none">
           <div className={`font-cinzel text-base sm:text-xl font-black tracking-[0.25em] ${activeChar === "ADIÓS" ? "text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,1)] scale-110" : "text-amber-700/80"} transition-all duration-300`}>
-            ADIÓS
+            {t("goodbye")}
           </div>
           <div className="text-[8px] sm:text-[10px] text-amber-900 font-cinzel tracking-widest">GOODBYE</div>
         </div>

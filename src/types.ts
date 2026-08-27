@@ -1,3 +1,5 @@
+export type SupportedLanguage = "es" | "en" | "pt" | "fr" | "it" | "de";
+
 export interface PastLifeDetails {
   title: string;
   eraLocation: string;
@@ -40,6 +42,37 @@ export interface VisitsStats {
   totalConsultations: number;
   uniqueVisitorsCount: number;
   lastUpdated?: string;
+}
+
+export interface DailyArcana {
+  id: number; // 0 to 21
+  romanNumber: string;
+  name: string;
+  englishName: string;
+  archetype: string;
+  element: "Fuego" | "Agua" | "Aire" | "Tierra" | "Éter";
+  astrologicalSign: string;
+  keywords: string[];
+  colorHex: string;
+  symbolGlyph: string;
+  cosmicEnergy: string;
+  dailyMessage: string;
+  lightAspect: string;
+  shadowAspect: string;
+  practicalAdvice: string;
+  dailyAffirmation: string;
+  meditationQuestion: string;
+  marseilleTitle?: string;
+  marseilleDetails?: string;
+  dateKey?: string;
+  isPersonalDraw?: boolean;
+}
+
+export interface TarotDailyResponse {
+  arcana: DailyArcana;
+  isAiEnhanced: boolean;
+  cosmicDate: string;
+  dayAspect: string;
 }
 
 

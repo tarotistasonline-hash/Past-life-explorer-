@@ -1,6 +1,7 @@
 import React from "react";
 import { PastLifeRevelation } from "../types";
-import { BookOpen, Scroll, Trash2, ExternalLink, Sparkles } from "lucide-react";
+import { BookOpen, Scroll, Trash2, ExternalLink } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 import pastLifeVisionImg from "../assets/images/past_life_vision_1787797379948.jpg";
 import ancientSoulPortraitImg from "../assets/images/ancient_soul_portrait_1787797394501.jpg";
@@ -17,6 +18,8 @@ export const PastLifeCodex: React.FC<PastLifeCodexProps> = ({
   onSelectRecord,
   onClearCodex,
 }) => {
+  const { t, language } = useLanguage();
+
   const resolveCodexThumbnail = (rec: PastLifeRevelation) => {
     if (rec.pastLifeDetails.imageUrl) return rec.pastLifeDetails.imageUrl;
     const text = `${rec.pastLifeDetails.title} ${rec.pastLifeDetails.identityRole} ${rec.pastLifeDetails.eraLocation}`.toLowerCase();
@@ -29,13 +32,15 @@ export const PastLifeCodex: React.FC<PastLifeCodexProps> = ({
     return pastLifeVisionImg;
   };
 
+  const locale = language === "en" ? "en-US" : language === "pt" ? "pt-BR" : language === "fr" ? "fr-FR" : language === "it" ? "it-IT" : language === "de" ? "de-DE" : "es-AR";
+
   if (records.length === 0) {
     return (
       <div className="w-full max-w-2xl bg-[#0f0918]/60 border border-purple-900/40 rounded-2xl p-6 text-center backdrop-blur-md">
         <BookOpen className="w-8 h-8 text-purple-400 mx-auto mb-2 opacity-60" />
-        <h3 className="font-cinzel font-semibold text-purple-300 text-sm">Codex del Alma Vacío</h3>
+        <h3 className="font-cinzel font-semibold text-purple-300 text-sm">{t("codexEmpty")}</h3>
         <p className="font-gothic text-xs text-purple-300/70 mt-1">
-          Realiza una consulta a los Registros Akáshicos para descubrir y registrar tus encarnaciones pasadas.
+          {t("codexEmptyDesc")}
         </p>
       </div>
     );
@@ -47,7 +52,7 @@ export const PastLifeCodex: React.FC<PastLifeCodexProps> = ({
         <div className="flex items-center space-x-2">
           <Scroll className="w-5 h-5 text-purple-400" />
           <h3 className="font-cinzel font-semibold text-purple-200 text-base sm:text-lg">
-            Codex de Vidas Pasadas ({records.length})
+            {t("codexTitle")} ({records.length})
           </h3>
         </div>
         <button
@@ -55,7 +60,7 @@ export const PastLifeCodex: React.FC<PastLifeCodexProps> = ({
           className="text-xs text-purple-400/80 hover:text-red-400 font-cinzel flex items-center space-x-1 transition cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          <span>Limpiar Codex</span>
+          <span>{t("clearCodex")}</span>
         </button>
       </div>
 
@@ -94,7 +99,7 @@ export const PastLifeCodex: React.FC<PastLifeCodexProps> = ({
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[10px] font-mono text-purple-400/80 uppercase tracking-widest flex items-center space-x-1">
                       <span className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ backgroundColor: auraColor, boxShadow: `0 0 6px ${auraColor}` }} />
-                      <span>{new Date(rec.timestamp).toLocaleDateString()}</span>
+                      <span>{new Date(rec.timestamp).toLocaleDateString(locale)}</span>
                     </span>
                   </div>
                   <h4 className="font-cinzel font-semibold text-purple-100 text-xs sm:text-sm group-hover:text-purple-300 transition truncate">
@@ -109,7 +114,7 @@ export const PastLifeCodex: React.FC<PastLifeCodexProps> = ({
               <div className="mt-3 pt-2 border-t border-purple-900/40 flex items-center justify-between text-xs text-purple-200/80 font-gothic">
                 <span className="truncate max-w-[180px]">{rec.pastLifeDetails.identityRole}</span>
                 <div className="flex items-center space-x-1 text-purple-400 group-hover:text-purple-200 transition">
-                  <span className="text-[10px] font-cinzel">Ver</span>
+                  <span className="text-[10px] font-cinzel">{t("codexView")}</span>
                   <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                 </div>
               </div>

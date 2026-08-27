@@ -6,10 +6,15 @@ import { PastLifeModal } from "./components/PastLifeModal";
 import { PastLifeCodex } from "./components/PastLifeCodex";
 import { AtmosphereControls } from "./components/AtmosphereControls";
 import { WelcomeVoiceModal } from "./components/WelcomeVoiceModal";
-import { ShieldAlert, Volume2, Eye, Sparkles } from "lucide-react";
+import { DailyTarotCard } from "./components/DailyTarotCard";
+import { MysticCoffeeOffer } from "./components/MysticCoffeeOffer";
+import { useLanguage } from "./context/LanguageContext";
+import { ShieldAlert, Volume2, Eye, Sparkles, Radio, BookOpen, Layers, Coffee, Globe } from "lucide-react";
 import { audio } from "./lib/audio";
 
 export default function App() {
+  const { t, language, setLanguage, options } = useLanguage();
+  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "CODEX">("ALL");
   const [mode, setMode] = useState<BoardMode>("IDLE");
   const [spelledWord, setSpelledWord] = useState("");
   const [activeChar, setActiveChar] = useState("");
@@ -19,6 +24,7 @@ export default function App() {
   const [savedRecords, setSavedRecords] = useState<PastLifeRevelation[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [visitsStats, setVisitsStats] = useState<VisitsStats | null>(null);
+  const [prefilledOuijaQuestion, setPrefilledOuijaQuestion] = useState("");
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
     return !sessionStorage.getItem("ouija_welcome_dismissed");
   });
@@ -30,6 +36,8 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [fogOn, setFogOn] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const locale = language === "en" ? "en-US" : language === "pt" ? "pt-BR" : language === "fr" ? "fr-FR" : language === "it" ? "it-IT" : language === "de" ? "de-DE" : "es-AR";
 
   // Record visitor count and retrieve real stats
   const fetchVisitsStats = useCallback(async () => {
@@ -135,7 +143,7 @@ export default function App() {
       const res = await fetch("/api/ouija/past-life", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, lang: language }),
       });
 
       if (!res.ok) {
@@ -146,10 +154,10 @@ export default function App() {
       setCurrentPastLife(json.pastLifeDetails);
       setSpelledWord(json.spelledWord || "VIDA PASADA");
       setMode("SPELLING");
-      fetchVisitsStats(); // Refresh stats with updated consultation count
+      fetchVisitsStats();
     } catch (err: unknown) {
       console.error(err);
-      setErrorMsg("No se pudo conectar con los Registros Akáshicos. Por favor reintenta tu consulta.");
+      setErrorMsg(t("errorAkashicConnection"));
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +174,7 @@ export default function App() {
       const res = await fetch("/api/ouija/spirit-question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, seekerName: name }),
+        body: JSON.stringify({ question, seekerName: name, lang: language }),
       });
 
       if (!res.ok) {
@@ -177,10 +185,10 @@ export default function App() {
       setCurrentSpiritResponse(json);
       setSpelledWord(json.spelledWord || "SI");
       setMode("SPELLING");
-      fetchVisitsStats(); // Refresh stats with updated consultation count
+      fetchVisitsStats();
     } catch (err: unknown) {
       console.error(err);
-      setErrorMsg("No se pudo canalizar la información de los Registros Akáshicos.");
+      setErrorMsg(t("errorOracleConnection"));
     } finally {
       setIsLoading(false);
     }
@@ -192,9 +200,18 @@ export default function App() {
       setIsModalOpen(true);
     } else if (currentSpiritResponse) {
       audio.speakSpiritText(
-        `Respuesta de los Registros Akáshicos: ${currentSpiritResponse.spelledWord}. ${currentSpiritResponse.spiritMessage}`
+        `${currentSpiritResponse.spelledWord}. ${currentSpiritResponse.spiritMessage}`,
+        undefined,
+        undefined,
+        language
       );
     }
+  };
+
+  const handleSendCardToOuija = (cardName: string) => {
+    setActiveMainSection("OUIJA");
+    setPrefilledOuijaQuestion(`${t("askCardMessage")} ${cardName}?`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const isCurrentSaved = savedRecords.some(
@@ -208,6 +225,36 @@ export default function App() {
         <div className="fixed inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen bg-[radial-gradient(circle_at_50%_40%,rgba(139,92,246,0.2),transparent_70%)] animate-pulse" />
       )}
 
+      {/* Prominent Global Multi-language Switcher Bar */}
+      <aside aria-label={t("languageSelect")} className="w-full max-w-4xl flex items-center justify-between gap-2 px-3 py-2 mb-2.5 bg-[#100922]/95 border border-purple-500/50 rounded-2xl backdrop-blur-md shadow-[0_0_25px_rgba(168,85,247,0.25)] z-30 overflow-hidden">
+        <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-purple-200 shrink-0">
+          <Globe className="w-4 h-4 text-purple-400 animate-pulse" />
+          <span className="hidden sm:inline tracking-wider uppercase">{t("languageSelect")}:</span>
+        </div>
+        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-0.5 no-scrollbar">
+          {options.map((opt) => {
+            const isSelected = opt.code === language;
+            return (
+              <button
+                key={opt.code}
+                type="button"
+                onClick={() => setLanguage(opt.code)}
+                title={`${opt.nativeName} (${opt.label})`}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-cinzel transition flex items-center space-x-1.5 cursor-pointer shrink-0 ${
+                  isSelected
+                    ? "bg-purple-700 text-white font-bold border border-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.6)] scale-105"
+                    : "bg-purple-950/60 hover:bg-purple-900/80 text-purple-300/90 hover:text-white border border-purple-900/60"
+                }`}
+              >
+                <span className="text-sm leading-none">{opt.flag}</span>
+                <span className="font-semibold text-xs">{opt.nativeName}</span>
+                <span className="text-[10px] opacity-70 uppercase hidden md:inline">({opt.code})</span>
+              </button>
+            );
+          })}
+        </div>
+      </aside>
+
       {/* Header Bar with Visitor Counter & Solemn Male Voice Controls */}
       <AtmosphereControls
         fogOn={fogOn}
@@ -215,6 +262,57 @@ export default function App() {
         onOpenWelcome={() => setIsWelcomeOpen(true)}
         visitsStats={visitsStats}
       />
+
+      {/* Portal Main Navigation Switcher */}
+      <nav aria-label="Navegación del Portal Místico" className="w-full max-w-4xl flex items-center justify-center gap-1 sm:gap-2 mb-3 z-20 overflow-x-auto py-1 px-2 bg-black/40 border border-purple-900/40 rounded-2xl backdrop-blur-md">
+        <button
+          onClick={() => setActiveMainSection("ALL")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+            activeMainSection === "ALL"
+              ? "bg-purple-900/80 text-purple-100 border border-purple-500/60 shadow-md"
+              : "text-purple-400 hover:text-purple-200"
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>{t("navAll")}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainSection("OUIJA")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+            activeMainSection === "OUIJA"
+              ? "bg-purple-900/80 text-purple-100 border border-purple-500/60 shadow-md"
+              : "text-purple-400 hover:text-purple-200"
+          }`}
+        >
+          <Radio className="w-3.5 h-3.5 text-purple-400" />
+          <span>{t("navOuija")}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainSection("TAROT")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+            activeMainSection === "TAROT"
+              ? "bg-gradient-to-r from-amber-600/60 to-purple-800/80 text-amber-200 border border-amber-500/60 shadow-md"
+              : "text-amber-400/80 hover:text-amber-200"
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>{t("navTarot")}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainSection("CODEX")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+            activeMainSection === "CODEX"
+              ? "bg-purple-900/80 text-purple-100 border border-purple-500/60 shadow-md"
+              : "text-purple-400 hover:text-purple-200"
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5 text-purple-400" />
+          <span>{t("navCodex")} ({savedRecords.length})</span>
+        </button>
+      </nav>
 
       {/* Main Content Area */}
       <main className="w-full max-w-4xl flex flex-col items-center space-y-6 z-20 my-auto">
@@ -226,76 +324,89 @@ export default function App() {
           </div>
         )}
 
-        {/* Physical Ouija Board Component */}
-        <OuijaBoard
-          mode={mode}
-          spelledWord={spelledWord}
-          onSpellingComplete={handleSpellingComplete}
-          activeChar={activeChar}
-          setActiveChar={setActiveChar}
-        />
+        {/* Section: Ouija Board & Oracle (Shown if ALL or OUIJA) */}
+        {(activeMainSection === "ALL" || activeMainSection === "OUIJA") && (
+          <div className="w-full flex flex-col items-center space-y-6 animate-fade-in">
+            {/* Physical Ouija Board Component */}
+            <OuijaBoard
+              mode={mode}
+              spelledWord={spelledWord}
+              onSpellingComplete={handleSpellingComplete}
+              activeChar={activeChar}
+              setActiveChar={setActiveChar}
+            />
 
-        {/* General Spirit Message Card (If Spirit Query) */}
-        {currentSpiritResponse && mode === "REVEALED" && (
-          <div className="w-full max-w-2xl bg-[#0f0918]/95 border border-purple-500/50 rounded-2xl p-5 sm:p-6 backdrop-blur-md shadow-2xl text-center space-y-3 animate-fade-in">
-            <div className="text-xs uppercase tracking-[0.2em] text-purple-300 font-cinzel font-semibold">
-              <span>Mensaje Canalizado de los Registros Akáshicos</span>
-            </div>
+            {/* General Spirit Message Card (If Spirit Query) */}
+            {currentSpiritResponse && mode === "REVEALED" && (
+              <div className="w-full max-w-2xl bg-[#0f0918]/95 border border-purple-500/50 rounded-2xl p-5 sm:p-6 backdrop-blur-md shadow-2xl text-center space-y-3 animate-fade-in">
+                <div className="text-xs uppercase tracking-[0.2em] text-purple-300 font-cinzel font-semibold">
+                  <span>{t("channeledMessageTitle")}</span>
+                </div>
 
-            <div className="text-xl sm:text-2xl font-bold text-purple-100 py-1 font-cinzel">
-              "{currentSpiritResponse.spelledWord}"
-            </div>
+                <div className="text-xl sm:text-2xl font-bold text-purple-100 py-1 font-cinzel">
+                  "{currentSpiritResponse.spelledWord}"
+                </div>
 
-            <p className="text-sm sm:text-base text-purple-200/90 leading-relaxed italic font-gothic">
-              {currentSpiritResponse.spiritMessage}
-            </p>
+                <p className="text-sm sm:text-base text-purple-200/90 leading-relaxed italic font-gothic">
+                  {currentSpiritResponse.spiritMessage}
+                </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              <button
-                onClick={() => {
-                  if (currentSpiritResponse) {
-                    audio.speakSpiritText(
-                      `Respuesta de los Registros Akáshicos: ${currentSpiritResponse.spelledWord}. ${currentSpiritResponse.spiritMessage}`
-                    );
-                  }
-                }}
-                className="px-4 py-2 bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-600/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition flex items-center space-x-2 cursor-pointer shadow"
-              >
-                <Volume2 className="w-4 h-4 text-purple-300" />
-                <span>Escuchar con Voz Solemne</span>
-              </button>
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      if (currentSpiritResponse) {
+                        audio.speakSpiritText(
+                          `${currentSpiritResponse.spelledWord}. ${currentSpiritResponse.spiritMessage}`
+                        );
+                      }
+                    }}
+                    className="px-4 py-2 bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-600/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition flex items-center space-x-2 cursor-pointer shadow"
+                  >
+                    <Volume2 className="w-4 h-4 text-purple-300" />
+                    <span>{t("listenSolemnVoice")}</span>
+                  </button>
 
-              <button
-                onClick={() => {
-                  audio.stopSpeech();
-                  setMode("IDLE");
-                  setCurrentSpiritResponse(null);
-                }}
-                className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-purple-300 border border-purple-800/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition cursor-pointer"
-              >
-                Realizar Otra Consulta
-              </button>
-            </div>
+                  <button
+                    onClick={() => {
+                      audio.stopSpeech();
+                      setMode("IDLE");
+                      setCurrentSpiritResponse(null);
+                    }}
+                    className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-purple-300 border border-purple-800/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition cursor-pointer"
+                  >
+                    {t("makeAnotherConsultation")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Form Inputs (Lectura de Vida Pasada y Consulta Akáshica) */}
+            <SpiritOracleForm
+              onPastLifeConsult={handlePastLifeConsult}
+              onGeneralConsult={handleGeneralConsult}
+              isLoading={isLoading}
+              externalPreFillQuery={prefilledOuijaQuestion}
+            />
           </div>
         )}
 
-        {/* Form Inputs (Lectura de Vida Pasada y Consulta Akáshica) */}
-        <SpiritOracleForm
-          onPastLifeConsult={handlePastLifeConsult}
-          onGeneralConsult={handleGeneralConsult}
-          isLoading={isLoading}
-        />
+        {/* Section: Daily Tarot Card / Arcano del Día (Shown if ALL or TAROT) */}
+        {(activeMainSection === "ALL" || activeMainSection === "TAROT") && (
+          <DailyTarotCard onSendToOuija={handleSendCardToOuija} />
+        )}
 
-        {/* Codex of Past Lives Logged */}
-        <PastLifeCodex
-          records={savedRecords}
-          onSelectRecord={(rec) => {
-            setCurrentPastLife(rec.pastLifeDetails);
-            setSeekerName(rec.seekerName);
-            setIsModalOpen(true);
-          }}
-          onClearCodex={handleClearCodex}
-        />
+        {/* Section: Codex of Past Lives Logged (Shown if ALL or CODEX) */}
+        {(activeMainSection === "ALL" || activeMainSection === "CODEX") && (
+          <PastLifeCodex
+            records={savedRecords}
+            onSelectRecord={(rec) => {
+              setCurrentPastLife(rec.pastLifeDetails);
+              setSeekerName(rec.seekerName);
+              setIsModalOpen(true);
+            }}
+            onClearCodex={handleClearCodex}
+          />
+        )}
       </main>
 
       {/* Past Life Revelation Modal */}
@@ -318,17 +429,35 @@ export default function App() {
         onClose={handleCloseWelcome}
       />
 
+      {/* Section: Mystic Coffee Offering / Invitación a Cafecito */}
+      <MysticCoffeeOffer />
+
       {/* Footer with Real Visitor Counter */}
-      <footer className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between py-4 text-[11px] font-gothic text-purple-400/70 z-20 border-t border-purple-900/30 mt-6 gap-2">
-        <p>Tabla Ouija Interactiva • Registros Akáshicos y Lectura de Vidas Pasadas</p>
-        <div className="flex items-center space-x-2 text-purple-300/80">
-          <Eye className="w-3.5 h-3.5 text-purple-400" />
-          <span>
-            <strong>{visitsStats?.totalVisits !== undefined ? visitsStats.totalVisits.toLocaleString("es-AR") : "1"}</strong> visitas reales registradas
-          </span>
+      <footer className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between py-4 text-[11px] font-gothic text-purple-400/70 z-20 border-t border-purple-900/30 mt-4 gap-3">
+        <div className="flex items-center space-x-3">
+          <p>{t("footerTitle")}</p>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <a
+            href="https://mpago.la/2m7bcUT"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-1 text-amber-400 hover:text-amber-300 transition"
+            title="Invitar un Cafecito por Mercado Pago"
+          >
+            <Coffee className="w-3.5 h-3.5 text-amber-400" />
+            <span>{t("footerCoffeeLink")}</span>
+          </a>
+
+          <div className="flex items-center space-x-1.5 text-purple-300/80">
+            <Eye className="w-3.5 h-3.5 text-purple-400" />
+            <span>
+              <strong>{visitsStats?.totalVisits !== undefined ? visitsStats.totalVisits.toLocaleString(locale) : "1"}</strong> {t("realVisits")}
+            </span>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
-

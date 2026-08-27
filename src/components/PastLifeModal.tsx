@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { PastLifeDetails } from "../types";
 import { BookOpen, Scroll, Shield, Key, Volume2, VolumeX, X, Sparkles, Maximize2, Eye } from "lucide-react";
 import { audio } from "../lib/audio";
+import { useLanguage } from "../context/LanguageContext";
 
 import pastLifeVisionImg from "../assets/images/past_life_vision_1787797379948.jpg";
 import ancientSoulPortraitImg from "../assets/images/ancient_soul_portrait_1787797394501.jpg";
 import mysticRelicVisionImg from "../assets/images/mystic_relic_vision_1787797407472.jpg";
-import pastLifeSoulImg from "../assets/images/past_life_soul_1785774959422.jpg";
 
 interface PastLifeModalProps {
   details: PastLifeDetails;
@@ -23,41 +23,43 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
   onSaveToCodex,
   isSaved = false,
 }) => {
+  const { t, language } = useLanguage();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
 
   useEffect(() => {
-    const speechText = `Revelación para ${seekerName || "ti"}. ${details.title}. En ${details.eraLocation}, fuiste ${details.identityRole}. ${details.narrative}`;
+    const speechText = `${details.title}. ${details.eraLocation}. ${details.identityRole}. ${details.narrative}`;
     setIsSpeaking(true);
     audio.speakSpiritText(
       speechText,
       () => setIsSpeaking(true),
-      () => setIsSpeaking(false)
+      () => setIsSpeaking(false),
+      language
     );
 
     return () => {
       audio.stopSpeech();
     };
-  }, [details, seekerName]);
+  }, [details, seekerName, language]);
 
   const toggleSpeech = () => {
     if (isSpeaking) {
       audio.stopSpeech();
       setIsSpeaking(false);
     } else {
-      const speechText = `${details.title}. En ${details.eraLocation}, fuiste ${details.identityRole}. ${details.narrative}`;
+      const speechText = `${details.title}. ${details.eraLocation}. ${details.identityRole}. ${details.narrative}`;
       setIsSpeaking(true);
       audio.speakSpiritText(
         speechText,
         () => setIsSpeaking(true),
-        () => setIsSpeaking(false)
+        () => setIsSpeaking(false),
+        language
       );
     }
   };
 
   const auraColor = details.vibeColor || "#8b5cf6";
 
-  // Select the most harmonious mystical artwork based on incarnation characteristics
   const resolveArtwork = () => {
     if (details.imageUrl) return details.imageUrl;
     const text = `${details.title} ${details.identityRole} ${details.eraLocation} ${details.narrative}`.toLowerCase();
@@ -89,20 +91,6 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
       text.includes("caballer")
     ) {
       return mysticRelicVisionImg;
-    }
-
-    if (
-      text.includes("alquimist") ||
-      text.includes("filósofo") ||
-      text.includes("filosofo") ||
-      text.includes("erudit") ||
-      text.includes("sabio") ||
-      text.includes("médic") ||
-      text.includes("escriba") ||
-      text.includes("artista") ||
-      text.includes("maestr")
-    ) {
-      return pastLifeVisionImg;
     }
 
     return pastLifeVisionImg;
@@ -166,7 +154,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
         {/* Top Header */}
         <div className="flex flex-col items-center text-center mb-5 z-10 relative">
           <div className="text-xs font-gothic text-purple-300 font-medium mb-1 tracking-wide">
-            Lectura Akáshica para {seekerName || "Buscador del Destino"}
+            {t("pastLifeModalReadingFor")} {seekerName || "Buscador"}
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-decorative font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-100 via-indigo-200 to-purple-300">
@@ -192,7 +180,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
                 <span className="absolute w-2.5 h-2.5 rounded-full animate-ping opacity-75" style={{ backgroundColor: auraColor }} />
                 <span className="relative w-2.5 h-2.5 rounded-full" style={{ backgroundColor: auraColor, boxShadow: `0 0 8px ${auraColor}` }} />
               </div>
-              <span>Aura del Alma</span>
+              <span>{t("pastLifeModalSoulAura")}</span>
             </div>
           </div>
         </div>
@@ -217,7 +205,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
             {/* Top Vision Badge */}
             <div className="absolute top-3 left-3 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-black/75 border border-purple-400/50 backdrop-blur-md text-[11px] font-cinzel font-semibold text-purple-200 shadow-md">
               <Sparkles className="w-3 h-3 text-purple-300 animate-spin-slow" />
-              <span>Visión Mística de la Encarnación</span>
+              <span>{t("pastLifeModalVision")}</span>
             </div>
 
             {/* Expand / Lightbox Trigger Button */}
@@ -249,7 +237,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
             className="px-4 py-1.5 rounded-full bg-purple-950/80 border border-purple-700/50 text-xs font-gothic text-purple-200 flex items-center space-x-2 hover:bg-purple-900/90 transition cursor-pointer shadow"
           >
             <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? "text-purple-300 animate-bounce" : "text-purple-400"}`} />
-            <span>{isSpeaking ? "Relatando lectura con voz solemne (Pausar)" : "Escuchar Relato Completo en Voz Solemne"}</span>
+            <span>{isSpeaking ? "Pausar narración" : t("pastLifeModalListen")}</span>
           </button>
         </div>
 
@@ -259,7 +247,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
           <div className="bg-purple-950/40 border-l-4 border-purple-500 p-3.5 sm:p-4 rounded-r-xl">
             <div className="text-xs font-cinzel font-semibold text-purple-300 uppercase tracking-wider mb-1 flex items-center space-x-1.5">
               <Shield className="w-4 h-4 text-purple-400" />
-              <span>Identidad y Ocupación del Alma</span>
+              <span>{t("pastLifeModalIdentity")}</span>
             </div>
             <p className="text-purple-100 font-semibold font-gothic text-base sm:text-lg">{details.identityRole}</p>
           </div>
@@ -268,7 +256,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
           <div className="bg-[#080410]/80 border border-purple-900/50 p-4 sm:p-5 rounded-xl shadow-inner">
             <div className="text-xs font-cinzel font-semibold text-purple-300 uppercase tracking-wider mb-2 flex items-center space-x-1.5">
               <BookOpen className="w-4 h-4 text-purple-400" />
-              <span>Crónica de la Encarnación</span>
+              <span>{t("pastLifeModalChronicle")}</span>
             </div>
             <p className="text-purple-100/90 text-sm sm:text-base leading-relaxed whitespace-pre-line font-gothic">
               {details.narrative}
@@ -280,7 +268,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
             {/* Death / Transition */}
             <div className="bg-purple-950/30 border border-purple-900/40 p-3.5 rounded-xl">
               <div className="text-xs font-cinzel font-semibold text-purple-300 uppercase tracking-wider mb-1 flex items-center space-x-1.5">
-                <span>Paso Terrenal</span>
+                <span>{t("pastLifeModalTransition")}</span>
               </div>
               <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed font-gothic">{details.deathTransition}</p>
             </div>
@@ -289,7 +277,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
             <div className="bg-purple-950/30 border border-purple-900/40 p-3.5 rounded-xl">
               <div className="text-xs font-cinzel font-semibold text-purple-300 uppercase tracking-wider mb-1 flex items-center space-x-1.5">
                 <Key className="w-3.5 h-3.5 text-purple-400" />
-                <span>Lección Kármica Actual</span>
+                <span>{t("pastLifeModalKarma")}</span>
               </div>
               <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed font-gothic">{details.karmicLesson}</p>
             </div>
@@ -303,7 +291,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
               </div>
               <div>
                 <div className="text-[11px] font-cinzel font-semibold text-purple-300 uppercase tracking-wider">
-                  Objeto Canalizador del Alma
+                  {t("pastLifeModalRelic")}
                 </div>
                 <div className="text-xs sm:text-sm text-purple-100 font-semibold font-gothic">{details.soulRelic}</div>
               </div>
@@ -327,14 +315,14 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>{isSaved ? "Guardado en Codex" : "Guardar en Codex del Alma"}</span>
+            <span>{isSaved ? t("pastLifeModalSaved") : t("pastLifeModalSaveCodex")}</span>
           </button>
 
           <button
             onClick={onClose}
             className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-cinzel text-xs font-semibold tracking-wide uppercase bg-neutral-900 hover:bg-neutral-800 text-purple-200 border border-purple-800/50 transition cursor-pointer"
           >
-            Cerrar Lectura
+            {t("pastLifeModalClose")}
           </button>
         </div>
       </div>
@@ -375,14 +363,9 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
                 className="w-full h-auto max-h-[70vh] object-contain"
               />
             </div>
-
-            <div className="text-xs text-purple-300 font-gothic italic text-center">
-              Representación visual canalizada desde los Registros Akáshicos para {seekerName || "el consultante"}
-            </div>
           </div>
         </div>
       )}
     </div>
   );
 };
-
