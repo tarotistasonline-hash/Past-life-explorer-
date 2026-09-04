@@ -1,14 +1,17 @@
 import React from "react";
 import { Sparkles } from "lucide-react";
+import { DailyArcana } from "../types";
 
 interface MarseilleCardArtProps {
-  cardId: number; // 0 to 21
-  romanNumber: string;
+  cardId?: number; // 0 to 21
+  romanNumber?: string;
   marseilleTitle?: string;
-  name: string;
-  colorHex: string;
+  name?: string;
+  colorHex?: string;
   isFlipping?: boolean;
   isHovered?: boolean;
+  isFlipped?: boolean;
+  arcana?: DailyArcana;
 }
 
 /**
@@ -22,10 +25,18 @@ export const MarseilleCardArt: React.FC<MarseilleCardArtProps> = ({
   colorHex,
   isFlipping = false,
   isHovered = false,
+  isFlipped = false,
+  arcana,
 }) => {
+  const actualCardId = typeof cardId === "number" ? cardId : (arcana?.id ?? 0);
+  const actualRomanNumber = romanNumber || arcana?.romanNumber || "";
+  const actualName = name || arcana?.name || "";
+  const actualMarseilleTitle = marseilleTitle || arcana?.marseilleTitle;
+  const actualColorHex = colorHex || arcana?.colorHex || "#d97706";
+
   // Render specific SVG iconography matching the traditional Tarot de Marseille woodcut iconography
   const renderMarseilleIllustration = () => {
-    switch (cardId) {
+    switch (actualCardId) {
       case 0: // LE MAT (The Fool)
         return (
           <g>
@@ -637,7 +648,7 @@ export const MarseilleCardArt: React.FC<MarseilleCardArtProps> = ({
   };
 
   const traditionalMarseilleLabel =
-    marseilleTitle ||
+    actualMarseilleTitle ||
     [
       "LE MAT",
       "LE BATELEVR",
@@ -661,8 +672,8 @@ export const MarseilleCardArt: React.FC<MarseilleCardArtProps> = ({
       "LE SOLEIL",
       "LE IVGEMENT",
       "LE MONDE",
-    ][cardId] ||
-    name.toUpperCase();
+    ][actualCardId] ||
+    (actualName ? actualName.toUpperCase() : "ARCANO");
 
   return (
     <div className="w-full h-full relative rounded-xl overflow-hidden select-none flex flex-col justify-between p-2 bg-[#f6eee0] text-[#1c1308] border-2 border-[#3d2b1f] shadow-inner font-cinzel">

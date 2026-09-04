@@ -3,8 +3,12 @@ import { DailyArcana, TarotDailyResponse } from "../types";
 import { MAJOR_ARCANA, getUniversalArcanaForDate, getRandomArcana, getLocalizedArcana } from "../lib/tarotData";
 import { MarseilleCardArt } from "./MarseilleCardArt";
 import { DeckShuffleAnimation } from "./DeckShuffleAnimation";
+import { KarmicThreeCardSpread } from "./KarmicThreeCardSpread";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
+import { isAdminSession, getAdminHeaders } from "../lib/adminTracking";
+import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
+import { downloadParchmentImage, copyMysticShareText } from "../lib/parchmentExport";
 import {
   Sparkles,
   Volume2,
@@ -21,7 +25,9 @@ import {
   Scroll,
   AudioLines,
   Shuffle,
-  Calendar
+  Calendar,
+  Layers,
+  Download
 } from "lucide-react";
 
 interface DailyTarotCardProps {
@@ -36,7 +42,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
   const [isHovered, setIsHovered] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [viewMode, setViewMode] = useState<"UNIVERSAL" | "PERSONAL">("UNIVERSAL");
+  const [viewMode, setViewMode] = useState<"UNIVERSAL" | "PERSONAL" | "KARMIC_SPREAD">("UNIVERSAL");
   const [personalName, setPersonalName] = useState("");
   const [personalFocus, setPersonalFocus] = useState("");
   const [activeTab, setActiveTab] = useState<"MESSAGE" | "MARSEILLE" | "LIGHT_SHADOW" | "ADVICE" | "MEDITATION">("MESSAGE");
@@ -46,6 +52,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
   const [narrationSection, setNarrationSection] = useState<string>("");
   
   const [isCopied, setIsCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [showArcanario, setShowArcanario] = useState(false);
   const [cosmicDateStr, setCosmicDateStr] = useState("");
 
@@ -178,6 +185,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
 
   const handleFlipCard = () => {
     if (isShuffling) return;
+    triggerHaptic(HAPTIC_PATTERNS.tarotCardFlip);
     setIsFlipping(true);
     const willBeFlipped = !isFlipped;
     
@@ -206,6 +214,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
 
   const handleShuffleDeck = () => {
     if (isShuffling) return;
+    triggerHaptic(HAPTIC_PATTERNS.tarotShuffle);
     handleStopVoice();
     setIsShuffling(true);
     setIsFlipped(false);
@@ -218,6 +227,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
       setIsShuffling(false);
       setIsFlipped(true);
       audio.playTarotReveal();
+      triggerHaptic(HAPTIC_PATTERNS.revelationUnlock);
 
       if (autoNarrateTimeoutRef.current) clearTimeout(autoNarrateTimeoutRef.current);
       autoNarrateTimeoutRef.current = setTimeout(() => {
@@ -238,12 +248,16 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     try {
       const res = await fetch("/api/tarot/draw", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAdminHeaders(),
+        },
         body: JSON.stringify({
           seekerName: personalName || "Buscador",
           focusQuery: personalFocus,
           excludeId: currentArcana.id,
           lang: language,
+          isAdmin: isAdminSession(),
         }),
       });
 
@@ -251,6 +265,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
       if (res.ok) {
         const data: TarotDailyResponse = await res.json();
         nextCard = data.arcana;
+        window.dispatchEvent(new CustomEvent("ouija-consultation-recorded"));
       } else {
         nextCard = getRandomArcana(currentArcana.id, language);
       }
@@ -316,15 +331,33 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     }, 600);
   };
 
-  const handleCopyMessage = () => {
-    const text = `✨ Arcano: ${currentArcana.marseilleTitle || currentArcana.name} (${currentArcana.romanNumber}) ✨\nArquetipo: ${currentArcana.archetype}\nElemento: ${currentArcana.element} • ${currentArcana.astrologicalSign}\n\n📜 ${t("tarotDailyMessage")}: ${currentArcana.dailyMessage}\n\n🌟 ${t("tarotPracticalAdvice")}: ${currentArcana.practicalAdvice}\n\n🔮 ${t("tarotDailyAffirmation")}: "${currentArcana.dailyAffirmation}"`;
-    navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2500);
+  const handleCopyMessage = async () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    const body = `🏛️ *Arquetipo:* ${currentArcana.archetype}\n🔮 *Elemento:* ${currentArcana.element} • ${currentArcana.astrologicalSign}\n\n📜 *Mensaje:* ${currentArcana.dailyMessage}\n\n🌟 *Consejo Práctico:* ${currentArcana.practicalAdvice}\n\n💫 *Afirmación:* "${currentArcana.dailyAffirmation}"`;
+    const ok = await copyMysticShareText({
+      title: `${currentArcana.marseilleTitle || currentArcana.name} (${currentArcana.romanNumber})`,
+      seekerName: personalName || "Alma Buscadora",
+      bodyText: body,
+      type: "TAROT",
+    });
+    if (ok) {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+    }
+  };
+
+  const handleDownloadParchment = async () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    setIsDownloading(true);
+    await downloadParchmentImage("daily-tarot-card-parchment", `arcano-${currentArcana.name.toLowerCase().replace(/\s+/g, "_")}.png`);
+    setIsDownloading(false);
   };
 
   return (
-    <section className="w-full max-w-4xl bg-[#0d0718]/90 border border-purple-800/50 rounded-3xl p-4 sm:p-7 backdrop-blur-xl shadow-2xl relative overflow-hidden my-4 text-purple-100">
+    <section 
+      id="daily-tarot-card-parchment"
+      className="w-full max-w-4xl bg-[#0d0718]/90 border border-purple-800/50 rounded-3xl p-4 sm:p-7 backdrop-blur-xl shadow-2xl relative overflow-hidden my-4 text-purple-100"
+    >
       {/* Mystical Background Radiant Aura */}
       <div
         className="absolute -top-24 -right-24 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none transition-colors duration-1000"
@@ -406,11 +439,27 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
           >
             {t("tarotPersonalDrawTitle")}
           </button>
+          <button
+            onClick={() => setViewMode("KARMIC_SPREAD")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
+              viewMode === "KARMIC_SPREAD"
+                ? "bg-gradient-to-r from-indigo-700 to-purple-800 text-indigo-100 shadow-md border border-indigo-400/50"
+                : "bg-purple-950/40 text-purple-400 hover:text-purple-200"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-indigo-300" />
+            <span>Tirada 3 Cartas</span>
+          </button>
         </div>
       </div>
 
-      {/* Personal Draw Form If Personal Mode */}
-      {viewMode === "PERSONAL" && (
+      {/* Render 3-Card Karmic Spread If Selected */}
+      {viewMode === "KARMIC_SPREAD" ? (
+        <KarmicThreeCardSpread onSendToOuija={onSendToOuija} />
+      ) : (
+        <>
+          {/* Personal Draw Form If Personal Mode */}
+          {viewMode === "PERSONAL" && (
         <form
           onSubmit={handleDrawPersonalCard}
           className="mb-6 p-4 rounded-2xl bg-black/40 border border-purple-900/60 flex flex-col sm:flex-row items-center gap-3 animate-fade-in"
@@ -816,10 +865,21 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
               </button>
             )}
 
+            {/* Download Parchment Button */}
+            <button
+              onClick={handleDownloadParchment}
+              disabled={isDownloading}
+              className="px-3.5 py-2 rounded-xl bg-amber-950/70 hover:bg-amber-900 border border-amber-600/50 text-amber-200 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer ml-auto"
+              title="Descargar Carta como Pergamino PNG"
+            >
+              <Download className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isDownloading ? "Generando..." : "Descargar PNG"}</span>
+            </button>
+
             {/* Copy / Share Button */}
             <button
               onClick={handleCopyMessage}
-              className="px-3.5 py-2 rounded-xl bg-black/60 hover:bg-purple-950 border border-purple-800 text-purple-300 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer ml-auto"
+              className="px-3.5 py-2 rounded-xl bg-black/60 hover:bg-purple-950 border border-purple-800 text-purple-300 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer"
             >
               {isCopied ? (
                 <>
@@ -889,6 +949,8 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
             })}
           </div>
         </div>
+      )}
+        </>
       )}
     </section>
   );

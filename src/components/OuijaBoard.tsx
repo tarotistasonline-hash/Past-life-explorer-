@@ -3,6 +3,7 @@ import { LetterCoord, BoardMode } from "../types";
 import { BOARD_COORDS, getCoordForChar } from "../lib/constants";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
+import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { Sparkles, Compass, Volume2, Eye } from "lucide-react";
 
 interface OuijaBoardProps {
@@ -57,6 +58,7 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
       setPlanchettePos({ x: coord.x, y: coord.y });
       setActiveChar(coord.char);
       audio.playWoodSlide();
+      triggerHaptic(HAPTIC_PATTERNS.planchetteLetter);
 
       if (char !== " ") {
         history.push(char);
@@ -75,6 +77,7 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
     setActiveChar(finalCoord.char);
     audio.playChime(432);
     audio.playMysticSwell();
+    triggerHaptic(HAPTIC_PATTERNS.planchetteWordEnd);
 
     await new Promise((r) => setTimeout(r, 800));
     setIsSpelling(false);

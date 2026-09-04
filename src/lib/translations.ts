@@ -23,6 +23,12 @@ export interface TranslationDictionary {
   portalOfficialRecord: string;
   portalRecordDesc: string;
   closeRecord: string;
+  creatorModeTitle: string;
+  creatorModeActive: string;
+  creatorModeInactive: string;
+  creatorModeDesc: string;
+  toggleCreatorModeBtn: string;
+  creatorModeBadge: string;
   solemnVoice: string;
   etherealMusic: string;
   mysticFog: string;
@@ -221,6 +227,12 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     portalOfficialRecord: "Registro Oficial del Portal",
     portalRecordDesc: "Este contador registra en tiempo real cada alma que accede al oráculo y realiza una consulta de vidas pasadas a través de la tabla Ouija.",
     closeRecord: "Cerrar Registro",
+    creatorModeTitle: "Filtro de Tráfico (Modo Creador)",
+    creatorModeActive: "Tus visitas están excluidas del contador",
+    creatorModeInactive: "Tus visitas se cuentan como tráfico público",
+    creatorModeDesc: "Al estar activo, tus aperturas de página y pruebas en el oráculo no alteran las estadísticas reales de tus usuarios.",
+    toggleCreatorModeBtn: "Alternar Exclusión de Mis Visitas",
+    creatorModeBadge: "Creador (Excluido)",
     solemnVoice: "Voz Solemne",
     etherealMusic: "Música Ethereal",
     mysticFog: "Bruma Mística",
@@ -408,6 +420,12 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     portalOfficialRecord: "Official Portal Registry",
     portalRecordDesc: "This counter registers in real time every soul that accesses the oracle and conducts a past life consultation through the Ouija board.",
     closeRecord: "Close Registry",
+    creatorModeTitle: "Traffic Filter (Creator Mode)",
+    creatorModeActive: "Your visits are excluded from metrics",
+    creatorModeInactive: "Your visits are counted as public traffic",
+    creatorModeDesc: "When active, your page views and test inquiries do not affect your visitors' real analytics.",
+    toggleCreatorModeBtn: "Toggle My Visits Exclusion",
+    creatorModeBadge: "Creator (Excluded)",
     solemnVoice: "Solemn Voice",
     etherealMusic: "Ethereal Music",
     mysticFog: "Mystic Mist",
@@ -595,6 +613,12 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     portalOfficialRecord: "Registro Oficial do Portal",
     portalRecordDesc: "Este contador registra em tempo real cada alma que acessa o oráculo e realiza uma consulta de vidas passadas pelo tabuleiro Ouija.",
     closeRecord: "Fechar Registro",
+    creatorModeTitle: "Filtro de Tráfego (Modo Criador)",
+    creatorModeActive: "Suas visitas estão excluídas das métricas",
+    creatorModeInactive: "Suas visitas são contadas como tráfego público",
+    creatorModeDesc: "Quando ativo, suas aberturas e testes no oráculo não alteram as estatísticas reais dos usuários.",
+    toggleCreatorModeBtn: "Alternar Exclusão de Minhas Visitas",
+    creatorModeBadge: "Criador (Excluído)",
     solemnVoice: "Voz Solene",
     etherealMusic: "Música Etérea",
     mysticFog: "Névoa Mística",
@@ -782,6 +806,12 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     portalOfficialRecord: "Registre Officiel du Portail",
     portalRecordDesc: "Ce compteur enregistre en temps réel chaque âme qui accède à l'oracle et effectue une consultation de vie antérieure via la planche Ouija.",
     closeRecord: "Fermer le Registre",
+    creatorModeTitle: "Filtre de Trafic (Mode Créateur)",
+    creatorModeActive: "Vos visites sont exclues des métriques",
+    creatorModeInactive: "Vos visites sont comptées comme trafic public",
+    creatorModeDesc: "Lorsqu'il est actif, vos ouvertures de page et tests n'affectent pas les statistiques réelles des visiteurs.",
+    toggleCreatorModeBtn: "Basculer l'Exclusion de Mes Visites",
+    creatorModeBadge: "Créateur (Exclu)",
     solemnVoice: "Voix Solennelle",
     etherealMusic: "Musique Éthérée",
     mysticFog: "Brume Mystique",
@@ -969,6 +999,12 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     portalOfficialRecord: "Registro Ufficiale del Portale",
     portalRecordDesc: "Questo contatore registra in tempo reale ogni anima che accede all'oracolo ed esegue una consultazione di vite passate tramite la tavola Ouija.",
     closeRecord: "Chiudi Registro",
+    creatorModeTitle: "Filtro di Traffico (Modo Creatore)",
+    creatorModeActive: "Le tue visite sono escluse dalle metriche",
+    creatorModeInactive: "Le tue visite sono contate come traffico pubblico",
+    creatorModeDesc: "Quando attivo, le tue visite e test non modificano le statistiche reali dei visitatori.",
+    toggleCreatorModeBtn: "Attiva/Disattiva Esclusione Mie Visite",
+    creatorModeBadge: "Creatore (Escluso)",
     solemnVoice: "Voce Solenne",
     etherealMusic: "Musica Eterea",
     mysticFog: "Nebbia Mistica",
@@ -1156,6 +1192,12 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     portalOfficialRecord: "Offizielles Portal-Register",
     portalRecordDesc: "Dieser Zähler erfasst in Echtzeit jede Seele, die auf das Orakel zugreift und eine Reinkarnationsabfrage über das Ouija-Brett durchführt.",
     closeRecord: "Register Schließen",
+    creatorModeTitle: "Verkehrsfilter (Entwicklermodus)",
+    creatorModeActive: "Ihre Besuche sind von Metriken ausgeschlossen",
+    creatorModeInactive: "Ihre Besuche werden als öffentlicher Verkehr gezählt",
+    creatorModeDesc: "Wenn aktiv, beeinflussen Ihre Seitenaufrufe und Tests nicht die realen Statistiken der Besucher.",
+    toggleCreatorModeBtn: "Ausschluss Meiner Besuche Umschalten",
+    creatorModeBadge: "Entwickler (Exkludiert)",
     solemnVoice: "Feierliche Stimme",
     etherealMusic: "Ätherische Musik",
     mysticFog: "Mystischer Nebel",

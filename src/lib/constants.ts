@@ -52,7 +52,10 @@ export const BOARD_COORDS: Record<string, LetterCoord> = {
   "0": { char: "0", x: 81, y: 73 },
 };
 
-export function getCoordForChar(c: string): LetterCoord {
+export function getCoordForChar(c?: string | null): LetterCoord {
+  if (!c || typeof c !== "string") {
+    return BOARD_COORDS["HOME"] || { char: "HOME", x: 50, y: 50 };
+  }
   const upper = c.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (BOARD_COORDS[upper]) {
     return BOARD_COORDS[upper];

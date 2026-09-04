@@ -8,9 +8,47 @@ import { AtmosphereControls } from "./components/AtmosphereControls";
 import { WelcomeVoiceModal } from "./components/WelcomeVoiceModal";
 import { DailyTarotCard } from "./components/DailyTarotCard";
 import { MysticCoffeeOffer } from "./components/MysticCoffeeOffer";
+import { GrimorioModal } from "./components/GrimorioModal";
+import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
 import { ShieldAlert, Volume2, Eye, Sparkles, Radio, BookOpen, Layers, Coffee, Globe } from "lucide-react";
 import { audio } from "./lib/audio";
+import { isAdminSession, getAdminHeaders } from "./lib/adminTracking";
+
+const CACHE_VISITS_KEY = "ouija_real_visits_clean";
+
+const getInitialVisitsStats = (): VisitsStats => {
+  if (typeof window !== "undefined") {
+    try {
+      // Remove any legacy simulation keys
+      localStorage.removeItem("ouija_cached_visits_stats");
+      localStorage.removeItem("ouija_cached_visits_stats_v2");
+      localStorage.removeItem("ouija_cached_real_visits_v3");
+
+      const cached = localStorage.getItem(CACHE_VISITS_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed.totalVisits === "number") {
+          return {
+            totalVisits: Number(parsed.totalVisits) || 0,
+            todayVisits: Number(parsed.todayVisits) || 0,
+            totalConsultations: Number(parsed.totalConsultations) || 0,
+            uniqueVisitorsCount: Number(parsed.uniqueVisitorsCount) || 0,
+            lastUpdated: parsed.lastUpdated || new Date().toISOString(),
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("Could not read cached visits", e);
+    }
+  }
+  return {
+    totalVisits: 0,
+    todayVisits: 0,
+    totalConsultations: 0,
+    uniqueVisitorsCount: 0,
+  };
+};
 
 export default function App() {
   const { t, language, setLanguage, options } = useLanguage();
@@ -23,11 +61,12 @@ export default function App() {
   const [seekerName, setSeekerName] = useState("Buscador");
   const [savedRecords, setSavedRecords] = useState<PastLifeRevelation[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [visitsStats, setVisitsStats] = useState<VisitsStats | null>(null);
+  const [visitsStats, setVisitsStats] = useState<VisitsStats>(getInitialVisitsStats);
   const [prefilledOuijaQuestion, setPrefilledOuijaQuestion] = useState("");
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
     return !sessionStorage.getItem("ouija_welcome_dismissed");
   });
+  const [showGrimorioModal, setShowGrimorioModal] = useState(false);
 
   const handleCloseWelcome = () => {
     setIsWelcomeOpen(false);
@@ -39,18 +78,43 @@ export default function App() {
 
   const locale = language === "en" ? "en-US" : language === "pt" ? "pt-BR" : language === "fr" ? "fr-FR" : language === "it" ? "it-IT" : language === "de" ? "de-DE" : "es-AR";
 
-  // Record visitor count and retrieve real stats
+  // Exact real visit updater from server with monotonic protection
+  const mergeVisitsStats = useCallback((incoming?: Partial<VisitsStats> | null) => {
+    if (!incoming) return;
+    setVisitsStats((prev) => {
+      const incomingTotal = typeof incoming.totalVisits === "number" ? incoming.totalVisits : 0;
+      const incomingToday = typeof incoming.todayVisits === "number" ? incoming.todayVisits : 0;
+      const incomingConsultations = typeof incoming.totalConsultations === "number" ? incoming.totalConsultations : 0;
+      const incomingUniques = typeof incoming.uniqueVisitorsCount === "number" ? incoming.uniqueVisitorsCount : 0;
+
+      const next: VisitsStats = {
+        totalVisits: Math.max(prev.totalVisits, incomingTotal),
+        todayVisits: Math.max(prev.todayVisits, incomingToday),
+        totalConsultations: Math.max(prev.totalConsultations, incomingConsultations),
+        uniqueVisitorsCount: Math.max(prev.uniqueVisitorsCount, incomingUniques),
+        lastUpdated: incoming.lastUpdated || new Date().toISOString(),
+      };
+      try {
+        localStorage.setItem(CACHE_VISITS_KEY, JSON.stringify(next));
+      } catch (e) {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  // Fetch real statistics with monotonic hints
   const fetchVisitsStats = useCallback(async () => {
     try {
       const res = await fetch("/api/visits");
       if (res.ok) {
         const data = await res.json();
-        setVisitsStats(data);
+        mergeVisitsStats(data);
       }
     } catch (e) {
       console.warn("Could not fetch visits stats:", e);
     }
-  }, []);
+  }, [mergeVisitsStats]);
 
   useEffect(() => {
     const registerVisit = async () => {
@@ -66,15 +130,26 @@ export default function App() {
           sessionStorage.setItem("ouija_session_logged", "true");
         }
 
+        const initialStats = getInitialVisitsStats();
+        const isAdmin = isAdminSession();
         const res = await fetch("/api/visits/hit", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ visitorId, isNewSession }),
+          headers: {
+            "Content-Type": "application/json",
+            ...getAdminHeaders(),
+          },
+          body: JSON.stringify({
+            visitorId,
+            isNewSession,
+            isAdmin,
+            clientKnownTotal: initialStats.totalVisits,
+            clientKnownConsultations: initialStats.totalConsultations,
+          }),
         });
 
         if (res.ok) {
           const stats = await res.json();
-          setVisitsStats(stats);
+          mergeVisitsStats(stats);
         } else {
           fetchVisitsStats();
         }
@@ -85,6 +160,22 @@ export default function App() {
     };
 
     registerVisit();
+
+    // Regular dynamic polling for live visitor updates (every 8 seconds)
+    const visitsInterval = setInterval(() => {
+      fetchVisitsStats();
+    }, 8000);
+
+    return () => clearInterval(visitsInterval);
+  }, [fetchVisitsStats, mergeVisitsStats]);
+
+  // Listen for real-time consultation events across components
+  useEffect(() => {
+    const handleConsultationEvent = () => {
+      fetchVisitsStats();
+    };
+    window.addEventListener("ouija-consultation-recorded", handleConsultationEvent);
+    return () => window.removeEventListener("ouija-consultation-recorded", handleConsultationEvent);
   }, [fetchVisitsStats]);
 
   // Load saved codex records from localStorage
@@ -116,6 +207,9 @@ export default function App() {
     } catch (e) {
       console.warn("Failed to save codex", e);
     }
+
+    // Save into central Grimorio
+    savePastLifeToGrimorio(newRecord, locale);
   };
 
   const handleClearCodex = () => {
@@ -142,8 +236,11 @@ export default function App() {
     try {
       const res = await fetch("/api/ouija/past-life", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, lang: language }),
+        headers: {
+          "Content-Type": "application/json",
+          ...getAdminHeaders(),
+        },
+        body: JSON.stringify({ ...data, lang: language, isAdmin: isAdminSession() }),
       });
 
       if (!res.ok) {
@@ -173,8 +270,11 @@ export default function App() {
     try {
       const res = await fetch("/api/ouija/spirit-question", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, seekerName: name, lang: language }),
+        headers: {
+          "Content-Type": "application/json",
+          ...getAdminHeaders(),
+        },
+        body: JSON.stringify({ question, seekerName: name, lang: language, isAdmin: isAdminSession() }),
       });
 
       if (!res.ok) {
@@ -260,6 +360,7 @@ export default function App() {
         fogOn={fogOn}
         setFogOn={setFogOn}
         onOpenWelcome={() => setIsWelcomeOpen(true)}
+        onOpenGrimorio={() => setShowGrimorioModal(true)}
         visitsStats={visitsStats}
       />
 
@@ -311,6 +412,15 @@ export default function App() {
         >
           <BookOpen className="w-3.5 h-3.5 text-purple-400" />
           <span>{t("navCodex")} ({savedRecords.length})</span>
+        </button>
+
+        <button
+          onClick={() => setShowGrimorioModal(true)}
+          className="px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap bg-purple-950/60 hover:bg-purple-900 border border-purple-700/60 text-purple-200"
+          title="Abrir Grimorio Personal"
+        >
+          <BookOpen className="w-3.5 h-3.5 text-purple-300" />
+          <span>Grimorio</span>
         </button>
       </nav>
 
@@ -428,6 +538,14 @@ export default function App() {
         isOpen={isWelcomeOpen}
         onClose={handleCloseWelcome}
       />
+
+      {/* Grimorio Personal / Archivo de Ecos Modal */}
+      {showGrimorioModal && (
+        <GrimorioModal
+          isOpen={showGrimorioModal}
+          onClose={() => setShowGrimorioModal(false)}
+        />
+      )}
 
       {/* Section: Mystic Coffee Offering / Invitación a Cafecito */}
       <MysticCoffeeOffer />

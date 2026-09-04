@@ -348,7 +348,7 @@ class OuijaAudioEngine {
 
     // Language-specific voices filter
     const langVoices = voices.filter(v => 
-      v.lang.toLowerCase().startsWith(langPrefix)
+      (v?.lang || "").toLowerCase().startsWith(langPrefix)
     );
 
     // Male keywords
@@ -365,8 +365,8 @@ class OuijaAudioEngine {
 
     // Priority 1: Specifically matched language male voice
     const matchedMale = langVoices.find(v => {
-      const name = v.name.toLowerCase();
-      const uri = v.voiceURI.toLowerCase();
+      const name = (v?.name || "").toLowerCase();
+      const uri = (v?.voiceURI || "").toLowerCase();
       const isMale = maleKeywords.some(k => name.includes(k) || uri.includes(k));
       const isFemale = femaleNames.some(f => name.includes(f) || uri.includes(f));
       return isMale && !isFemale;
@@ -375,8 +375,8 @@ class OuijaAudioEngine {
 
     // Priority 2: Language voice strictly avoiding female keywords
     const strictlyNonFemale = langVoices.find(v => {
-      const name = v.name.toLowerCase();
-      const uri = v.voiceURI.toLowerCase();
+      const name = (v?.name || "").toLowerCase();
+      const uri = (v?.voiceURI || "").toLowerCase();
       const isFemale = femaleNames.some(f => name.includes(f) || uri.includes(f));
       return !isFemale;
     });
@@ -386,8 +386,8 @@ class OuijaAudioEngine {
 
     // Fallback: any male voice on device
     const anyDeviceMaleVoice = voices.find(v => {
-      const name = v.name.toLowerCase();
-      const uri = v.voiceURI.toLowerCase();
+      const name = (v?.name || "").toLowerCase();
+      const uri = (v?.voiceURI || "").toLowerCase();
       const isMale = maleKeywords.some(k => name.includes(k) || uri.includes(k));
       const isFemale = femaleNames.some(f => name.includes(f) || uri.includes(f));
       return isMale && !isFemale;
@@ -415,16 +415,16 @@ class OuijaAudioEngine {
       "male", "hombre", "masculino"
     ];
 
-    const prefix = targetLang.slice(0, 2).toLowerCase();
+    const prefix = (targetLang || "es").slice(0, 2).toLowerCase();
 
     return voices
-      .filter(v => v.lang.toLowerCase().startsWith(prefix))
-      .filter(v => !femaleNames.some(f => v.name.toLowerCase().includes(f)))
+      .filter(v => (v?.lang || "").toLowerCase().startsWith(prefix))
+      .filter(v => !femaleNames.some(f => (v?.name || "").toLowerCase().includes(f)))
       .map(v => ({
         name: v.name,
         lang: v.lang,
         voiceURI: v.voiceURI,
-        isPreferredMale: maleKeywords.some(k => v.name.toLowerCase().includes(k)),
+        isPreferredMale: maleKeywords.some(k => (v?.name || "").toLowerCase().includes(k)),
       }));
   }
 

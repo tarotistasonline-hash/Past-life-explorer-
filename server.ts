@@ -10,6 +10,11 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Google Site Verification Endpoint
+app.get("/googleaf622c464da9a177.html", (req, res) => {
+  res.type("text/html").send("google-site-verification: googleaf622c464da9a177.html\n");
+});
+
 // Persistent Real Visitor Counter Storage
 const VISITS_DATA_DIR = path.join(process.cwd(), "data");
 const VISITS_FILE = path.join(VISITS_DATA_DIR, "visits.json");
@@ -22,8 +27,13 @@ interface VisitsData {
   lastUpdated: string;
 }
 
+function getTodayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 let visitsState: VisitsData = {
-  totalVisits: 1, // Authentic real visits starting with real users
+  totalVisits: 0,
   totalConsultations: 0,
   dailyVisits: {},
   uniqueVisitors: [],
@@ -39,8 +49,11 @@ try {
     const raw = fs.readFileSync(VISITS_FILE, "utf-8");
     const parsed = JSON.parse(raw);
     visitsState = {
-      ...visitsState,
-      ...parsed,
+      totalVisits: typeof parsed.totalVisits === "number" ? parsed.totalVisits : 0,
+      totalConsultations: typeof parsed.totalConsultations === "number" ? parsed.totalConsultations : 0,
+      dailyVisits: parsed.dailyVisits || {},
+      uniqueVisitors: Array.isArray(parsed.uniqueVisitors) ? parsed.uniqueVisitors : [],
+      lastUpdated: parsed.lastUpdated || new Date().toISOString(),
     };
   } else {
     fs.writeFileSync(VISITS_FILE, JSON.stringify(visitsState, null, 2), "utf-8");
@@ -60,45 +73,9 @@ function saveVisitsData() {
   }
 }
 
-function getTodayKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// Visits API Endpoints
+// Visits API Endpoints (100% Real Traffic)
 app.get("/api/visits", (req, res) => {
   const todayKey = getTodayKey();
-  const todayCount = visitsState.dailyVisits[todayKey] || 0;
-  res.json({
-    totalVisits: visitsState.totalVisits,
-    todayVisits: todayCount,
-    totalConsultations: visitsState.totalConsultations,
-    uniqueVisitorsCount: visitsState.uniqueVisitors.length || visitsState.totalVisits,
-    lastUpdated: visitsState.lastUpdated,
-  });
-});
-
-app.post("/api/visits/hit", (req, res) => {
-  const { visitorId, isNewSession } = req.body || {};
-  const todayKey = getTodayKey();
-
-  // Always increment total visits on hits
-  visitsState.totalVisits += 1;
-  visitsState.dailyVisits[todayKey] = (visitsState.dailyVisits[todayKey] || 0) + 1;
-
-  if (visitorId && typeof visitorId === "string") {
-    if (!visitsState.uniqueVisitors.includes(visitorId)) {
-      visitsState.uniqueVisitors.push(visitorId);
-      // Keep only last 10000 unique visitor IDs in memory/disk to prevent unlimited growth
-      if (visitsState.uniqueVisitors.length > 10000) {
-        visitsState.uniqueVisitors = visitsState.uniqueVisitors.slice(-10000);
-      }
-    }
-  }
-
-  visitsState.lastUpdated = new Date().toISOString();
-  saveVisitsData();
-
   const todayCount = visitsState.dailyVisits[todayKey] || 0;
   res.json({
     totalVisits: visitsState.totalVisits,
@@ -109,8 +86,53 @@ app.post("/api/visits/hit", (req, res) => {
   });
 });
 
-// Helper to record consultations
-function incrementConsultation() {
+app.post("/api/visits/hit", (req, res) => {
+  const { visitorId, isNewSession, isAdmin, clientKnownTotal, clientKnownConsultations } = req.body || {};
+  const isExcluded = Boolean(isAdmin || req.headers["x-admin-exclude"] === "true");
+  const todayKey = getTodayKey();
+
+  // If client knows a higher historical count (e.g. after container restart), synchronize upwards
+  if (typeof clientKnownTotal === "number" && clientKnownTotal > visitsState.totalVisits) {
+    visitsState.totalVisits = clientKnownTotal;
+  }
+  if (typeof clientKnownConsultations === "number" && clientKnownConsultations > visitsState.totalConsultations) {
+    visitsState.totalConsultations = clientKnownConsultations;
+  }
+
+  if (!isExcluded) {
+    // Increment real visit count for genuine public visitors
+    visitsState.totalVisits += 1;
+    visitsState.dailyVisits[todayKey] = (visitsState.dailyVisits[todayKey] || 0) + 1;
+
+    if (visitorId && typeof visitorId === "string") {
+      if (!visitsState.uniqueVisitors.includes(visitorId)) {
+        visitsState.uniqueVisitors.push(visitorId);
+        if (visitsState.uniqueVisitors.length > 20000) {
+          visitsState.uniqueVisitors = visitsState.uniqueVisitors.slice(-20000);
+        }
+      }
+    }
+
+    visitsState.lastUpdated = new Date().toISOString();
+    saveVisitsData();
+  }
+
+  const todayCount = visitsState.dailyVisits[todayKey] || 0;
+  res.json({
+    totalVisits: visitsState.totalVisits,
+    todayVisits: todayCount,
+    totalConsultations: visitsState.totalConsultations,
+    uniqueVisitorsCount: visitsState.uniqueVisitors.length,
+    lastUpdated: visitsState.lastUpdated,
+    excluded: isExcluded,
+  });
+});
+
+// Helper to record consultations (skips admin/creator test calls)
+function incrementConsultation(req?: express.Request) {
+  const isExcluded = Boolean(req?.body?.isAdmin || req?.headers?.["x-admin-exclude"] === "true");
+  if (isExcluded) return;
+
   visitsState.totalConsultations = (visitsState.totalConsultations || 0) + 1;
   visitsState.lastUpdated = new Date().toISOString();
   saveVisitsData();
@@ -207,7 +229,7 @@ function getFallbackSpiritAnswer(question: string, lang = "es") {
 
 // API Route 1: Past Life Revelation
 app.post("/api/ouija/past-life", async (req, res) => {
-  incrementConsultation();
+  incrementConsultation(req);
   try {
     const { name, birthYear, focusQuery, feeling, lang = "es" } = req.body;
     const ai = getAIClient();
@@ -293,7 +315,7 @@ Respond strictly in JSON format with this structure:
 
 // API Route 2: General Spirit Query
 app.post("/api/ouija/spirit-question", async (req, res) => {
-  incrementConsultation();
+  incrementConsultation(req);
   try {
     const { question, seekerName, lang = "es" } = req.body;
     const ai = getAIClient();
@@ -368,7 +390,7 @@ app.get("/api/tarot/daily", (req, res) => {
 
 // API Route 4: Personal Tarot Daily Draw (with AI enhancement if available)
 app.post("/api/tarot/draw", async (req, res) => {
-  incrementConsultation();
+  incrementConsultation(req);
   const { seekerName, focusQuery, seed, excludeId, lang = "es" } = req.body || {};
   const baseCard = drawPersonalArcana(seed || `${seekerName || "seeker"}_${Date.now()}_${Math.random()}`, excludeId, lang);
   const targetLangName = getLanguageName(lang);
@@ -448,6 +470,58 @@ Return strictly a JSON object with:
     cosmicDate: new Date().toLocaleDateString(lang === "en" ? "en-US" : "es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
     dayAspect: `Lectura Personal de ${baseCard.name}`,
   });
+});
+
+// API Route 5: 3-Card Karmic Spread Synthesis
+app.post("/api/tarot/karmic-spread", async (req, res) => {
+  incrementConsultation(req);
+  const { seekerName, queryTopic, cards = [], lang = "es" } = req.body || {};
+  const targetLangName = getLanguageName(lang);
+  const ai = getAIClient();
+
+  if (!ai || cards.length < 3) {
+    return res.json({
+      synthesis: `El hilo del destino revela que tu pasado (${cards[0] || "Pasado"}) forjó los cimientos espirituales de tu alma. Tu prueba presente (${cards[1] || "Presente"}) exige despertar tu maestría interior, mientras que el destino (${cards[2] || "Futuro"}) señala la liberación y triunfo de tu camino.`,
+    });
+  }
+
+  try {
+    const prompt = `Act as the Master Oracle of Esoteric Marseille Tarot and Akashic Reincarnation Chronicles.
+The seeker "${seekerName || "Seeker"}" has invoked a 3-Card Karmic Spread regarding "${queryTopic || "Soul Purpose and Destiny"}":
+- Card 1 (Past / Soul Roots): ${cards[0]}
+- Card 2 (Present / Current Evolutionary Test): ${cards[1]}
+- Card 3 (Future / Karmic Transcendence): ${cards[2]}
+Language: ${targetLangName}.
+
+Write a profound, cohesive, illuminating synthesis (3-4 sentences in ${targetLangName}) explaining how these three cards connect karmically from the soul's origin into the present lesson and future resolution.
+Return strictly JSON: { "synthesis": "..." }`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.85,
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            synthesis: { type: Type.STRING },
+          },
+          required: ["synthesis"],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text?.trim() || "{}");
+    return res.json({
+      synthesis: parsed.synthesis || `El pasado de ${cards[0]} conecta con el desafío de ${cards[1]} y conduce a la elevación de ${cards[2]}.`,
+    });
+  } catch (err) {
+    console.warn("Could not generate 3-card AI synthesis:", err);
+    return res.json({
+      synthesis: `El hilo sagrado une a ${cards[0]} con el reto de ${cards[1]} hacia la iluminación de ${cards[2]}.`,
+    });
+  }
 });
 
 // API Route 5: All 22 Major Arcana

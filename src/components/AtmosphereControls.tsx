@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Mic, Play, Check } from "lucide-react";
+import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Mic, Play, Check, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen } from "lucide-react";
 import { audio, VoiceOption } from "../lib/audio";
 import { VisitsStats } from "../types";
 import { useLanguage } from "../context/LanguageContext";
 import { LanguageSelector } from "./LanguageSelector";
+import { MoonPhaseWidget } from "./MoonPhaseWidget";
+import { isAdminSession, setAdminSession } from "../lib/adminTracking";
+import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 
 interface AtmosphereControlsProps {
   fogOn: boolean;
   setFogOn: (on: boolean) => void;
   onOpenWelcome: () => void;
+  onOpenGrimorio?: () => void;
   visitsStats: VisitsStats | null;
 }
 
@@ -16,6 +20,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   fogOn,
   setFogOn,
   onOpenWelcome,
+  onOpenGrimorio,
   visitsStats,
 }) => {
   const { t, language } = useLanguage();
@@ -27,6 +32,46 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   const [availableVoices, setAvailableVoices] = useState<VoiceOption[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
   const [isPlayingTestVoice, setIsPlayingTestVoice] = useState(false);
+  const [isCreatorMode, setIsCreatorMode] = useState<boolean>(() => isAdminSession());
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleCreatorModeChange = (e: any) => {
+      if (e?.detail?.isAdmin !== undefined) {
+        setIsCreatorMode(e.detail.isAdmin);
+      } else {
+        setIsCreatorMode(isAdminSession());
+      }
+    };
+
+    window.addEventListener("ouija-creator-mode-change", handleCreatorModeChange);
+    return () => window.removeEventListener("ouija-creator-mode-change", handleCreatorModeChange);
+  }, []);
+
+  const handleToggleCreatorMode = () => {
+    const nextVal = !isCreatorMode;
+    setIsCreatorMode(nextVal);
+    setAdminSession(nextVal);
+  };
 
   useEffect(() => {
     const loadVoices = () => {
@@ -67,9 +112,11 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
 
   const locale = language === "en" ? "en-US" : language === "pt" ? "pt-BR" : language === "fr" ? "fr-FR" : language === "it" ? "it-IT" : language === "de" ? "de-DE" : "es-AR";
 
-  const formattedVisits = visitsStats?.totalVisits !== undefined
-    ? visitsStats.totalVisits.toLocaleString(locale)
-    : "1";
+  const totalVisitsVal = visitsStats?.totalVisits ?? 0;
+  const todayVisitsVal = visitsStats?.todayVisits ?? 0;
+  const totalConsultationsVal = visitsStats?.totalConsultations ?? 0;
+
+  const formattedVisits = totalVisitsVal.toLocaleString(locale);
 
   return (
     <>
@@ -104,10 +151,31 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             <Eye className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-100 transition" />
             <span className="font-cinzel font-semibold text-purple-100">{formattedVisits}</span>
             <span className="hidden md:inline text-[11px] text-purple-300/80">{t("realVisits")}</span>
+            {isCreatorMode && (
+              <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] font-sans font-medium" title={t("creatorModeActive")}>
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                <span className="hidden lg:inline">{t("creatorModeBadge")}</span>
+              </span>
+            )}
           </button>
 
           {/* Language Selector Dropdown */}
           <LanguageSelector />
+
+          {/* Moon Phase Real-time Widget */}
+          <MoonPhaseWidget />
+
+          {/* Grimorio Personal / Ecos del Alma Trigger */}
+          {onOpenGrimorio && (
+            <button
+              onClick={onOpenGrimorio}
+              title="Abrir Grimorio Personal (Lecturas Guardadas)"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-purple-700/60 bg-purple-950/70 hover:bg-purple-900 text-purple-200 flex items-center space-x-1.5 transition cursor-pointer shadow-sm"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-purple-300" />
+              <span className="hidden lg:inline text-[11px] font-cinzel font-semibold">Grimorio</span>
+            </button>
+          )}
 
           {/* Solemn Male Voice Settings Button */}
           <button
@@ -143,6 +211,15 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             }`}
           >
             {!isAudioMuted ? <Volume2 className="w-4 h-4 text-purple-300" /> : <VolumeX className="w-4 h-4" />}
+          </button>
+
+          {/* Fullscreen / Ambient Ritual Mode */}
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Salir de Pantalla Completa" : "Modo Ritual / Pantalla Completa"}
+            className="p-2 rounded-xl border border-purple-800/60 bg-purple-950/50 hover:bg-purple-900 text-purple-300 flex items-center transition cursor-pointer"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-amber-300" /> : <Maximize2 className="w-4 h-4 text-purple-300" />}
           </button>
 
           {/* Fog Toggle */}
@@ -200,7 +277,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
                   {t("totalRealVisits")}
                 </span>
                 <span className="text-2xl font-cinzel font-bold text-purple-100 mt-1 block">
-                  {visitsStats?.totalVisits !== undefined ? visitsStats.totalVisits.toLocaleString(locale) : "1"}
+                  {totalVisitsVal.toLocaleString(locale)}
                 </span>
               </div>
 
@@ -209,7 +286,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
                   {t("visitsToday")}
                 </span>
                 <span className="text-2xl font-cinzel font-bold text-purple-100 mt-1 block">
-                  {visitsStats?.todayVisits !== undefined ? visitsStats.todayVisits.toLocaleString(locale) : "1"}
+                  {todayVisitsVal.toLocaleString(locale)}
                 </span>
               </div>
 
@@ -218,7 +295,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
                   {t("channeledConsultations")}
                 </span>
                 <span className="text-xl font-cinzel font-bold text-indigo-200 mt-1 block">
-                  {visitsStats?.totalConsultations !== undefined ? visitsStats.totalConsultations.toLocaleString(locale) : "0"}
+                  {totalConsultationsVal.toLocaleString(locale)}
                 </span>
               </div>
             </div>
@@ -231,6 +308,38 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
               <p>
                 {t("portalRecordDesc")}
               </p>
+            </div>
+
+            {/* Creator / Owner Traffic Exclusion Setting */}
+            <div className="bg-purple-950/40 border border-purple-800/50 rounded-xl p-3 space-y-2 text-xs font-gothic">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <Shield className="w-4 h-4 text-purple-300" />
+                  <span className="font-cinzel font-bold text-purple-200">
+                    {t("creatorModeTitle")}
+                  </span>
+                </div>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-sans font-semibold border ${
+                    isCreatorMode
+                      ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-300"
+                      : "bg-neutral-900 border-neutral-700 text-neutral-400"
+                  }`}
+                >
+                  {isCreatorMode ? t("creatorModeActive") : t("creatorModeInactive")}
+                </span>
+              </div>
+              <p className="text-[11px] text-purple-300/70 leading-relaxed">
+                {t("creatorModeDesc")}
+              </p>
+              <button
+                type="button"
+                onClick={handleToggleCreatorMode}
+                className="w-full py-1.5 px-3 bg-purple-900/50 hover:bg-purple-800/60 border border-purple-600/40 text-purple-100 rounded-lg text-xs font-gothic transition cursor-pointer flex items-center justify-center space-x-2"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-300" />
+                <span>{t("toggleCreatorModeBtn")}</span>
+              </button>
             </div>
 
             <button

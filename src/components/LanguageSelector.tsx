@@ -12,7 +12,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ compact = fa
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const currentOption = options.find((o) => o.code === language) || options[0];
+  const currentOption = (options && options.find((o) => o.code === language)) || (options && options[0]) || { code: "es", flag: "🇪🇸", nativeName: "Español", label: "Español" };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { PastLifeDetails } from "../types";
-import { BookOpen, Scroll, Shield, Key, Volume2, VolumeX, X, Sparkles, Maximize2, Eye } from "lucide-react";
+import { BookOpen, Scroll, Shield, Key, Volume2, VolumeX, X, Sparkles, Maximize2, Eye, Download, Share2, Check } from "lucide-react";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
+import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
+import { downloadParchmentImage, copyMysticShareText } from "../lib/parchmentExport";
 
 import pastLifeVisionImg from "../assets/images/past_life_vision_1787797379948.jpg";
 import ancientSoulPortraitImg from "../assets/images/ancient_soul_portrait_1787797394501.jpg";
@@ -26,8 +28,11 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
   const { t, language } = useLanguage();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
+    triggerHaptic(HAPTIC_PATTERNS.revelationUnlock);
     const speechText = `${details.title}. ${details.eraLocation}. ${details.identityRole}. ${details.narrative}`;
     setIsSpeaking(true);
     audio.speakSpiritText(
@@ -43,6 +48,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
   }, [details, seekerName, language]);
 
   const toggleSpeech = () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
     if (isSpeaking) {
       audio.stopSpeech();
       setIsSpeaking(false);
@@ -56,6 +62,29 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
         language
       );
     }
+  };
+
+  const handleShare = async () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    const ok = await copyMysticShareText({
+      title: details.title,
+      seekerName: seekerName || "Buscador",
+      bodyText: `📜 *Era & Lugar:* ${details.eraLocation}\n🛡️ *Rol:* ${details.identityRole}\n\n📖 *Crónica:* ${details.narrative}\n\n🕊️ *Transición:* ${details.deathTransition}`,
+      karmicLesson: details.karmicLesson,
+      relic: details.soulRelic,
+      type: "PAST_LIFE",
+    });
+    if (ok) {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 3000);
+    }
+  };
+
+  const handleDownload = async () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    setIsDownloading(true);
+    await downloadParchmentImage("past-life-parchment-box", `papiro-${seekerName || "alma"}-${Date.now()}.png`);
+    setIsDownloading(false);
   };
 
   const auraColor = details.vibeColor || "#8b5cf6";
@@ -111,6 +140,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
 
       {/* Cosmic Modal Box Container */}
       <div 
+        id="past-life-parchment-box"
         className="relative w-full max-w-2xl bg-[#0e0a18]/95 border rounded-2xl p-5 sm:p-7 text-purple-100 my-8 overflow-hidden transition-all duration-700 z-10 backdrop-blur-xl"
         style={{
           backgroundImage: `radial-gradient(circle at 50% 0%, #1e1233 0%, #080410 100%)`,
@@ -304,19 +334,40 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-purple-900/50">
-          <button
-            onClick={onSaveToCodex}
-            disabled={isSaved}
-            className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-cinzel text-xs font-semibold tracking-wide uppercase flex items-center justify-center space-x-2 transition ${
-              isSaved
-                ? "bg-purple-950/50 text-purple-400 border border-purple-900/60 cursor-default"
-                : "bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white border border-purple-400/40 shadow-lg cursor-pointer"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>{isSaved ? t("pastLifeModalSaved") : t("pastLifeModalSaveCodex")}</span>
-          </button>
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-4 border-t border-purple-900/50">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={onSaveToCodex}
+              disabled={isSaved}
+              className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-cinzel text-xs font-semibold tracking-wide uppercase flex items-center justify-center space-x-2 transition ${
+                isSaved
+                  ? "bg-purple-950/50 text-purple-400 border border-purple-900/60 cursor-default"
+                  : "bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white border border-purple-400/40 shadow-lg cursor-pointer"
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>{isSaved ? t("pastLifeModalSaved") : t("pastLifeModalSaveCodex")}</span>
+            </button>
+
+            <button
+              onClick={handleShare}
+              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl font-cinzel text-xs font-semibold bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-200 flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-sm"
+              title="Compartir Papiro en WhatsApp / Redes"
+            >
+              {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4 text-purple-300" />}
+              <span>{isCopied ? "¡Copiado!" : "Compartir"}</span>
+            </button>
+
+            <button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl font-cinzel text-xs font-semibold bg-amber-950/60 hover:bg-amber-900/80 border border-amber-600/50 text-amber-200 flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-sm"
+              title="Descargar Pergamino PNG"
+            >
+              <Download className="w-4 h-4 text-amber-400" />
+              <span>{isDownloading ? "Generando..." : "Descargar PNG"}</span>
+            </button>
+          </div>
 
           <button
             onClick={onClose}

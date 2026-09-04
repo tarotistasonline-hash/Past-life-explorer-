@@ -1,7 +1,14 @@
 {
-  "totalVisits": 1,
-  "totalConsultations": 0,
-  "dailyVisits": {},
-  "uniqueVisitors": [],
-  "lastUpdated": "2026-08-26T19:25:00.000Z"
+  "totalVisits": 8,
+  "totalConsultations": 1,
+  "dailyVisits": {
+    "2026-08-29": 5,
+    "2026-09-04": 3
+  },
+  "uniqueVisitors": [
+    "visitor_init",
+    "user_real_test",
+    "user_real_test_2"
+  ],
+  "lastUpdated": "2026-09-04T02:19:13.407Z"
 }
