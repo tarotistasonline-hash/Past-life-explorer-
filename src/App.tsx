@@ -64,13 +64,61 @@ export default function App() {
   const [visitsStats, setVisitsStats] = useState<VisitsStats>(getInitialVisitsStats);
   const [prefilledOuijaQuestion, setPrefilledOuijaQuestion] = useState("");
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
-    return !sessionStorage.getItem("ouija_welcome_dismissed");
+    try {
+      if (typeof window !== "undefined") {
+        const sessionVal = sessionStorage.getItem("ouija_welcome_dismissed");
+        const localVal = localStorage.getItem("ouija_welcome_dismissed");
+        return !(sessionVal || localVal);
+      }
+    } catch (e) {
+      console.warn("Storage access restricted:", e);
+    }
+    return false;
   });
   const [showGrimorioModal, setShowGrimorioModal] = useState(false);
 
-  const handleCloseWelcome = () => {
+  // Automatic spoken welcome on initial interaction if welcome modal was closed or skipped
+  useEffect(() => {
+    if (isWelcomeOpen) return;
+
+    try {
+      const alreadyGreeted = sessionStorage.getItem("ouija_initial_greeting_done");
+      if (alreadyGreeted) return;
+
+      const triggerGreetingOnInteraction = () => {
+        try {
+          sessionStorage.setItem("ouija_initial_greeting_done", "true");
+        } catch {}
+        audio.speakSpiritText(t("welcomeVoiceText"), undefined, undefined, language);
+        window.removeEventListener("pointerdown", triggerGreetingOnInteraction);
+        window.removeEventListener("keydown", triggerGreetingOnInteraction);
+      };
+
+      window.addEventListener("pointerdown", triggerGreetingOnInteraction, { once: true });
+      window.addEventListener("keydown", triggerGreetingOnInteraction, { once: true });
+
+      return () => {
+        window.removeEventListener("pointerdown", triggerGreetingOnInteraction);
+        window.removeEventListener("keydown", triggerGreetingOnInteraction);
+      };
+    } catch (e) {
+      console.warn("Could not setup initial greeting listener", e);
+    }
+  }, [isWelcomeOpen, language, t]);
+
+  const handleCloseWelcome = (keepPlayingSpeech: boolean = false) => {
     setIsWelcomeOpen(false);
-    sessionStorage.setItem("ouija_welcome_dismissed", "true");
+    if (!keepPlayingSpeech) {
+      audio.stopSpeech();
+    }
+    try {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("ouija_welcome_dismissed", "true");
+        localStorage.setItem("ouija_welcome_dismissed", "true");
+      }
+    } catch (e) {
+      console.warn("Could not persist welcome dismissal:", e);
+    }
   };
   const [isLoading, setIsLoading] = useState(false);
   const [fogOn, setFogOn] = useState(true);
@@ -281,9 +329,28 @@ export default function App() {
         throw new Error("Error en la respuesta del oráculo");
       }
 
-      const json: SpiritResponse = await res.json();
-      setCurrentSpiritResponse(json);
-      setSpelledWord(json.spelledWord || "SI");
+      const rawJson: any = await res.json();
+      const spelledClean = String(rawJson.spelledWord || rawJson.spelled || "SI")
+        .replace(/\bundefined\b/gi, "")
+        .trim() || "SI";
+
+      const defaultMsg = language === "en"
+        ? "The portal opens. The spirit confirms peace and clarity along your journey."
+        : "El portal de ultratumba se abre. El espíritu confirma serenidad y claridad en tu camino.";
+
+      const messageClean = String(rawJson.spiritMessage || rawJson.spirit || defaultMsg)
+        .replace(/\bundefined\b/gi, "")
+        .trim() || defaultMsg;
+
+      const normalized: SpiritResponse = {
+        spelledWord: spelledClean,
+        answerType: (rawJson.answerType || rawJson.type || "SPELLOUT") as "YES" | "NO" | "SPELLOUT",
+        spiritMessage: messageClean,
+        spiritName: String(rawJson.spiritName || rawJson.name || (language === "en" ? "Akashic Guardian" : "Guardián Akáshico")).replace(/\bundefined\b/gi, "").trim() || "Guardián Akáshico",
+      };
+
+      setCurrentSpiritResponse(normalized);
+      setSpelledWord(normalized.spelledWord);
       setMode("SPELLING");
       fetchVisitsStats();
     } catch (err: unknown) {
@@ -299,8 +366,11 @@ export default function App() {
     if (currentPastLife) {
       setIsModalOpen(true);
     } else if (currentSpiritResponse) {
+      const spelled = (currentSpiritResponse.spelledWord || "").replace(/\bundefined\b/gi, "").trim();
+      const message = (currentSpiritResponse.spiritMessage || "").replace(/\bundefined\b/gi, "").trim();
+      const phrase = spelled && message ? `${spelled}. ${message}` : message || spelled || "El oráculo de ultratumba ha hablado.";
       audio.speakSpiritText(
-        `${currentSpiritResponse.spelledWord}. ${currentSpiritResponse.spiritMessage}`,
+        phrase,
         undefined,
         undefined,
         language
@@ -465,8 +535,14 @@ export default function App() {
                   <button
                     onClick={() => {
                       if (currentSpiritResponse) {
+                        const spelled = (currentSpiritResponse.spelledWord || "").replace(/\bundefined\b/gi, "").trim();
+                        const message = (currentSpiritResponse.spiritMessage || "").replace(/\bundefined\b/gi, "").trim();
+                        const phrase = spelled && message ? `${spelled}. ${message}` : message || spelled || "El oráculo de ultratumba ha hablado.";
                         audio.speakSpiritText(
-                          `${currentSpiritResponse.spelledWord}. ${currentSpiritResponse.spiritMessage}`
+                          phrase,
+                          undefined,
+                          undefined,
+                          language
                         );
                       }
                     }}

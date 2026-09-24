@@ -4,7 +4,8 @@ import { BookOpen, Scroll, Shield, Key, Volume2, VolumeX, X, Sparkles, Maximize2
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
-import { downloadParchmentImage, copyMysticShareText } from "../lib/parchmentExport";
+import { downloadParchmentImage, exportParchmentImageBlob } from "../lib/parchmentExport";
+import { PastLifeShareModal } from "./PastLifeShareModal";
 
 import pastLifeVisionImg from "../assets/images/past_life_vision_1787797379948.jpg";
 import ancientSoulPortraitImg from "../assets/images/ancient_soul_portrait_1787797394501.jpg";
@@ -28,12 +29,18 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
   const { t, language } = useLanguage();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareImageDataUrl, setShareImageDataUrl] = useState<string | null>(null);
+  const [shareImageBlob, setShareImageBlob] = useState<Blob | null>(null);
+  const [isGeneratingShareImage, setIsGeneratingShareImage] = useState(false);
 
   useEffect(() => {
     triggerHaptic(HAPTIC_PATTERNS.revelationUnlock);
-    const speechText = `${details.title}. ${details.eraLocation}. ${details.identityRole}. ${details.narrative}`;
+    const speechParts = [details.title, details.eraLocation, details.identityRole, details.narrative].filter(
+      (p) => Boolean(p) && typeof p === "string" && !p.toLowerCase().includes("undefined")
+    );
+    const speechText = speechParts.join(". ");
     setIsSpeaking(true);
     audio.speakSpiritText(
       speechText,
@@ -53,7 +60,10 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
       audio.stopSpeech();
       setIsSpeaking(false);
     } else {
-      const speechText = `${details.title}. ${details.eraLocation}. ${details.identityRole}. ${details.narrative}`;
+      const speechParts = [details.title, details.eraLocation, details.identityRole, details.narrative].filter(
+        (p) => Boolean(p) && typeof p === "string" && !p.toLowerCase().includes("undefined")
+      );
+      const speechText = speechParts.join(". ");
       setIsSpeaking(true);
       audio.speakSpiritText(
         speechText,
@@ -64,26 +74,29 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
     }
   };
 
-  const handleShare = async () => {
+  const handleShareClick = async () => {
     triggerHaptic(HAPTIC_PATTERNS.click);
-    const ok = await copyMysticShareText({
-      title: details.title,
-      seekerName: seekerName || "Buscador",
-      bodyText: `📜 *Era & Lugar:* ${details.eraLocation}\n🛡️ *Rol:* ${details.identityRole}\n\n📖 *Crónica:* ${details.narrative}\n\n🕊️ *Transición:* ${details.deathTransition}`,
-      karmicLesson: details.karmicLesson,
-      relic: details.soulRelic,
-      type: "PAST_LIFE",
-    });
-    if (ok) {
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 3000);
+    setIsShareModalOpen(true);
+    setIsGeneratingShareImage(true);
+
+    try {
+      const result = await exportParchmentImageBlob("past-life-parchment-box");
+      if (result) {
+        setShareImageDataUrl(result.dataUrl);
+        setShareImageBlob(result.blob);
+      }
+    } catch (err) {
+      console.error("Error generating social share image:", err);
+    } finally {
+      setIsGeneratingShareImage(false);
     }
   };
 
   const handleDownload = async () => {
     triggerHaptic(HAPTIC_PATTERNS.click);
     setIsDownloading(true);
-    await downloadParchmentImage("past-life-parchment-box", `papiro-${seekerName || "alma"}-${Date.now()}.png`);
+    const filename = `revelacion-${(seekerName || "alma").toLowerCase().replace(/\s+/g, "_")}-${Date.now()}.png`;
+    await downloadParchmentImage("past-life-parchment-box", filename);
     setIsDownloading(false);
   };
 
@@ -155,7 +168,16 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
         />
 
         {/* Header Action Controls */}
-        <div className="absolute top-4 right-4 flex items-center space-x-2 z-20">
+        <div className="absolute top-4 right-4 flex items-center space-x-2 z-20" data-html2canvas-ignore="true">
+          {/* Share Button for Social Media Export */}
+          <button
+            onClick={handleShareClick}
+            title={t("pastLifeShare")}
+            className="p-2 rounded-full bg-purple-950/80 border border-purple-800 text-purple-300 hover:text-white hover:bg-purple-900 transition flex items-center justify-center cursor-pointer shadow-sm"
+          >
+            <Share2 className="w-5 h-5 text-purple-300" />
+          </button>
+
           {/* Voice Speech Control */}
           <button
             onClick={toggleSpeech}
@@ -240,6 +262,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
 
             {/* Expand / Lightbox Trigger Button */}
             <button
+              data-html2canvas-ignore="true"
               onClick={() => setIsImageZoomed(true)}
               title="Expandir retrato visual en alta resolución"
               className="absolute top-3 right-3 p-1.5 rounded-full bg-black/75 border border-purple-500/50 text-purple-200 hover:text-white hover:bg-purple-900/80 transition backdrop-blur-md cursor-pointer shadow-md"
@@ -260,8 +283,8 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
           </div>
         </div>
 
-        {/* Voice Indicator Banner */}
-        <div className="mb-4 flex items-center justify-center">
+        {/* Voice Playback Button */}
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-2" data-html2canvas-ignore="true">
           <button
             onClick={toggleSpeech}
             className="px-4 py-1.5 rounded-full bg-purple-950/80 border border-purple-700/50 text-xs font-gothic text-purple-200 flex items-center space-x-2 hover:bg-purple-900/90 transition cursor-pointer shadow"
@@ -333,8 +356,19 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
           </div>
         </div>
 
+        {/* Mystical Parchment Footer Watermark - Included in exported image */}
+        <div className="mt-5 pt-3.5 border-t border-purple-800/40 flex items-center justify-between text-[11px] text-purple-300/80 font-cinzel">
+          <div className="flex items-center space-x-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="font-semibold tracking-wide">Oráculo Astral Akáshico • Portal de Vidas Pasadas</span>
+          </div>
+          <span className="text-[10px] text-purple-400/90 font-mono tracking-wider">
+            {typeof window !== "undefined" ? window.location.hostname : "ouija.astral"}
+          </span>
+        </div>
+
         {/* Footer Actions */}
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-4 border-t border-purple-900/50">
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-4 border-t border-purple-900/50" data-html2canvas-ignore="true">
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               onClick={onSaveToCodex}
@@ -349,19 +383,22 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
               <span>{isSaved ? t("pastLifeModalSaved") : t("pastLifeModalSaveCodex")}</span>
             </button>
 
+            {/* Prominent Share Button for Social Media Image Export */}
             <button
-              onClick={handleShare}
-              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl font-cinzel text-xs font-semibold bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-200 flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-sm"
-              title="Compartir Papiro en WhatsApp / Redes"
+              onClick={handleShareClick}
+              disabled={isGeneratingShareImage}
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-cinzel text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-600 hover:via-indigo-500 hover:to-purple-700 text-white border border-purple-400/60 shadow-[0_0_20px_rgba(168,85,247,0.4)] flex items-center justify-center space-x-2 transition cursor-pointer disabled:opacity-60"
+              title="Exportar papiro como imagen para compartir en redes sociales"
             >
-              {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4 text-purple-300" />}
-              <span>{isCopied ? "¡Copiado!" : "Compartir"}</span>
+              <Share2 className="w-4 h-4 text-purple-200" />
+              <span>{isGeneratingShareImage ? t("pastLifeModalGeneratingImage") : t("pastLifeShare")}</span>
             </button>
 
+            {/* Direct PNG Download Button */}
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl font-cinzel text-xs font-semibold bg-amber-950/60 hover:bg-amber-900/80 border border-amber-600/50 text-amber-200 flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-sm"
+              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl font-cinzel text-xs font-semibold bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-200 flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-sm disabled:opacity-60"
               title="Descargar Pergamino PNG"
             >
               <Download className="w-4 h-4 text-amber-400" />
@@ -417,6 +454,18 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Social Media Share Modal with HD Image Preview & 1-Click Export */}
+      <PastLifeShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        details={details}
+        seekerName={seekerName}
+        imageDataUrl={shareImageDataUrl}
+        imageBlob={shareImageBlob}
+        isGenerating={isGeneratingShareImage}
+        onDownload={handleDownload}
+      />
     </div>
   );
 };

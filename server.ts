@@ -210,22 +210,224 @@ function getFallbackPastLife(name?: string, query?: string, lang = "es") {
 
 function getFallbackSpiritAnswer(question: string, lang = "es") {
   const language = lang?.toLowerCase() || "es";
-  if (language === "en") {
-    const answersEn = [
-      { spelled: "LOOK WITHIN YOUR SOUL", type: "YES" as const, spirit: "The portal opens. The ancestors confirm that the answer resides within your deepest intuition.", name: "Guardian of the Mist" },
-      { spelled: "DO NOT FEAR THE UNKNOWN", type: "NO" as const, spirit: "The shadows reveal that what you fear holds no power over your light. Embrace new beginnings.", name: "Benevolent Shadow" },
-      { spelled: "LIGHT GUIDES YOUR PATH", type: "SPELLOUT" as const, spirit: "Destiny weaves golden threads around your intentions. Follow your heart's quiet call.", name: "Celestial Oracle" }
-    ];
-    return answersEn[Math.floor(Math.random() * answersEn.length)];
-  }
 
-  const answers = [
-    { spelled: "SI BUSCA EN TU INTERIOR", type: "YES" as const, spirit: "El Portal se abre. Los ancestros confirman que la respuesta vive en tu intuición más profunda.", name: "Guardián de la Bruma" },
-    { spelled: "NO TEMAS EL CAMBIO", type: "NO" as const, spirit: "Las sombras revelan que lo que temes no te dañará. Abre los brazos a lo desconocido.", name: "Sombra Benefactora" },
-    { spelled: "LA LUZ GUIA TU PASO", type: "SPELLOUT" as const, spirit: "El destino teje hilos dorados en torno a tus decisiones. Sigue el impulso de tu corazón.", name: "Oráculo Celeste" }
+  const answersEs = [
+    {
+      spelledWord: "BUSCA EN TU ALMA",
+      answerType: "YES" as const,
+      spiritMessage: "El portal de ultratumba se abre ante ti. Los ancestros confirman que la respuesta que anhelas reside en la sabiduría silenciosa de tu intuición más pura.",
+      spiritName: "Guardián de la Bruma",
+    },
+    {
+      spelledWord: "NO TEMAS EL CAMBIO",
+      answerType: "NO" as const,
+      spirit: "Las sombras ancestrales revelan que lo desconocido no tiene poder para dañarte. Suelta el temor y abraza la metamorfosis de tu alma.",
+      spiritMessage: "Las sombras ancestrales revelan que lo desconocido no tiene poder para dañarte. Suelta el temor y abraza la metamorfosis de tu alma.",
+      spiritName: "Sombra Benefactora",
+    },
+    {
+      spelledWord: "LA LUZ GUIA TU PASO",
+      answerType: "SPELLOUT" as const,
+      spiritMessage: "El hilo dorado del destino teje protección alrededor de tus pasos. Confía en las sincronicidades que el universo coloca frente a ti.",
+      spiritName: "Oráculo Celeste",
+    },
+    {
+      spelledWord: "CONFIA EN TU DESTINO",
+      answerType: "YES" as const,
+      spiritMessage: "Desde el plano akáshico, los guías espirituales te recuerdan que cada prueba es un peldaño sagrado hacia tu mayor elevación.",
+      spiritName: "Consejo de Ultratumba",
+    },
+    {
+      spelledWord: "PACIENCIA Y FE",
+      answerType: "SPELLOUT" as const,
+      spiritMessage: "El tiempo cósmico no coincide con la prisa terrenal. Aquello que está destinado a tu mayor bien llegará en el momento exacto.",
+      spiritName: "Escriba del Velo",
+    },
   ];
-  return answers[Math.floor(Math.random() * answers.length)];
+
+  const answersEn = [
+    {
+      spelledWord: "LOOK WITHIN YOUR SOUL",
+      answerType: "YES" as const,
+      spiritMessage: "The portal opens before you. The spirits confirm that the truth you seek already dwells within your deepest intuition.",
+      spiritName: "Guardian of the Mist",
+    },
+    {
+      spelledWord: "DO NOT FEAR UNKNOWN",
+      answerType: "NO" as const,
+      spiritMessage: "The shadows reveal that what you fear holds no power over your divine spark. Release apprehension and embrace renewal.",
+      spiritName: "Benevolent Shadow",
+    },
+    {
+      spelledWord: "LIGHT GUIDES YOUR PATH",
+      answerType: "SPELLOUT" as const,
+      spiritMessage: "Destiny weaves golden protective threads around your soul. Heed the quiet signs and synchronicities guiding your steps.",
+      spiritName: "Celestial Oracle",
+    },
+  ];
+
+  const answersPt = [
+    {
+      spelledWord: "OLHE EM SUA ALMA",
+      answerType: "YES" as const,
+      spiritMessage: "O portal de outrotumba se abre. Os ancestrais confirmam que a resposta que você procura reside na sua intuição mais profunda.",
+      spiritName: "Guardião da Névoa",
+    },
+    {
+      spelledWord: "A LUZ GUIA SEU PASSO",
+      answerType: "SPELLOUT" as const,
+      spiritMessage: "O destino tece fios de ouro ao redor de sua jornada. Confie nos sinais que o universo coloca em seu caminho.",
+      spiritName: "Oráculo Celeste",
+    },
+  ];
+
+  const answersFr = [
+    {
+      spelledWord: "REGARDE EN TON AME",
+      answerType: "YES" as const,
+      spiritMessage: "Le portail s'ouvre devant vous. Les ancêtres confirment que la vérité réside dans votre intuition la plus pure.",
+      spiritName: "Gardien de la Brume",
+    },
+    {
+      spelledWord: "LA LUMIERE TE GUIDE",
+      answerType: "SPELLOUT" as const,
+      spiritMessage: "Le destin tisse des fils dorés autour de vos pas. Ayez foi dans les synchronicités du cosmos.",
+      spiritName: "Oracle Céleste",
+    },
+  ];
+
+  const list = language === "en" ? answersEn : language === "pt" ? answersPt : language === "fr" ? answersFr : answersEs;
+  const chosen = list[Math.floor(Math.random() * list.length)];
+
+  return {
+    spelledWord: chosen.spelledWord,
+    answerType: chosen.answerType,
+    spiritMessage: chosen.spiritMessage,
+    spiritName: chosen.spiritName,
+    // Backwards compatibility aliases
+    spelled: chosen.spelledWord,
+    type: chosen.answerType,
+    spirit: chosen.spiritMessage,
+    name: chosen.spiritName,
+  };
 }
+
+// TTS Engine & Audio Cache Setup (Fenrir Solemn Male Voice of Ultratumba)
+const TTS_CACHE_DIR = path.join(process.cwd(), "data", "tts_cache");
+if (!fs.existsSync(TTS_CACHE_DIR)) {
+  fs.mkdirSync(TTS_CACHE_DIR, { recursive: true });
+}
+
+const memoryAudioCache = new Map<string, { audioData: string; mimeType: string }>();
+
+// Load existing disk cache into memory
+try {
+  const files = fs.readdirSync(TTS_CACHE_DIR);
+  for (const f of files) {
+    if (f.endsWith(".json")) {
+      try {
+        const raw = fs.readFileSync(path.join(TTS_CACHE_DIR, f), "utf-8");
+        const parsed = JSON.parse(raw);
+        if (parsed.audioData) {
+          const key = f.replace(".json", "");
+          memoryAudioCache.set(key, { audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav" });
+        }
+      } catch {}
+    }
+  }
+} catch (e) {
+  console.warn("Could not pre-load TTS disk cache:", e);
+}
+
+// API Route: Text-to-Speech (Fenrir Solemn Male Voice of Ultratumba)
+app.post("/api/tts", async (req, res) => {
+  try {
+    const { text, voice = "Fenrir", style, lang = "es" } = req.body || {};
+    if (!text || typeof text !== "string") {
+      return res.status(400).json({ error: "Missing text" });
+    }
+
+    const cleanText = text.trim();
+    // Default and prioritize Fenrir (the solemn male voice of ultratumba)
+    const chosenVoice = ["Fenrir", "Puck", "Charon"].includes(voice) ? voice : "Fenrir";
+    
+    // Hash key for cache
+    const hash = Buffer.from(`${chosenVoice}_${cleanText}`).toString("base64url").slice(0, 80);
+    const cacheFile = path.join(TTS_CACHE_DIR, `${hash}.json`);
+
+    // 1. Check memory cache (0ms latency)
+    if (memoryAudioCache.has(hash)) {
+      const cached = memoryAudioCache.get(hash)!;
+      return res.json({ audioData: cached.audioData, mimeType: cached.mimeType, voice: chosenVoice, fromCache: true });
+    }
+
+    // 2. Check disk cache
+    if (fs.existsSync(cacheFile)) {
+      try {
+        const raw = fs.readFileSync(cacheFile, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (parsed.audioData) {
+          memoryAudioCache.set(hash, { audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav" });
+          return res.json({ audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav", voice: chosenVoice, fromCache: true });
+        }
+      } catch (err) {
+        console.warn("Could not read TTS cache file:", err);
+      }
+    }
+
+    const ai = getAIClient();
+    if (!ai) {
+      return res.status(503).json({ error: "AI client not available", fallback: true });
+    }
+
+    const voicePromptStyle = style || (chosenVoice === "Fenrir"
+      ? "Solemne, profundo, misterioso, sereno y majestuoso de ultratumba"
+      : chosenVoice === "Puck"
+      ? "Claro, místico, reflexivo y sereno de ultratumba"
+      : "Cavernoso, grave, antiguo y sepulcral del abismo");
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash-tts",
+      contents: [{
+        role: "user",
+        parts: [{
+          text: cleanText.slice(0, 600),
+          speechMetadata: {
+            style: voicePromptStyle,
+          }
+        }]
+      }] as any,
+      config: {
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: chosenVoice }
+          }
+        }
+      }
+    });
+
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const mimeType = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType || "audio/wav";
+
+    if (!audioData) {
+      return res.status(500).json({ error: "No audio generated", fallback: true });
+    }
+
+    // Cache to memory and disk
+    memoryAudioCache.set(hash, { audioData, mimeType });
+    try {
+      fs.writeFileSync(cacheFile, JSON.stringify({ audioData, mimeType, voice: chosenVoice, text: cleanText }), "utf-8");
+    } catch (e) {
+      console.warn("Could not write TTS cache:", e);
+    }
+
+    return res.json({ audioData, mimeType, voice: chosenVoice, fromCache: false });
+  } catch (error: any) {
+    console.warn("Error in /api/tts:", error?.message || error);
+    return res.status(500).json({ error: error?.message || "TTS error", fallback: true });
+  }
+});
 
 // API Route 1: Past Life Revelation
 app.post("/api/ouija/past-life", async (req, res) => {
@@ -269,7 +471,7 @@ Respond strictly in JSON format with this structure:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -302,7 +504,7 @@ Respond strictly in JSON format with this structure:
     const jsonText = response.text?.trim();
     if (jsonText) {
       const parsed = JSON.parse(jsonText);
-      parsed.spelledWord = (parsed.spelledWord || "PAST LIFE").toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 30);
+      parsed.spelledWord = (parsed.spelledWord || "VIDA PASADA").toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 30);
       return res.json(parsed);
     } else {
       return res.json(getFallbackPastLife(name, focusQuery, lang));
@@ -342,7 +544,7 @@ Respond strictly in JSON format:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -363,8 +565,22 @@ Respond strictly in JSON format:
     const jsonText = response.text?.trim();
     if (jsonText) {
       const parsed = JSON.parse(jsonText);
-      parsed.spelledWord = (parsed.spelledWord || "SENSE").toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 25);
-      return res.json(parsed);
+      const cleanWord = (parsed.spelledWord || "LUZ EN TU ALMA").toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 25);
+      const safeMessage = parsed.spiritMessage || (targetLangName === "English" ? "The spirit guides your steps with peace." : "El espíritu guía tus pasos en serenidad y paz.");
+      const safeName = parsed.spiritName || (targetLangName === "English" ? "Akashic Guardian" : "Guardián Akáshico");
+      const safeType = parsed.answerType || "SPELLOUT";
+
+      return res.json({
+        spelledWord: cleanWord,
+        answerType: safeType,
+        spiritMessage: safeMessage,
+        spiritName: safeName,
+        // Backward compatibility
+        spelled: cleanWord,
+        type: safeType,
+        spirit: safeMessage,
+        name: safeName,
+      });
     } else {
       return res.json(getFallbackSpiritAnswer(question, lang));
     }
@@ -425,7 +641,7 @@ Return strictly a JSON object with:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -497,7 +713,7 @@ Write a profound, cohesive, illuminating synthesis (3-4 sentences in ${targetLan
 Return strictly JSON: { "synthesis": "..." }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
