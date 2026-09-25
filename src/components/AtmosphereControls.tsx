@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Ghost } from "lucide-react";
+import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Settings, Lock } from "lucide-react";
 import { audio } from "../lib/audio";
 import { VisitsStats } from "../types";
 import { useLanguage } from "../context/LanguageContext";
 import { LanguageSelector } from "./LanguageSelector";
 import { MoonPhaseWidget } from "./MoonPhaseWidget";
-import { isAdminSession, setAdminSession } from "../lib/adminTracking";
+import { isAdminSession, setAdminSession, isAuthorizedAdmin } from "../lib/adminTracking";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
-import { VoiceSettingsModal } from "./VoiceSettingsModal";
+import { AdminConfigModal } from "./AdminConfigModal";
+import { AdminUnlockModal } from "./AdminUnlockModal";
 
 interface AtmosphereControlsProps {
   fogOn: boolean;
   setFogOn: (on: boolean) => void;
-  onOpenWelcome: () => void;
   onOpenGrimorio?: () => void;
   visitsStats: VisitsStats | null;
 }
@@ -20,7 +20,6 @@ interface AtmosphereControlsProps {
 export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   fogOn,
   setFogOn,
-  onOpenWelcome,
   onOpenGrimorio,
   visitsStats,
 }) => {
@@ -28,10 +27,12 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isDroneActive, setIsDroneActive] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
-  const [showVisitsModal, setShowVisitsModal] = useState(false);
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showAdminConfigModal, setShowAdminConfigModal] = useState(false);
+  const [showAdminUnlockModal, setShowAdminUnlockModal] = useState(false);
+  const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean>(() => isAuthorizedAdmin());
   const [isCreatorMode, setIsCreatorMode] = useState<boolean>(() => isAdminSession());
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [logoClickCount, setLogoClickCount] = useState(0);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -53,6 +54,14 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   };
 
   useEffect(() => {
+    const handleAuthChange = (e: any) => {
+      setIsAdminAuthorized(isAuthorizedAdmin());
+    };
+    window.addEventListener("ouija-admin-auth-change", handleAuthChange);
+    return () => window.removeEventListener("ouija-admin-auth-change", handleAuthChange);
+  }, []);
+
+  useEffect(() => {
     const handleCreatorModeChange = (e: any) => {
       if (e?.detail?.isAdmin !== undefined) {
         setIsCreatorMode(e.detail.isAdmin);
@@ -71,6 +80,15 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
     setAdminSession(nextVal);
   };
 
+  const handleLogoClick = () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    if (isAdminAuthorized) {
+      setShowAdminConfigModal(true);
+    } else {
+      setShowAdminUnlockModal(true);
+    }
+  };
+
   const toggleSound = () => {
     const nextState = !isAudioMuted;
     setIsAudioMuted(nextState);
@@ -85,9 +103,6 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   const locale = language === "en" ? "en-US" : language === "pt" ? "pt-BR" : language === "fr" ? "fr-FR" : language === "it" ? "it-IT" : language === "de" ? "de-DE" : "es-AR";
 
   const totalVisitsVal = visitsStats?.totalVisits ?? 0;
-  const todayVisitsVal = visitsStats?.todayVisits ?? 0;
-  const totalConsultationsVal = visitsStats?.totalConsultations ?? 0;
-
   const formattedVisits = totalVisitsVal.toLocaleString(locale);
 
   return (
@@ -95,8 +110,12 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
       <div className="w-full max-w-4xl flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-3 bg-[#0c0816]/90 border border-purple-900/50 rounded-2xl backdrop-blur-md mb-4 shadow-2xl text-purple-200">
         {/* Title / Logo */}
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-full bg-purple-950/90 border border-purple-500/60 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.3)] shrink-0">
-            <span className="text-xs font-bold text-purple-300 font-cinzel">RA</span>
+          <div 
+            onClick={handleLogoClick}
+            title={isAdminAuthorized ? "Panel de Configuración (Propietario)" : "Tabla Ouija - Registros Akáshicos"}
+            className="w-8 h-8 rounded-full bg-purple-950/90 border border-purple-500/60 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.3)] shrink-0 cursor-pointer hover:border-amber-400 transition"
+          >
+            <span className="text-xs font-bold text-purple-300 font-cinzel">AR</span>
           </div>
           <div>
             <h1 className="font-decorative font-bold text-xs sm:text-sm md:text-base text-transparent bg-clip-text bg-gradient-to-r from-purple-100 via-indigo-200 to-purple-300 tracking-wide">
@@ -110,26 +129,31 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
 
         {/* Live Visitor Counter Badge & Controls */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs font-gothic">
-          {/* Visitor Counter Button */}
-          <button
-            onClick={() => setShowVisitsModal(true)}
+          {/* Visitor Counter Badge */}
+          <div
             title={t("realVisitsTitle")}
-            className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 border border-purple-600/40 text-purple-200 text-xs font-gothic transition cursor-pointer shadow-[0_0_12px_rgba(147,51,234,0.25)] group"
+            className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-950/70 border border-purple-600/40 text-purple-200 text-xs font-gothic shadow-[0_0_12px_rgba(147,51,234,0.25)] select-none"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <Eye className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-100 transition" />
+            <Eye className="w-3.5 h-3.5 text-purple-300" />
             <span className="font-cinzel font-semibold text-purple-100">{formattedVisits}</span>
             <span className="hidden md:inline text-[11px] text-purple-300/80">{t("realVisits")}</span>
-            {isCreatorMode && (
-              <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] font-sans font-medium" title={t("creatorModeActive")}>
-                <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                <span className="hidden lg:inline">{t("creatorModeBadge")}</span>
-              </span>
-            )}
-          </button>
+          </div>
+
+          {/* Exclusive Admin Configuration Button (Visible ONLY to Owner) */}
+          {isAdminAuthorized && (
+            <button
+              onClick={() => setShowAdminConfigModal(true)}
+              title="Configuración Exclusiva del Propietario (tarotistasonline@gmail.com)"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 to-purple-950/90 hover:from-amber-900 hover:to-purple-900 border border-amber-500/60 text-amber-200 flex items-center space-x-1.5 transition cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse"
+            >
+              <Settings className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] font-cinzel font-bold">Configuración</span>
+            </button>
+          )}
 
           {/* Language Selector Dropdown */}
           <LanguageSelector />
@@ -197,24 +221,6 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             <Moon className="w-4 h-4 text-purple-300" />
           </button>
 
-          {/* Spoken Welcome Button */}
-          <button
-            onClick={onOpenWelcome}
-            title={t("akashicRecordsBtn")}
-            className="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-purple-800 to-indigo-700 hover:from-purple-700 hover:to-indigo-600 border border-purple-500/40 rounded-xl text-purple-100 font-medium flex items-center space-x-1 transition cursor-pointer shadow-[0_0_10px_rgba(168,85,247,0.2)]"
-          >
-            <span className="hidden sm:inline">{t("akashicRecordsBtn")}</span>
-          </button>
-
-          {/* Spiritual Voice / Netherworld Resonance Selector */}
-          <button
-            onClick={() => setShowVoiceModal(true)}
-            title={t("voiceModalTitle") || "Voz Espiritual & Resonancia de Ultratumba"}
-            className="p-2 rounded-xl border border-purple-800/60 bg-purple-950/50 hover:bg-purple-900 text-purple-300 flex items-center transition cursor-pointer"
-          >
-            <Ghost className="w-4 h-4 text-purple-300" />
-          </button>
-
           {/* Guide Modal Trigger */}
           <button
             onClick={() => setShowGuide(true)}
@@ -225,103 +231,6 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
           </button>
         </div>
       </div>
-
-      {/* Visitor Counter Modal */}
-      {showVisitsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-md bg-[#0e0a18] border border-purple-500/40 rounded-2xl p-6 text-purple-100 shadow-2xl space-y-4">
-            <button
-              onClick={() => setShowVisitsModal(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full bg-purple-950 text-purple-300 hover:bg-purple-900 transition cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center space-x-2 text-purple-200 font-cinzel font-semibold text-lg border-b border-purple-900/50 pb-2">
-              <Eye className="w-5 h-5 text-purple-400" />
-              <span>{t("visitsModalTitle")}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className="bg-purple-950/50 border border-purple-800/40 rounded-xl p-3 text-center">
-                <span className="text-[10px] uppercase text-purple-400 font-semibold tracking-wider block">
-                  {t("totalRealVisits")}
-                </span>
-                <span className="text-2xl font-cinzel font-bold text-purple-100 mt-1 block">
-                  {totalVisitsVal.toLocaleString(locale)}
-                </span>
-              </div>
-
-              <div className="bg-purple-950/50 border border-purple-800/40 rounded-xl p-3 text-center">
-                <span className="text-[10px] uppercase text-purple-400 font-semibold tracking-wider block">
-                  {t("visitsToday")}
-                </span>
-                <span className="text-2xl font-cinzel font-bold text-purple-100 mt-1 block">
-                  {todayVisitsVal.toLocaleString(locale)}
-                </span>
-              </div>
-
-              <div className="bg-purple-950/50 border border-purple-800/40 rounded-xl p-3 text-center col-span-2">
-                <span className="text-[10px] uppercase text-purple-400 font-semibold tracking-wider block">
-                  {t("channeledConsultations")}
-                </span>
-                <span className="text-xl font-cinzel font-bold text-indigo-200 mt-1 block">
-                  {totalConsultationsVal.toLocaleString(locale)}
-                </span>
-              </div>
-            </div>
-
-            <div className="text-xs text-purple-300/80 font-gothic leading-relaxed bg-neutral-950/60 p-3 rounded-xl border border-purple-900/30">
-              <p className="flex items-center space-x-1.5 text-purple-300 font-semibold mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                <span>{t("portalOfficialRecord")}</span>
-              </p>
-              <p>
-                {t("portalRecordDesc")}
-              </p>
-            </div>
-
-            {/* Creator / Owner Traffic Exclusion Setting */}
-            <div className="bg-purple-950/40 border border-purple-800/50 rounded-xl p-3 space-y-2 text-xs font-gothic">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1.5">
-                  <Shield className="w-4 h-4 text-purple-300" />
-                  <span className="font-cinzel font-bold text-purple-200">
-                    {t("creatorModeTitle")}
-                  </span>
-                </div>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-sans font-semibold border ${
-                    isCreatorMode
-                      ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-300"
-                      : "bg-neutral-900 border-neutral-700 text-neutral-400"
-                  }`}
-                >
-                  {isCreatorMode ? t("creatorModeActive") : t("creatorModeInactive")}
-                </span>
-              </div>
-              <p className="text-[11px] text-purple-300/70 leading-relaxed">
-                {t("creatorModeDesc")}
-              </p>
-              <button
-                type="button"
-                onClick={handleToggleCreatorMode}
-                className="w-full py-1.5 px-3 bg-purple-900/50 hover:bg-purple-800/60 border border-purple-600/40 text-purple-100 rounded-lg text-xs font-gothic transition cursor-pointer flex items-center justify-center space-x-2"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-300" />
-                <span>{t("toggleCreatorModeBtn")}</span>
-              </button>
-            </div>
-
-            <button
-              onClick={() => setShowVisitsModal(false)}
-              className="w-full py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-cinzel font-semibold text-xs rounded-xl transition cursor-pointer"
-            >
-              {t("closeRecord")}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Guide Modal */}
       {showGuide && (
@@ -363,10 +272,23 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
         </div>
       )}
 
-      {/* Spiritual Voice & Ultratumba Timbre Modal */}
-      <VoiceSettingsModal
-        isOpen={showVoiceModal}
-        onClose={() => setShowVoiceModal(false)}
+      {/* Exclusive Admin Configuration Modal (ONLY for tarotistasonline@gmail.com) */}
+      <AdminConfigModal
+        isOpen={showAdminConfigModal}
+        onClose={() => setShowAdminConfigModal(false)}
+        visitsStats={visitsStats}
+        isCreatorMode={isCreatorMode}
+        onToggleCreatorMode={handleToggleCreatorMode}
+      />
+
+      {/* Admin Unlock Modal (Access with email/PIN) */}
+      <AdminUnlockModal
+        isOpen={showAdminUnlockModal}
+        onClose={() => setShowAdminUnlockModal(false)}
+        onSuccess={() => {
+          setShowAdminUnlockModal(false);
+          setShowAdminConfigModal(true);
+        }}
       />
     </>
   );

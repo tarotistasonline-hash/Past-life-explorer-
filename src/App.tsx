@@ -5,13 +5,12 @@ import { SpiritOracleForm } from "./components/SpiritOracleForm";
 import { PastLifeModal } from "./components/PastLifeModal";
 import { PastLifeCodex } from "./components/PastLifeCodex";
 import { AtmosphereControls } from "./components/AtmosphereControls";
-import { WelcomeVoiceModal } from "./components/WelcomeVoiceModal";
 import { DailyTarotCard } from "./components/DailyTarotCard";
 import { MysticCoffeeOffer } from "./components/MysticCoffeeOffer";
 import { GrimorioModal } from "./components/GrimorioModal";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Volume2, Eye, Sparkles, Radio, BookOpen, Layers, Coffee, Globe } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Coffee, Globe } from "lucide-react";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders } from "./lib/adminTracking";
 
@@ -63,63 +62,53 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [visitsStats, setVisitsStats] = useState<VisitsStats>(getInitialVisitsStats);
   const [prefilledOuijaQuestion, setPrefilledOuijaQuestion] = useState("");
-  const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
-    try {
-      if (typeof window !== "undefined") {
-        const sessionVal = sessionStorage.getItem("ouija_welcome_dismissed");
-        const localVal = localStorage.getItem("ouija_welcome_dismissed");
-        return !(sessionVal || localVal);
-      }
-    } catch (e) {
-      console.warn("Storage access restricted:", e);
-    }
-    return false;
-  });
   const [showGrimorioModal, setShowGrimorioModal] = useState(false);
 
-  // Automatic spoken welcome on initial interaction if welcome modal was closed or skipped
+  // Spoken welcome narration on initial portal visit (Fenrir solemn voice)
   useEffect(() => {
-    if (isWelcomeOpen) return;
+    let isDisposed = false;
+    const welcomeNarrative = t("welcomeVoiceText");
 
+    // Don't repeat if already played in this browser session
     try {
-      const alreadyGreeted = sessionStorage.getItem("ouija_initial_greeting_done");
-      if (alreadyGreeted) return;
-
-      const triggerGreetingOnInteraction = () => {
-        try {
-          sessionStorage.setItem("ouija_initial_greeting_done", "true");
-        } catch {}
-        audio.speakSpiritText(t("welcomeVoiceText"), undefined, undefined, language);
-        window.removeEventListener("pointerdown", triggerGreetingOnInteraction);
-        window.removeEventListener("keydown", triggerGreetingOnInteraction);
-      };
-
-      window.addEventListener("pointerdown", triggerGreetingOnInteraction, { once: true });
-      window.addEventListener("keydown", triggerGreetingOnInteraction, { once: true });
-
-      return () => {
-        window.removeEventListener("pointerdown", triggerGreetingOnInteraction);
-        window.removeEventListener("keydown", triggerGreetingOnInteraction);
-      };
-    } catch (e) {
-      console.warn("Could not setup initial greeting listener", e);
-    }
-  }, [isWelcomeOpen, language, t]);
-
-  const handleCloseWelcome = (keepPlayingSpeech: boolean = false) => {
-    setIsWelcomeOpen(false);
-    if (!keepPlayingSpeech) {
-      audio.stopSpeech();
-    }
-    try {
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("ouija_welcome_dismissed", "true");
-        localStorage.setItem("ouija_welcome_dismissed", "true");
+      if (sessionStorage.getItem("ouija_welcome_narrative_played")) {
+        return;
       }
-    } catch (e) {
-      console.warn("Could not persist welcome dismissal:", e);
-    }
-  };
+    } catch {}
+
+    const triggerWelcome = () => {
+      if (isDisposed) return;
+      try {
+        sessionStorage.setItem("ouija_welcome_narrative_played", "true");
+      } catch {}
+
+      audio.speakSpiritText(welcomeNarrative, undefined, undefined, language);
+
+      window.removeEventListener("pointerdown", triggerWelcome);
+      window.removeEventListener("keydown", triggerWelcome);
+    };
+
+    // Try immediate playback
+    try {
+      audio.speakSpiritText(
+        welcomeNarrative,
+        () => {
+          try { sessionStorage.setItem("ouija_welcome_narrative_played", "true"); } catch {}
+        },
+        undefined,
+        language
+      );
+    } catch {}
+
+    window.addEventListener("pointerdown", triggerWelcome, { once: true });
+    window.addEventListener("keydown", triggerWelcome, { once: true });
+
+    return () => {
+      isDisposed = true;
+      window.removeEventListener("pointerdown", triggerWelcome);
+      window.removeEventListener("keydown", triggerWelcome);
+    };
+  }, [language, t]);
   const [isLoading, setIsLoading] = useState(false);
   const [fogOn, setFogOn] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -276,6 +265,9 @@ export default function App() {
     focusQuery: string;
     feeling: string;
   }) => {
+    // Instantly terminate any previous ambient or welcome voice
+    audio.stopSpeech();
+    try { sessionStorage.setItem("ouija_welcome_narrative_played", "true"); } catch {}
     setIsLoading(true);
     setErrorMsg("");
     setSeekerName(data.name || "Buscador");
@@ -310,6 +302,9 @@ export default function App() {
 
   // Free Spirit Oracle API Call
   const handleGeneralConsult = async (question: string, name: string) => {
+    // Instantly terminate any previous ambient or welcome voice
+    audio.stopSpeech();
+    try { sessionStorage.setItem("ouija_welcome_narrative_played", "true"); } catch {}
     setIsLoading(true);
     setErrorMsg("");
     setSeekerName(name);
@@ -425,11 +420,10 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Header Bar with Visitor Counter & Solemn Male Voice Controls */}
+      {/* Header Bar with Atmosphere & Settings Controls */}
       <AtmosphereControls
         fogOn={fogOn}
         setFogOn={setFogOn}
-        onOpenWelcome={() => setIsWelcomeOpen(true)}
         onOpenGrimorio={() => setShowGrimorioModal(true)}
         visitsStats={visitsStats}
       />
@@ -534,31 +528,11 @@ export default function App() {
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                   <button
                     onClick={() => {
-                      if (currentSpiritResponse) {
-                        const spelled = (currentSpiritResponse.spelledWord || "").replace(/\bundefined\b/gi, "").trim();
-                        const message = (currentSpiritResponse.spiritMessage || "").replace(/\bundefined\b/gi, "").trim();
-                        const phrase = spelled && message ? `${spelled}. ${message}` : message || spelled || "El oráculo de ultratumba ha hablado.";
-                        audio.speakSpiritText(
-                          phrase,
-                          undefined,
-                          undefined,
-                          language
-                        );
-                      }
-                    }}
-                    className="px-4 py-2 bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-600/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition flex items-center space-x-2 cursor-pointer shadow"
-                  >
-                    <Volume2 className="w-4 h-4 text-purple-300" />
-                    <span>{t("listenSolemnVoice")}</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
                       audio.stopSpeech();
                       setMode("IDLE");
                       setCurrentSpiritResponse(null);
                     }}
-                    className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-purple-300 border border-purple-800/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition cursor-pointer"
+                    className="px-6 py-2.5 bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-700/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition cursor-pointer shadow-lg"
                   >
                     {t("makeAnotherConsultation")}
                   </button>
@@ -608,12 +582,6 @@ export default function App() {
           isSaved={isCurrentSaved}
         />
       )}
-
-      {/* Spoken Welcome Voice Modal */}
-      <WelcomeVoiceModal
-        isOpen={isWelcomeOpen}
-        onClose={handleCloseWelcome}
-      />
 
       {/* Grimorio Personal / Archivo de Ecos Modal */}
       {showGrimorioModal && (

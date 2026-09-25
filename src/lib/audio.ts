@@ -663,6 +663,8 @@ class OuijaAudioEngine {
     return this.selectedVoiceURI;
   }
 
+  private currentPlaybackId: number = 0;
+  private currentAbortController: AbortController | null = null;
   private pendingAutoplayItem: {
     text: string;
     voice: string;
@@ -671,6 +673,7 @@ class OuijaAudioEngine {
     targetLang?: string;
   } | null = null;
   private isAutoplayListenerAttached: boolean = false;
+  private unlockHandlerRef: (() => void) | null = null;
 
   public hasPendingAutoplay(): boolean {
     return this.pendingAutoplayItem !== null;
@@ -686,6 +689,17 @@ class OuijaAudioEngine {
     return false;
   }
 
+  private clearAutoplayQueue() {
+    this.pendingAutoplayItem = null;
+    if (this.unlockHandlerRef && typeof window !== "undefined") {
+      window.removeEventListener("pointerdown", this.unlockHandlerRef);
+      window.removeEventListener("keydown", this.unlockHandlerRef);
+      window.removeEventListener("click", this.unlockHandlerRef);
+      this.unlockHandlerRef = null;
+      this.isAutoplayListenerAttached = false;
+    }
+  }
+
   private queueAutoplayUnlock(
     text: string,
     voice: string,
@@ -693,22 +707,18 @@ class OuijaAudioEngine {
     onEnd?: () => void,
     targetLang?: string
   ) {
+    this.clearAutoplayQueue();
     this.pendingAutoplayItem = { text, voice, onStart, onEnd, targetLang };
-    if (this.isAutoplayListenerAttached || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
     this.isAutoplayListenerAttached = true;
     const unlockHandler = () => {
-      window.removeEventListener("pointerdown", unlockHandler);
-      window.removeEventListener("keydown", unlockHandler);
-      window.removeEventListener("click", unlockHandler);
-      this.isAutoplayListenerAttached = false;
-
-      if (this.pendingAutoplayItem) {
-        const item = this.pendingAutoplayItem;
-        this.pendingAutoplayItem = null;
-        this.playAiVoice(item.text, item.voice, item.onStart, item.onEnd, item.targetLang);
+      this.clearAutoplayQueue();
+      if (text) {
+        this.playAiVoice(text, voice, onStart, onEnd, targetLang);
       }
     };
+    this.unlockHandlerRef = unlockHandler;
 
     window.addEventListener("pointerdown", unlockHandler, { once: true });
     window.addEventListener("keydown", unlockHandler, { once: true });
@@ -716,8 +726,43 @@ class OuijaAudioEngine {
   }
 
   /**
+   * Builds a concise, solemn, and high-impact spoken past life text.
+   * Keeps character count around 180-250 for instant generation (<1.5s) and pre-cache matching.
+   */
+  public buildPastLifeNarrationText(details: any, lang: string = "es"): string {
+    if (!details) return "";
+    const parts: string[] = [];
+    if (details.title) parts.push(String(details.title).trim());
+    if (details.eraLocation) parts.push(String(details.eraLocation).trim());
+    if (details.identityRole) parts.push(String(details.identityRole).trim());
+
+    if (details.narrative) {
+      const raw = String(details.narrative).replace(/\bundefined\b/gi, "").trim();
+      const sentenceMatch = raw.match(/^(?:[^.!?]+[.!?]){1,2}/);
+      if (sentenceMatch && sentenceMatch[0] && sentenceMatch[0].length >= 30) {
+        parts.push(sentenceMatch[0].trim());
+      } else {
+        parts.push(raw.slice(0, 240).trim());
+      }
+    }
+
+    if (details.karmicLesson) {
+      const prefix = lang === "en" ? "Karmic lesson" : lang === "pt" ? "Lição cármica" : lang === "fr" ? "Leçon karmique" : "Lección kármica";
+      parts.push(`${prefix}: ${String(details.karmicLesson).slice(0, 140).trim()}`);
+    }
+
+    return parts
+      .filter(Boolean)
+      .join(". ")
+      .replace(/\bundefined\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  /**
    * Plays the authentic, high-fidelity AI voice of ultratumba (Fenrir, Puck, or Charon)
    * generated via Gemini TTS and served from the cached backend.
+   * Guarantees strictly ONE voice playing at any given instant.
    */
   public async playAiVoice(
     text: string,
@@ -731,8 +776,13 @@ class OuijaAudioEngine {
       return false;
     }
 
+    // Advance session ID and cleanly abort any in-flight or current playback
     this.stopSpeech();
     this.initContext();
+
+    const playbackId = ++this.currentPlaybackId;
+    const abortCtrl = new AbortController();
+    this.currentAbortController = abortCtrl;
 
     const voice = voiceName || this.selectedAiVoice || "Fenrir";
 
@@ -745,13 +795,19 @@ class OuijaAudioEngine {
           voice,
           lang: targetLang,
         }),
+        signal: abortCtrl.signal,
       });
+
+      // Stale check
+      if (playbackId !== this.currentPlaybackId) return false;
 
       if (!res.ok) {
         throw new Error(`TTS server response: ${res.status}`);
       }
 
       const data = await res.json();
+      if (playbackId !== this.currentPlaybackId) return false;
+
       if (!data.audioData) {
         throw new Error("No audioData received");
       }
@@ -761,26 +817,39 @@ class OuijaAudioEngine {
       this.currentAudioElement = audioEl;
 
       audioEl.onplay = () => {
+        if (playbackId !== this.currentPlaybackId) {
+          audioEl.pause();
+          return;
+        }
         this.startCavernResonance();
         if (onStart) onStart();
       };
 
       audioEl.onended = () => {
-        this.stopCavernResonance();
-        this.currentAudioElement = null;
-        if (onEnd) onEnd();
+        if (playbackId === this.currentPlaybackId) {
+          this.stopCavernResonance();
+          this.currentAudioElement = null;
+          if (onEnd) onEnd();
+        }
       };
 
       audioEl.onerror = () => {
-        this.stopCavernResonance();
-        this.currentAudioElement = null;
-        this.speakSpiritTextFallback(text, onStart, onEnd, targetLang);
+        if (playbackId === this.currentPlaybackId) {
+          this.stopCavernResonance();
+          this.currentAudioElement = null;
+          this.speakSpiritTextFallback(text, onStart, onEnd, targetLang, playbackId);
+        }
       };
 
       try {
         await audioEl.play();
+        if (playbackId !== this.currentPlaybackId) {
+          audioEl.pause();
+          return false;
+        }
         return true;
       } catch (playErr: any) {
+        if (playbackId !== this.currentPlaybackId) return false;
         if (playErr?.name === "NotAllowedError") {
           console.warn("Autoplay deferred by browser policy. Will play on first user interaction.");
           this.queueAutoplayUnlock(text, voice, onStart, onEnd, targetLang);
@@ -788,10 +857,13 @@ class OuijaAudioEngine {
         }
         throw playErr;
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (playbackId !== this.currentPlaybackId || e?.name === "AbortError") {
+        return false;
+      }
       console.warn("AI voice playback fallback:", e);
       this.stopCavernResonance();
-      this.speakSpiritTextFallback(text, onStart, onEnd, targetLang);
+      this.speakSpiritTextFallback(text, onStart, onEnd, targetLang, playbackId);
       return false;
     }
   }
@@ -898,8 +970,6 @@ class OuijaAudioEngine {
       ? "The portal opens. The spirit confirms your path."
       : "El portal de ultratumba se abre. El espíritu confirma tu camino.");
 
-    this.stopSpeech();
-
     this.playAiVoice(
       safeText,
       this.selectedAiVoice || "Fenrir",
@@ -909,9 +979,19 @@ class OuijaAudioEngine {
     );
   }
 
-  public speakSpiritTextFallback(text: string, onStart?: () => void, onEnd?: () => void, targetLang: string = "es") {
+  public speakSpiritTextFallback(
+    text: string,
+    onStart?: () => void,
+    onEnd?: () => void,
+    targetLang: string = "es",
+    originPlaybackId?: number
+  ) {
     if (this.isMuted) {
       if (onEnd) onEnd();
+      return;
+    }
+
+    if (originPlaybackId !== undefined && originPlaybackId !== this.currentPlaybackId) {
       return;
     }
 
@@ -919,6 +999,8 @@ class OuijaAudioEngine {
       if (onEnd) onEnd();
       return;
     }
+
+    const playbackId = originPlaybackId !== undefined ? originPlaybackId : ++this.currentPlaybackId;
 
     // Eradicate any literal "undefined"
     const clean = (text || "")
@@ -953,16 +1035,24 @@ class OuijaAudioEngine {
       utterance.volume = 1.0;
 
       utterance.onstart = () => {
+        if (playbackId !== this.currentPlaybackId) {
+          synth.cancel();
+          return;
+        }
         this.startCavernResonance();
         if (onStart) onStart();
       };
       utterance.onend = () => {
-        this.stopCavernResonance();
-        if (onEnd) onEnd();
+        if (playbackId === this.currentPlaybackId) {
+          this.stopCavernResonance();
+          if (onEnd) onEnd();
+        }
       };
       utterance.onerror = () => {
-        this.stopCavernResonance();
-        if (onEnd) onEnd();
+        if (playbackId === this.currentPlaybackId) {
+          this.stopCavernResonance();
+          if (onEnd) onEnd();
+        }
       };
 
       synth.speak(utterance);
@@ -973,19 +1063,30 @@ class OuijaAudioEngine {
   }
 
   public stopSpeech() {
+    this.currentPlaybackId++;
+    if (this.currentAbortController) {
+      try {
+        this.currentAbortController.abort();
+      } catch {}
+      this.currentAbortController = null;
+    }
+    this.clearAutoplayQueue();
     this.stopCavernResonance();
 
     if (this.currentAudioElement) {
       try {
         this.currentAudioElement.pause();
-        this.currentAudioElement.currentTime = 0;
+        this.currentAudioElement.onplay = null;
+        this.currentAudioElement.onended = null;
+        this.currentAudioElement.onerror = null;
+        this.currentAudioElement.src = "";
         this.currentAudioElement = null;
       } catch {
         // ignore
       }
     }
 
-    if ('speechSynthesis' in window) {
+    if (typeof window !== "undefined" && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
       } catch {

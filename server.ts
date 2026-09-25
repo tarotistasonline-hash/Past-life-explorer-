@@ -10,9 +10,33 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Google Site Verification Endpoint
+// Google Site Verification Endpoints
 app.get("/googleaf622c464da9a177.html", (req, res) => {
   res.type("text/html").send("google-site-verification: googleaf622c464da9a177.html\n");
+});
+
+app.get("/googlee814d7c05b3fbac6.html", (req, res) => {
+  res.type("text/html").send("google-site-verification: googlee814d7c05b3fbac6.html\n");
+});
+
+// Robots.txt for Search Engine Crawlers
+app.get("/robots.txt", (req, res) => {
+  const robotsPath = path.join(process.cwd(), "public", "robots.txt");
+  if (fs.existsSync(robotsPath)) {
+    res.type("text/plain").send(fs.readFileSync(robotsPath, "utf-8"));
+  } else {
+    res.type("text/plain").send("User-agent: *\nAllow: /\nSitemap: https://ais-pre-ulzgbsculea2d4feemykvi-172786148761.us-east1.run.app/sitemap.xml\n");
+  }
+});
+
+// Sitemap.xml for Google Search Console & Indexing
+app.get("/sitemap.xml", (req, res) => {
+  const sitemapPath = path.join(process.cwd(), "public", "sitemap.xml");
+  if (fs.existsSync(sitemapPath)) {
+    res.type("application/xml").send(fs.readFileSync(sitemapPath, "utf-8"));
+  } else {
+    res.status(404).send("Sitemap not found");
+  }
 });
 
 // Persistent Real Visitor Counter Storage
@@ -174,6 +198,129 @@ function getLanguageName(lang?: string): string {
   }
 }
 
+// TTS Engine & Audio Cache Setup (Fenrir Solemn Male Voice of Ultratumba)
+const TTS_CACHE_DIR = path.join(process.cwd(), "data", "tts_cache");
+if (!fs.existsSync(TTS_CACHE_DIR)) {
+  fs.mkdirSync(TTS_CACHE_DIR, { recursive: true });
+}
+
+const memoryAudioCache = new Map<string, { audioData: string; mimeType: string }>();
+
+// Load existing disk cache into memory
+try {
+  const files = fs.readdirSync(TTS_CACHE_DIR);
+  for (const f of files) {
+    if (f.endsWith(".json")) {
+      try {
+        const raw = fs.readFileSync(path.join(TTS_CACHE_DIR, f), "utf-8");
+        const parsed = JSON.parse(raw);
+        if (parsed.audioData) {
+          const key = f.replace(".json", "");
+          memoryAudioCache.set(key, { audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav" });
+        }
+      } catch {}
+    }
+  }
+} catch (e) {
+  console.warn("Could not pre-load TTS disk cache:", e);
+}
+
+function buildPastLifeNarrationText(details: any, lang: string = "es"): string {
+  if (!details) return "";
+  const parts: string[] = [];
+  if (details.title) parts.push(String(details.title).trim());
+  if (details.eraLocation) parts.push(String(details.eraLocation).trim());
+  if (details.identityRole) parts.push(String(details.identityRole).trim());
+
+  if (details.narrative) {
+    const raw = String(details.narrative).replace(/\bundefined\b/gi, "").trim();
+    const sentenceMatch = raw.match(/^(?:[^.!?]+[.!?]){1,2}/);
+    if (sentenceMatch && sentenceMatch[0] && sentenceMatch[0].length >= 30) {
+      parts.push(sentenceMatch[0].trim());
+    } else {
+      parts.push(raw.slice(0, 240).trim());
+    }
+  }
+
+  if (details.karmicLesson) {
+    const prefix = lang === "en" ? "Karmic lesson" : lang === "pt" ? "Lição cármica" : lang === "fr" ? "Leçon karmique" : "Lección kármica";
+    parts.push(`${prefix}: ${String(details.karmicLesson).slice(0, 140).trim()}`);
+  }
+
+  return parts
+    .filter(Boolean)
+    .join(". ")
+    .replace(/\bundefined\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function generateAndCacheTTS(
+  text: string,
+  voice: string = "Fenrir",
+  lang: string = "es"
+): Promise<{ audioData: string; mimeType: string } | null> {
+  if (!text || typeof text !== "string") return null;
+  const cleanText = text.trim();
+  const chosenVoice = ["Fenrir", "Puck", "Charon"].includes(voice) ? voice : "Fenrir";
+  const hash = Buffer.from(`${chosenVoice}_${cleanText}`).toString("base64url").slice(0, 80);
+  const cacheFile = path.join(TTS_CACHE_DIR, `${hash}.json`);
+
+  if (memoryAudioCache.has(hash)) {
+    return memoryAudioCache.get(hash)!;
+  }
+
+  if (fs.existsSync(cacheFile)) {
+    try {
+      const raw = fs.readFileSync(cacheFile, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (parsed.audioData) {
+        memoryAudioCache.set(hash, { audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav" });
+        return { audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav" };
+      }
+    } catch (e) {
+      console.warn("Could not read TTS cache file:", e);
+    }
+  }
+
+  const ai = getAIClient();
+  if (!ai) return null;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash-lite-tts",
+      contents: [{
+        role: "user",
+        parts: [{ text: cleanText.slice(0, 480) }]
+      }],
+      config: {
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: chosenVoice }
+          }
+        }
+      }
+    });
+
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const mimeType = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType || "audio/wav";
+
+    if (audioData) {
+      memoryAudioCache.set(hash, { audioData, mimeType });
+      try {
+        fs.writeFileSync(cacheFile, JSON.stringify({ audioData, mimeType, voice: chosenVoice, text: cleanText }), "utf-8");
+      } catch (e) {
+        console.warn("Could not write TTS cache:", e);
+      }
+      return { audioData, mimeType };
+    }
+  } catch (error: any) {
+    console.warn("TTS generation error in generateAndCacheTTS:", error?.message || error);
+  }
+  return null;
+}
+
 // Fallback generator for past life when API key is missing or on error
 function getFallbackPastLife(name?: string, query?: string, lang = "es") {
   const language = lang?.toLowerCase() || "es";
@@ -192,19 +339,26 @@ function getFallbackPastLife(name?: string, query?: string, lang = "es") {
   const eraList = language === "en" ? eraOptionsEn : eraOptionsEs;
   const chosen = eraList[Math.floor(Math.random() * eraList.length)];
 
+  const details = {
+    title: chosen.title,
+    eraLocation: chosen.eraLocation,
+    identityRole: chosen.role,
+    narrative: chosen.narrative,
+    deathTransition: chosen.death,
+    karmicLesson: chosen.karma,
+    soulConnection: chosen.connection,
+    soulRelic: chosen.relic,
+    vibeColor: chosen.color || "#d97706",
+    narrationText: "",
+  };
+  details.narrationText = buildPastLifeNarrationText(details, lang);
+
+  // Background pre-cache TTS for fallback too
+  generateAndCacheTTS(details.narrationText, "Fenrir", lang).catch(() => {});
+
   return {
     spelledWord: chosen.spelled,
-    pastLifeDetails: {
-      title: chosen.title,
-      eraLocation: chosen.eraLocation,
-      identityRole: chosen.role,
-      narrative: chosen.narrative,
-      deathTransition: chosen.death,
-      karmicLesson: chosen.karma,
-      soulConnection: chosen.connection,
-      soulRelic: chosen.relic,
-      vibeColor: chosen.color || "#d97706"
-    }
+    pastLifeDetails: details,
   };
 }
 
@@ -312,117 +466,27 @@ function getFallbackSpiritAnswer(question: string, lang = "es") {
   };
 }
 
-// TTS Engine & Audio Cache Setup (Fenrir Solemn Male Voice of Ultratumba)
-const TTS_CACHE_DIR = path.join(process.cwd(), "data", "tts_cache");
-if (!fs.existsSync(TTS_CACHE_DIR)) {
-  fs.mkdirSync(TTS_CACHE_DIR, { recursive: true });
-}
-
-const memoryAudioCache = new Map<string, { audioData: string; mimeType: string }>();
-
-// Load existing disk cache into memory
-try {
-  const files = fs.readdirSync(TTS_CACHE_DIR);
-  for (const f of files) {
-    if (f.endsWith(".json")) {
-      try {
-        const raw = fs.readFileSync(path.join(TTS_CACHE_DIR, f), "utf-8");
-        const parsed = JSON.parse(raw);
-        if (parsed.audioData) {
-          const key = f.replace(".json", "");
-          memoryAudioCache.set(key, { audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav" });
-        }
-      } catch {}
-    }
-  }
-} catch (e) {
-  console.warn("Could not pre-load TTS disk cache:", e);
-}
-
 // API Route: Text-to-Speech (Fenrir Solemn Male Voice of Ultratumba)
 app.post("/api/tts", async (req, res) => {
   try {
-    const { text, voice = "Fenrir", style, lang = "es" } = req.body || {};
+    const { text, voice = "Fenrir", lang = "es" } = req.body || {};
     if (!text || typeof text !== "string") {
       return res.status(400).json({ error: "Missing text" });
     }
 
     const cleanText = text.trim();
-    // Default and prioritize Fenrir (the solemn male voice of ultratumba)
     const chosenVoice = ["Fenrir", "Puck", "Charon"].includes(voice) ? voice : "Fenrir";
-    
-    // Hash key for cache
-    const hash = Buffer.from(`${chosenVoice}_${cleanText}`).toString("base64url").slice(0, 80);
-    const cacheFile = path.join(TTS_CACHE_DIR, `${hash}.json`);
+    const result = await generateAndCacheTTS(cleanText, chosenVoice, lang);
 
-    // 1. Check memory cache (0ms latency)
-    if (memoryAudioCache.has(hash)) {
-      const cached = memoryAudioCache.get(hash)!;
-      return res.json({ audioData: cached.audioData, mimeType: cached.mimeType, voice: chosenVoice, fromCache: true });
-    }
-
-    // 2. Check disk cache
-    if (fs.existsSync(cacheFile)) {
-      try {
-        const raw = fs.readFileSync(cacheFile, "utf-8");
-        const parsed = JSON.parse(raw);
-        if (parsed.audioData) {
-          memoryAudioCache.set(hash, { audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav" });
-          return res.json({ audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav", voice: chosenVoice, fromCache: true });
-        }
-      } catch (err) {
-        console.warn("Could not read TTS cache file:", err);
-      }
-    }
-
-    const ai = getAIClient();
-    if (!ai) {
-      return res.status(503).json({ error: "AI client not available", fallback: true });
-    }
-
-    const voicePromptStyle = style || (chosenVoice === "Fenrir"
-      ? "Solemne, profundo, misterioso, sereno y majestuoso de ultratumba"
-      : chosenVoice === "Puck"
-      ? "Claro, místico, reflexivo y sereno de ultratumba"
-      : "Cavernoso, grave, antiguo y sepulcral del abismo");
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash-tts",
-      contents: [{
-        role: "user",
-        parts: [{
-          text: cleanText.slice(0, 600),
-          speechMetadata: {
-            style: voicePromptStyle,
-          }
-        }]
-      }] as any,
-      config: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: chosenVoice }
-          }
-        }
-      }
-    });
-
-    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    const mimeType = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType || "audio/wav";
-
-    if (!audioData) {
+    if (!result) {
       return res.status(500).json({ error: "No audio generated", fallback: true });
     }
 
-    // Cache to memory and disk
-    memoryAudioCache.set(hash, { audioData, mimeType });
-    try {
-      fs.writeFileSync(cacheFile, JSON.stringify({ audioData, mimeType, voice: chosenVoice, text: cleanText }), "utf-8");
-    } catch (e) {
-      console.warn("Could not write TTS cache:", e);
-    }
-
-    return res.json({ audioData, mimeType, voice: chosenVoice, fromCache: false });
+    return res.json({
+      audioData: result.audioData,
+      mimeType: result.mimeType,
+      voice: chosenVoice,
+    });
   } catch (error: any) {
     console.warn("Error in /api/tts:", error?.message || error);
     return res.status(500).json({ error: error?.message || "TTS error", fallback: true });
@@ -505,6 +569,14 @@ Respond strictly in JSON format with this structure:
     if (jsonText) {
       const parsed = JSON.parse(jsonText);
       parsed.spelledWord = (parsed.spelledWord || "VIDA PASADA").toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 30);
+      const narrationText = buildPastLifeNarrationText(parsed.pastLifeDetails, lang);
+      parsed.pastLifeDetails.narrationText = narrationText;
+
+      // Start background pre-warming of the TTS audio while the user watches the Ouija board!
+      generateAndCacheTTS(narrationText, "Fenrir", lang).catch((err) => {
+        console.warn("Background TTS pre-warm notice:", err?.message || err);
+      });
+
       return res.json(parsed);
     } else {
       return res.json(getFallbackPastLife(name, focusQuery, lang));

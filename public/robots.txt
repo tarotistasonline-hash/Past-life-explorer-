@@ -1,0 +1,6 @@
+# Robots.txt - Tabla Ouija Interactiva & Registros Akáshicos
+User-agent: *
+Allow: /
+
+# Sitemap for Google Search Console & Web Crawlers
+Sitemap: https://ais-pre-ulzgbsculea2d4feemykvi-172786148761.us-east1.run.app/sitemap.xml

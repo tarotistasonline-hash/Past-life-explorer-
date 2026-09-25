@@ -1,4 +1,5 @@
 import html2canvas from "html2canvas";
+import { getPublicPortalUrl } from "./constants";
 
 /**
  * Generates an HTMLCanvasElement from a target DOM element with high DPI and astral styling
@@ -165,7 +166,7 @@ export async function copyMysticShareText(options: {
   relic?: string;
   type?: "PAST_LIFE" | "TAROT" | "SPREAD";
 }): Promise<boolean> {
-  const portalUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const portalUrl = getPublicPortalUrl();
 
   let formattedText = `📜 ✧ *PAPIRO DE LA REVELACIÓN AKÁSHICA* ✧ 📜\n`;
   formattedText += `🔮 *Portal de Vidas Pasadas & Oráculo Astral*\n`;

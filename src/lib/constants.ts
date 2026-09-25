@@ -1,5 +1,31 @@
 import { LetterCoord } from "../types";
 
+export const CANONICAL_PUBLIC_URL = "https://ais-pre-ulzgbsculea2d4feemykvi-172786148761.us-east1.run.app";
+
+/**
+ * Returns the true production link for sharing, indexing, and social distribution.
+ * If running in local development or inside private container tunnels, it returns the real canonical public URL.
+ */
+export function getPublicPortalUrl(): string {
+  if (typeof window === "undefined") return CANONICAL_PUBLIC_URL;
+  try {
+    const origin = window.location.origin || "";
+    if (
+      !origin ||
+      origin.includes("localhost") ||
+      origin.includes("127.0.0.1") ||
+      origin.includes(".e2b-tunnel") ||
+      origin.includes("ais-dev") ||
+      !origin.startsWith("http")
+    ) {
+      return CANONICAL_PUBLIC_URL;
+    }
+    return origin;
+  } catch {
+    return CANONICAL_PUBLIC_URL;
+  }
+}
+
 export const BOARD_COORDS: Record<string, LetterCoord> = {
   // Special Emblems
   "SI": { char: "SÍ", x: 22, y: 18 },

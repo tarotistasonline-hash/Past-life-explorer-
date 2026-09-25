@@ -12,9 +12,11 @@ import {
   Loader2,
   ExternalLink,
   Layers,
+  Link2,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
+import { getPublicPortalUrl } from "../lib/constants";
 import {
   shareImageFile,
   copyImageToClipboard,
@@ -52,7 +54,7 @@ export const PastLifeShareModal: React.FC<PastLifeShareModalProps> = ({
   if (!isOpen) return null;
 
   const auraColor = details.vibeColor || "#a855f7";
-  const portalUrl = typeof window !== "undefined" ? window.location.origin : "https://oraculo-astral.app";
+  const portalUrl = getPublicPortalUrl();
   const sanitizedTitle = details.title || "Revelación Akáshica";
   const shareFilename = `revelacion-${(seekerName || "alma").toLowerCase().replace(/\s+/g, "_")}-${Date.now()}.png`;
 
@@ -311,7 +313,7 @@ export const PastLifeShareModal: React.FC<PastLifeShareModalProps> = ({
           <div className="text-[11px] font-cinzel text-purple-300/80 mb-2 text-center uppercase tracking-wider">
             Compartir Directo en Redes
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2 mb-3">
             <button
               onClick={shareToWhatsApp}
               className="py-2 px-1 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/40 text-emerald-200 text-xs font-cinzel flex items-center justify-center space-x-1 transition cursor-pointer"
@@ -347,6 +349,30 @@ export const PastLifeShareModal: React.FC<PastLifeShareModalProps> = ({
               <Send className="w-3.5 h-3.5 text-cyan-400" />
               <span className="text-[11px]">Telegram</span>
             </button>
+          </div>
+
+          {/* Official Link to Share and Index */}
+          <div className="bg-purple-950/60 border border-purple-800/60 rounded-xl p-3 space-y-1.5 text-left">
+            <div className="flex items-center justify-between text-[11px] font-cinzel text-amber-300">
+              <span className="flex items-center space-x-1.5 font-bold">
+                <Link2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>Enlace Oficial del Portal:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic(HAPTIC_PATTERNS.click);
+                  navigator.clipboard.writeText(portalUrl);
+                  showTemporaryFeedback("¡Enlace oficial copiado al portapapeles!");
+                }}
+                className="text-[10px] px-2.5 py-1 rounded bg-purple-900/90 hover:bg-purple-800 text-purple-100 border border-purple-600/60 transition cursor-pointer font-cinzel font-semibold"
+              >
+                Copiar Enlace
+              </button>
+            </div>
+            <div className="text-[11px] font-mono text-purple-200/90 break-all select-all bg-black/50 p-2 rounded-lg border border-purple-900/60">
+              {portalUrl}
+            </div>
           </div>
         </div>
 

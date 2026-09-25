@@ -37,10 +37,10 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
 
   useEffect(() => {
     triggerHaptic(HAPTIC_PATTERNS.revelationUnlock);
-    const speechParts = [details.title, details.eraLocation, details.identityRole, details.narrative].filter(
-      (p) => Boolean(p) && typeof p === "string" && !p.toLowerCase().includes("undefined")
-    );
-    const speechText = speechParts.join(". ");
+    // Instantly cancel any previous welcome voice or residual speech
+    audio.stopSpeech();
+
+    const speechText = details.narrationText || audio.buildPastLifeNarrationText(details, language);
     setIsSpeaking(true);
     audio.speakSpiritText(
       speechText,
@@ -60,10 +60,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
       audio.stopSpeech();
       setIsSpeaking(false);
     } else {
-      const speechParts = [details.title, details.eraLocation, details.identityRole, details.narrative].filter(
-        (p) => Boolean(p) && typeof p === "string" && !p.toLowerCase().includes("undefined")
-      );
-      const speechText = speechParts.join(". ");
+      const speechText = details.narrationText || audio.buildPastLifeNarrationText(details, language);
       setIsSpeaking(true);
       audio.speakSpiritText(
         speechText,
@@ -290,7 +287,7 @@ export const PastLifeModal: React.FC<PastLifeModalProps> = ({
             className="px-4 py-1.5 rounded-full bg-purple-950/80 border border-purple-700/50 text-xs font-gothic text-purple-200 flex items-center space-x-2 hover:bg-purple-900/90 transition cursor-pointer shadow"
           >
             <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? "text-purple-300 animate-bounce" : "text-purple-400"}`} />
-            <span>{isSpeaking ? "Pausar narración" : t("pastLifeModalListen")}</span>
+            <span>{isSpeaking ? "Pausar narración" : "Reanudar narración"}</span>
           </button>
         </div>
 

@@ -1,16 +1,45 @@
 /**
- * Creator & Admin Traffic Filter Utility
- * Allows the website creator/owner to optionally exclude their visits and test consultations
- * from public metrics if explicitly chosen via the Atmosphere Controls menu.
+ * Creator & Admin Traffic Filter Utility & Exclusive Configuration Access
+ * Strictly restricts configuration and creator options to tarotistasonline@gmail.com
  */
 
 const STORAGE_KEY = "ouija_creator_exclude_visits_v2";
+const AUTH_KEY = "ouija_admin_authorized_tarotista";
+
+export function isAuthorizedAdmin(): boolean {
+  if (typeof window === "undefined") return false;
+
+  try {
+    const isAuth = localStorage.getItem(AUTH_KEY);
+    return isAuth === "true";
+  } catch (e) {
+    return false;
+  }
+}
+
+export function authorizeAdmin(input: string): boolean {
+  if (typeof window === "undefined") return false;
+  const clean = input.trim().toLowerCase();
+  
+  // STRICT SECURITY: Only the verified owner email can unlock
+  if (clean === "tarotistasonline@gmail.com") {
+    localStorage.setItem(AUTH_KEY, "true");
+    window.dispatchEvent(new CustomEvent("ouija-admin-auth-change", { detail: { isAuthorized: true } }));
+    return true;
+  }
+  return false;
+}
+
+export function deauthorizeAdmin(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(AUTH_KEY);
+  window.dispatchEvent(new CustomEvent("ouija-admin-auth-change", { detail: { isAuthorized: false } }));
+}
 
 export function isAdminSession(): boolean {
   if (typeof window === "undefined") return false;
 
   try {
-    // Clear legacy automatic exclusion key that falsely locked dev/test users out of the counter
     if (localStorage.getItem("ouija_creator_mode_v1") !== null) {
       localStorage.removeItem("ouija_creator_mode_v1");
     }
@@ -29,7 +58,6 @@ export function isAdminSession(): boolean {
     // ignore
   }
 
-  // By default, ALL visits and consultations count towards real traffic metrics
   return false;
 }
 

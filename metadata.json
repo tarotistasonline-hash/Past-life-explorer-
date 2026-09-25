@@ -1,6 +1,6 @@
 {
   "name": "Tabla Ouija Interactiva - Vidas Pasadas",
-  "description": "Revela tus vidas pasadas, consulta a los espíritus con la Tabla Ouija interactiva y descubre tu Arcano de Tarot del Día con voz solemne.",
+  "description": "Descubre tu Vida Pasada en los Registros Akáshicos! Consulta además la Tabla Ouija y despeja cualquier duda que te inquiete. Por otra parte, escucha el atinado consejo del arcano mayor que te ha salido, luego de barajar las cartas.",
   "requestFramePermissions": [
     "microphone"
   ],

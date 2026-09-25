@@ -11,6 +11,7 @@ export interface PastLifeDetails {
   soulRelic: string;
   vibeColor: string;
   imageUrl?: string;
+  narrationText?: string;
 }
 
 export interface PastLifeRevelation {

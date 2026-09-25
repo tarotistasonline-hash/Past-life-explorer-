@@ -303,7 +303,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     welcomeClose: "Iniciar Experiencia",
     welcomeListenVoice: "⚰️ Escuchar Voz de Ultratumba",
     welcomeStopVoice: "Detener Voz",
-    welcomeVoiceText: "Hablo desde el umbral de ultratumba... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas. Descubre aquí quién fuiste en tus encarnaciones anteriores y la sabiduría ancestral de tu alma a través de la canalización de la tabla ouija.",
+    welcomeVoiceText: "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas. Descubre aquí quién fuiste en tus encarnaciones anteriores y la sabiduría ancestral de tu alma a través de la canalización de la tabla ouija.",
     welcomeModalTitle: "Registros Akáshicos",
     welcomeModalSubtitle: "Descubre quién fuiste en tus encarnaciones pasadas y la sabiduría ancestral de tu alma",
     welcomeCard1: "Encarnaciones Pasadas",
