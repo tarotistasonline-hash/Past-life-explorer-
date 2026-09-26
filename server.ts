@@ -9,14 +9,25 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(express.static(path.join(process.cwd(), "public")));
 
-// Google Site Verification Endpoints
-app.get("/googleaf622c464da9a177.html", (req, res) => {
-  res.type("text/html").send("google-site-verification: googleaf622c464da9a177.html\n");
+// Google Site Verification Endpoints (supports with and without .html)
+app.get(["/googleaf622c464da9a177.html", "/googleaf622c464da9a177"], (req, res) => {
+  const file = path.join(process.cwd(), "public", "googleaf622c464da9a177.html");
+  if (fs.existsSync(file)) {
+    res.sendFile(file);
+  } else {
+    res.type("text/html").send("google-site-verification: googleaf622c464da9a177.html\n");
+  }
 });
 
-app.get("/googlee814d7c05b3fbac6.html", (req, res) => {
-  res.type("text/html").send("google-site-verification: googlee814d7c05b3fbac6.html\n");
+app.get(["/googlee814d7c05b3fbac6.html", "/googlee814d7c05b3fbac6"], (req, res) => {
+  const file = path.join(process.cwd(), "public", "googlee814d7c05b3fbac6.html");
+  if (fs.existsSync(file)) {
+    res.sendFile(file);
+  } else {
+    res.type("text/html").send("google-site-verification: googlee814d7c05b3fbac6.html\n");
+  }
 });
 
 // Robots.txt for Search Engine Crawlers
@@ -466,6 +477,40 @@ function getFallbackSpiritAnswer(question: string, lang = "es") {
   };
 }
 
+// Welcome narration texts per language
+const WELCOME_TEXTS: Record<string, string> = {
+  es: "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas. Descubre aquí quién fuiste en tus encarnaciones anteriores y la sabiduría ancestral de tu alma a través de la canalización de la tabla ouija.",
+  en: "I speak from beyond the veil of death... The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary. Discover who you were in your past incarnations and the ancient wisdom of your soul through the channeling of the Ouija board.",
+  pt: "Falo do limiar do além-túmulo... O véu dos tempos foi rasgado. Dou-lhe as boas-vindas aos Registos Akáshicos e Vidas Passadas. Descubra quem foi nas suas encarnações anteriores e a sabedoria ancestral da sua alma através da canalização do tabuleiro ouija.",
+  fr: "Je parle depuis le seuil d'outre-tombe... Le voile des temps est déchiré. Bienvenue aux Annales Akashiques et Vies Antérieures. Découvrez qui vous étiez dans vos incarnations précédentes et la sagesse ancestrale de votre âme grâce à la canalisation de la table ouija.",
+  it: "Parlo dalla soglia dell'oltretomba... Il velo dei tiempos è squarciato. Ti do il benvenuto ai Registri Akashici e alle Vite Passate. Scopri chi eri nelle tue incarnazioni passate e la saggezza ancestrale della tua anima attraverso la canalizzazione della tavola ouija.",
+  de: "Ich spreche von der Schwelle des Jenseits... Der Schleier der Zeit ist zerrissen. Willkommen in der Akasha-Chronik und bei den früheren Leben. Erfahre, wer du in deinen früheren Inkarnationen warst und die Weisheit deiner Seele durch das Channeling des Ouija-Bretts.",
+};
+
+// Direct Audio Stream endpoint for instant zero-latency welcome speech
+app.get("/api/welcome-audio", async (req, res) => {
+  try {
+    const lang = String(req.query.lang || "es").toLowerCase();
+    const voice = String(req.query.voice || "Fenrir");
+    const chosenVoice = ["Fenrir", "Puck", "Charon"].includes(voice) ? voice : "Fenrir";
+    const text = WELCOME_TEXTS[lang] || WELCOME_TEXTS.es;
+
+    const result = await generateAndCacheTTS(text, chosenVoice, lang);
+    if (!result || !result.audioData) {
+      return res.status(500).send("No audio generated");
+    }
+
+    const audioBuffer = Buffer.from(result.audioData, "base64");
+    res.setHeader("Content-Type", result.mimeType || "audio/wav");
+    res.setHeader("Content-Length", audioBuffer.length);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.end(audioBuffer);
+  } catch (err: any) {
+    console.warn("Error in /api/welcome-audio:", err?.message || err);
+    return res.status(500).send(err?.message || "Audio error");
+  }
+});
+
 // API Route: Text-to-Speech (Fenrir Solemn Male Voice of Ultratumba)
 app.post("/api/tts", async (req, res) => {
   try {
@@ -838,6 +883,19 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    // Prewarm welcome audio cache for instantaneous zero-latency playback
+    setTimeout(async () => {
+      try {
+        await Promise.all([
+          generateAndCacheTTS(WELCOME_TEXTS.es, "Fenrir", "es"),
+          generateAndCacheTTS(WELCOME_TEXTS.en, "Fenrir", "en"),
+          generateAndCacheTTS(WELCOME_TEXTS.pt, "Fenrir", "pt"),
+        ]);
+        console.log("Welcome audio cache prewarmed successfully.");
+      } catch (err) {
+        console.warn("Welcome audio prewarm notice:", err);
+      }
+    }, 1500);
   });
 }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Settings, Lock } from "lucide-react";
+import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen } from "lucide-react";
 import { audio } from "../lib/audio";
 import { VisitsStats } from "../types";
 import { useLanguage } from "../context/LanguageContext";
@@ -112,10 +112,10 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
         <div className="flex items-center space-x-3">
           <div 
             onClick={handleLogoClick}
-            title={isAdminAuthorized ? "Panel de Configuración (Propietario)" : "Tabla Ouija - Registros Akáshicos"}
+            title="Tabla Ouija - Registros Akáshicos"
             className="w-8 h-8 rounded-full bg-purple-950/90 border border-purple-500/60 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.3)] shrink-0 cursor-pointer hover:border-amber-400 transition"
           >
-            <span className="text-xs font-bold text-purple-300 font-cinzel">AR</span>
+            <span className="text-xs font-bold text-purple-300 font-cinzel">RA</span>
           </div>
           <div>
             <h1 className="font-decorative font-bold text-xs sm:text-sm md:text-base text-transparent bg-clip-text bg-gradient-to-r from-purple-100 via-indigo-200 to-purple-300 tracking-wide">
@@ -142,18 +142,6 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             <span className="font-cinzel font-semibold text-purple-100">{formattedVisits}</span>
             <span className="hidden md:inline text-[11px] text-purple-300/80">{t("realVisits")}</span>
           </div>
-
-          {/* Exclusive Admin Configuration Button (Visible ONLY to Owner) */}
-          {isAdminAuthorized && (
-            <button
-              onClick={() => setShowAdminConfigModal(true)}
-              title="Configuración Exclusiva del Propietario (tarotistasonline@gmail.com)"
-              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 to-purple-950/90 hover:from-amber-900 hover:to-purple-900 border border-amber-500/60 text-amber-200 flex items-center space-x-1.5 transition cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse"
-            >
-              <Settings className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-[11px] font-cinzel font-bold">Configuración</span>
-            </button>
-          )}
 
           {/* Language Selector Dropdown */}
           <LanguageSelector />

@@ -65,6 +65,14 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
   const { t, language } = useLanguage();
   const [selectedVoice, setSelectedVoice] = useState<string>(audio.getSelectedAiVoice());
   const [testingVoiceId, setTestingVoiceId] = useState<string | null>(null);
+  const [isPlayingWelcome, setIsPlayingWelcome] = useState<boolean>(false);
+  const [isWelcomeActive, setIsWelcomeActive] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("ouija_welcome_speech_active") !== "false";
+    } catch {
+      return true;
+    }
+  });
 
   if (!isOpen) return null;
 
@@ -72,6 +80,34 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
     triggerHaptic(HAPTIC_PATTERNS.click);
     setSelectedVoice(voiceId);
     audio.setSelectedAiVoice(voiceId);
+  };
+
+  const handleToggleWelcome = () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    const nextVal = !isWelcomeActive;
+    setIsWelcomeActive(nextVal);
+    try {
+      localStorage.setItem("ouija_welcome_speech_active", nextVal ? "true" : "false");
+      window.dispatchEvent(new CustomEvent("ouija-welcome-settings-change", { detail: { active: nextVal } }));
+    } catch {}
+  };
+
+  const handleTestWelcomeMessage = () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    if (isPlayingWelcome) {
+      audio.stopSpeech();
+      setIsPlayingWelcome(false);
+      return;
+    }
+
+    setIsPlayingWelcome(true);
+    const welcomeNarrative = t("welcomeVoiceText");
+    audio.speakSpiritText(
+      welcomeNarrative,
+      () => setIsPlayingWelcome(true),
+      () => setIsPlayingWelcome(false),
+      language
+    );
   };
 
   const handleTestVoice = (voiceId: "Fenrir" | "Puck" | "Charon", e: React.MouseEvent) => {
@@ -188,6 +224,51 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                 </div>
               );
             })}
+          </div>
+
+          {/* Welcome Message Autoplay & Preview Controls */}
+          <div className="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-800/50 space-y-2.5 mt-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Volume2 className="w-4 h-4 text-amber-400" />
+                <span className="font-cinzel text-xs font-bold text-amber-200">
+                  Mensaje de Bienvenida al Iniciar la App
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleWelcome}
+                className={`px-3 py-1 rounded-xl text-xs font-cinzel font-semibold border transition cursor-pointer flex items-center space-x-1.5 ${
+                  isWelcomeActive
+                    ? "bg-emerald-950 border-emerald-500 text-emerald-300"
+                    : "bg-neutral-900 border-neutral-700 text-neutral-400"
+                }`}
+              >
+                <span>{isWelcomeActive ? "Activado" : "Desactivado"}</span>
+              </button>
+            </div>
+            
+            <p className="text-[11px] text-purple-300/80 font-gothic italic">
+              "{t("welcomeVoiceText")}"
+            </p>
+
+            <div className="flex items-center justify-between pt-1 border-t border-purple-900/40">
+              <span className="text-[10px] text-purple-400 font-gothic">
+                Voz activa: <strong className="text-amber-300">{selectedVoice}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleTestWelcomeMessage}
+                className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold border flex items-center space-x-1.5 transition cursor-pointer ${
+                  isPlayingWelcome
+                    ? "bg-amber-600 text-black border-amber-400 animate-pulse"
+                    : "bg-purple-900/80 hover:bg-purple-800 text-purple-100 border-purple-600/60"
+                }`}
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>{isPlayingWelcome ? "Detener Mensaje" : "Escuchar Bienvenida Ahora"}</span>
+              </button>
+            </div>
           </div>
         </div>
 

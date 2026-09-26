@@ -286,4 +286,143 @@
   animation: coffeeLiquidShimmer 2.2s ease-in-out infinite;
 }
 
+/* === Custom Mystical Crystal Ball Animations ("Brillo y Parpadeo") === */
+@keyframes crystalFlicker {
+  0%, 100% {
+    opacity: 0.95;
+    filter: brightness(1.05) contrast(1.1) drop-shadow(0 0 25px rgba(168, 85, 247, 0.75)) drop-shadow(0 0 50px rgba(99, 102, 241, 0.45));
+  }
+  12% {
+    opacity: 0.76;
+    filter: brightness(0.85) contrast(1.02) drop-shadow(0 0 15px rgba(168, 85, 247, 0.45));
+  }
+  24% {
+    opacity: 1;
+    filter: brightness(1.35) contrast(1.2) drop-shadow(0 0 45px rgba(216, 180, 254, 0.9)) drop-shadow(0 0 75px rgba(147, 51, 234, 0.7));
+  }
+  38% {
+    opacity: 0.88;
+    filter: brightness(0.95) contrast(1.05) drop-shadow(0 0 20px rgba(192, 132, 252, 0.5));
+  }
+  52% {
+    opacity: 1;
+    filter: brightness(1.4) contrast(1.25) drop-shadow(0 0 50px rgba(129, 140, 248, 0.95)) drop-shadow(0 0 85px rgba(236, 72, 153, 0.6));
+  }
+  67% {
+    opacity: 0.82;
+    filter: brightness(0.9) contrast(1.03) drop-shadow(0 0 18px rgba(147, 51, 234, 0.5));
+  }
+  81% {
+    opacity: 0.98;
+    filter: brightness(1.22) contrast(1.15) drop-shadow(0 0 35px rgba(192, 132, 252, 0.85));
+  }
+  92% {
+    opacity: 0.84;
+    filter: brightness(0.88) contrast(1.04) drop-shadow(0 0 22px rgba(168, 85, 247, 0.5));
+  }
+}
+
+@keyframes crystalMistSwirl {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.65;
+  }
+  33% {
+    transform: rotate(120deg) scale(1.12);
+    opacity: 0.9;
+  }
+  66% {
+    transform: rotate(240deg) scale(0.92);
+    opacity: 0.75;
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+    opacity: 0.65;
+  }
+}
+
+@keyframes crystalMistSwirlReverse {
+  0% {
+    transform: rotate(360deg) scale(1.05);
+    opacity: 0.5;
+  }
+  50% {
+    transform: rotate(180deg) scale(0.88);
+    opacity: 0.85;
+  }
+  100% {
+    transform: rotate(0deg) scale(1.05);
+    opacity: 0.5;
+  }
+}
+
+@keyframes crystalStarGlint {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.6) rotate(0deg);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.4) rotate(45deg);
+    filter: drop-shadow(0 0 8px #ffffff);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.8) rotate(90deg);
+  }
+  75% {
+    opacity: 0.95;
+    transform: scale(1.3) rotate(135deg);
+    filter: drop-shadow(0 0 6px #f472b6);
+  }
+}
+
+@keyframes crystalRingSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes crystalPulseAura {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.85;
+  }
+}
+
+.animate-crystal-flicker {
+  animation: crystalFlicker 2.4s ease-in-out infinite;
+}
+
+.animate-crystal-flicker-fast {
+  animation: crystalFlicker 1.4s ease-in-out infinite;
+}
+
+.animate-crystal-mist {
+  animation: crystalMistSwirl 7s linear infinite;
+}
+
+.animate-crystal-mist-reverse {
+  animation: crystalMistSwirlReverse 9s linear infinite;
+}
+
+.animate-crystal-glint {
+  animation: crystalStarGlint 2.8s ease-in-out infinite;
+}
+
+.animate-crystal-ring {
+  animation: crystalRingSpin 14s linear infinite;
+}
+
+.animate-crystal-aura {
+  animation: crystalPulseAura 3s ease-in-out infinite;
+}
+
 

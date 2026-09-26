@@ -692,9 +692,8 @@ class OuijaAudioEngine {
   private clearAutoplayQueue() {
     this.pendingAutoplayItem = null;
     if (this.unlockHandlerRef && typeof window !== "undefined") {
-      window.removeEventListener("pointerdown", this.unlockHandlerRef);
-      window.removeEventListener("keydown", this.unlockHandlerRef);
-      window.removeEventListener("click", this.unlockHandlerRef);
+      const events = ["pointerdown", "touchstart", "touchend", "mousedown", "keydown", "click"];
+      events.forEach((ev) => window.removeEventListener(ev, this.unlockHandlerRef!));
       this.unlockHandlerRef = null;
       this.isAutoplayListenerAttached = false;
     }
@@ -705,7 +704,8 @@ class OuijaAudioEngine {
     voice: string,
     onStart?: () => void,
     onEnd?: () => void,
-    targetLang?: string
+    targetLang?: string,
+    readyAudioEl?: HTMLAudioElement
   ) {
     this.clearAutoplayQueue();
     this.pendingAutoplayItem = { text, voice, onStart, onEnd, targetLang };
@@ -714,15 +714,94 @@ class OuijaAudioEngine {
     this.isAutoplayListenerAttached = true;
     const unlockHandler = () => {
       this.clearAutoplayQueue();
-      if (text) {
+      this.initContext();
+      if (readyAudioEl) {
+        this.currentAudioElement = readyAudioEl;
+        readyAudioEl.play()
+          .catch(() => {
+            this.playAiVoice(text, voice, onStart, onEnd, targetLang);
+          });
+      } else if (text) {
         this.playAiVoice(text, voice, onStart, onEnd, targetLang);
       }
     };
     this.unlockHandlerRef = unlockHandler;
 
-    window.addEventListener("pointerdown", unlockHandler, { once: true });
-    window.addEventListener("keydown", unlockHandler, { once: true });
-    window.addEventListener("click", unlockHandler, { once: true });
+    const events = ["pointerdown", "touchstart", "touchend", "mousedown", "keydown", "click"];
+    events.forEach((ev) => window.addEventListener(ev, unlockHandler, { once: true, passive: true }));
+  }
+
+  private hasPlayedWelcome = false;
+
+  public playWelcomeSpeech(lang: string = "es") {
+    if (this.isMuted || this.hasPlayedWelcome) return;
+
+    try {
+      if (localStorage.getItem("ouija_welcome_speech_active") === "false") {
+        return;
+      }
+    } catch {}
+
+    const voice = this.selectedAiVoice || "Fenrir";
+    const audioUrl = `/api/welcome-audio?lang=${encodeURIComponent(lang)}&voice=${encodeURIComponent(voice)}`;
+    const welcomeEl = new Audio(audioUrl);
+    welcomeEl.preload = "auto";
+    const playbackId = ++this.currentPlaybackId;
+
+    welcomeEl.onplay = () => {
+      this.hasPlayedWelcome = true;
+      this.currentAudioElement = welcomeEl;
+      this.startCavernResonance();
+    };
+
+    welcomeEl.onended = () => {
+      this.stopCavernResonance();
+      if (this.currentAudioElement === welcomeEl) {
+        this.currentAudioElement = null;
+      }
+    };
+
+    welcomeEl.onerror = () => {
+      console.warn("Welcome stream audio failed, falling back to speech synthesis");
+      this.hasPlayedWelcome = true;
+      const text = (lang === "en")
+        ? "I speak from beyond the veil of death. The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary."
+        : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas.";
+      this.speakSpiritTextFallback(text, undefined, undefined, lang, playbackId);
+    };
+
+    // Attempt direct autoplay
+    const playPromise = welcomeEl.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          this.hasPlayedWelcome = true;
+        })
+        .catch(() => {
+          // If browser policy defers autoplay without user gesture:
+          // Start the voice invisibly on the first touch/click anywhere on the screen
+          // ZERO panels, ZERO buttons, ZERO popups.
+          const events = ["pointerdown", "touchstart", "mousedown", "click", "keydown"];
+          const unlock = () => {
+            events.forEach((ev) => window.removeEventListener(ev, unlock));
+            if (this.hasPlayedWelcome) return;
+            this.initContext();
+            this.currentAudioElement = welcomeEl;
+            welcomeEl.play()
+              .then(() => {
+                this.hasPlayedWelcome = true;
+              })
+              .catch(() => {
+                const text = (lang === "en")
+                  ? "I speak from beyond the veil of death. The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary."
+                  : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas.";
+                this.speakSpiritTextFallback(text, undefined, undefined, lang, playbackId);
+              });
+          };
+
+          events.forEach((ev) => window.addEventListener(ev, unlock, { once: true, passive: true }));
+        });
+    }
   }
 
   /**
@@ -852,7 +931,7 @@ class OuijaAudioEngine {
         if (playbackId !== this.currentPlaybackId) return false;
         if (playErr?.name === "NotAllowedError") {
           console.warn("Autoplay deferred by browser policy. Will play on first user interaction.");
-          this.queueAutoplayUnlock(text, voice, onStart, onEnd, targetLang);
+          this.queueAutoplayUnlock(text, voice, onStart, onEnd, targetLang, audioEl);
           return false;
         }
         throw playErr;

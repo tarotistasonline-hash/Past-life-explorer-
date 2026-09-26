@@ -9,11 +9,11 @@ import {
   Sparkles,
   MessageCircle,
   Send,
-  Loader2,
   ExternalLink,
   Layers,
   Link2,
 } from "lucide-react";
+import { CrystalBallLoader } from "./CrystalBallLoader";
 import { useLanguage } from "../context/LanguageContext";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { getPublicPortalUrl } from "../lib/constants";
@@ -208,12 +208,12 @@ export const PastLifeShareModal: React.FC<PastLifeShareModalProps> = ({
         {/* Image Preview & Generation State */}
         <div className="relative mb-4 bg-black/60 rounded-xl border border-purple-900/50 p-2 overflow-hidden flex flex-col items-center justify-center min-h-[180px] max-h-[44vh]">
           {isGenerating ? (
-            <div className="flex flex-col items-center justify-center py-10 space-y-3">
-              <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
-              <span className="text-xs font-cinzel text-purple-200 animate-pulse">
-                {t("pastLifeModalGeneratingImage")}
-              </span>
-            </div>
+            <CrystalBallLoader
+              variant="full"
+              size="sm"
+              text={t("pastLifeModalGeneratingImage") || "Conjurando papiro sagrado..."}
+              subtext="Inscribiendo las visiones y memorias del alma..."
+            />
           ) : imageDataUrl ? (
             <div className="relative w-full h-full flex items-center justify-center overflow-auto max-h-[42vh] rounded-lg">
               <img
@@ -251,7 +251,7 @@ export const PastLifeShareModal: React.FC<PastLifeShareModalProps> = ({
             className="w-full py-3 px-4 rounded-xl font-cinzel text-xs sm:text-sm font-bold uppercase tracking-wider bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-600 hover:via-indigo-500 hover:to-purple-700 text-white border border-purple-400/50 shadow-[0_0_25px_rgba(168,85,247,0.4)] flex items-center justify-center space-x-2 transition cursor-pointer disabled:opacity-50"
           >
             {isSharingNative ? (
-              <Loader2 className="w-4 h-4 text-purple-200 animate-spin" />
+              <CrystalBallLoader variant="inline" className="mr-1.5" />
             ) : (
               <Share2 className="w-4 h-4 text-purple-100" />
             )}

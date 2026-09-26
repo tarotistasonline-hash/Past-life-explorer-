@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { User, Calendar, MessageSquare, Mic, MicOff, Radio, Compass } from "lucide-react";
+import { User, Calendar, MessageSquare, Mic, MicOff, Radio } from "lucide-react";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
+import { CrystalBallLoader } from "./CrystalBallLoader";
 
 interface SpiritOracleFormProps {
   onPastLifeConsult: (data: { name: string; birthYear: string; focusQuery: string; feeling: string }) => void;
@@ -339,12 +340,12 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="py-3 px-4 bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-600 hover:to-indigo-500 text-white font-cinzel font-semibold text-xs sm:text-sm tracking-wide rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.3)] border border-purple-400/30 transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+              className="py-3 px-4 bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-600 hover:to-indigo-500 text-white font-cinzel font-semibold text-xs sm:text-sm tracking-wide rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.3)] border border-purple-400/30 transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-75"
             >
               {isLoading ? (
                 <>
-                  <Compass className="w-4 h-4 animate-spin text-purple-200" />
-                  <span>{t("channelingMsg")}</span>
+                  <CrystalBallLoader variant="inline" className="mr-1.5" />
+                  <span className="animate-pulse">{t("channelingMsg")}</span>
                 </>
               ) : (
                 <span>{t("revealPastLifeBtn")}</span>
@@ -420,12 +421,12 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="py-3 px-4 bg-gradient-to-r from-indigo-700 via-purple-600 to-indigo-800 hover:from-indigo-600 hover:to-purple-500 text-white font-cinzel font-semibold text-xs sm:text-sm tracking-wide rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.3)] border border-indigo-400/30 transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+              className="py-3 px-4 bg-gradient-to-r from-indigo-700 via-purple-600 to-indigo-800 hover:from-indigo-600 hover:to-purple-500 text-white font-cinzel font-semibold text-xs sm:text-sm tracking-wide rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.3)] border border-indigo-400/30 transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-75"
             >
               {isLoading ? (
                 <>
-                  <Compass className="w-4 h-4 animate-spin text-indigo-200" />
-                  <span>{t("channelingMsg")}</span>
+                  <CrystalBallLoader variant="inline" className="mr-1.5" />
+                  <span className="animate-pulse">{t("channelingMsg")}</span>
                 </>
               ) : (
                 <span>{t("askOuijaBtn")}</span>

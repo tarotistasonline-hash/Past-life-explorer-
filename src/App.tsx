@@ -8,6 +8,7 @@ import { AtmosphereControls } from "./components/AtmosphereControls";
 import { DailyTarotCard } from "./components/DailyTarotCard";
 import { MysticCoffeeOffer } from "./components/MysticCoffeeOffer";
 import { GrimorioModal } from "./components/GrimorioModal";
+import { CrystalBallLoader } from "./components/CrystalBallLoader";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
 import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Coffee, Globe } from "lucide-react";
@@ -64,51 +65,10 @@ export default function App() {
   const [prefilledOuijaQuestion, setPrefilledOuijaQuestion] = useState("");
   const [showGrimorioModal, setShowGrimorioModal] = useState(false);
 
-  // Spoken welcome narration on initial portal visit (Fenrir solemn voice)
+  // Spoken welcome narration on initial portal visit (Fenrir/selected solemn voice)
   useEffect(() => {
-    let isDisposed = false;
-    const welcomeNarrative = t("welcomeVoiceText");
-
-    // Don't repeat if already played in this browser session
-    try {
-      if (sessionStorage.getItem("ouija_welcome_narrative_played")) {
-        return;
-      }
-    } catch {}
-
-    const triggerWelcome = () => {
-      if (isDisposed) return;
-      try {
-        sessionStorage.setItem("ouija_welcome_narrative_played", "true");
-      } catch {}
-
-      audio.speakSpiritText(welcomeNarrative, undefined, undefined, language);
-
-      window.removeEventListener("pointerdown", triggerWelcome);
-      window.removeEventListener("keydown", triggerWelcome);
-    };
-
-    // Try immediate playback
-    try {
-      audio.speakSpiritText(
-        welcomeNarrative,
-        () => {
-          try { sessionStorage.setItem("ouija_welcome_narrative_played", "true"); } catch {}
-        },
-        undefined,
-        language
-      );
-    } catch {}
-
-    window.addEventListener("pointerdown", triggerWelcome, { once: true });
-    window.addEventListener("keydown", triggerWelcome, { once: true });
-
-    return () => {
-      isDisposed = true;
-      window.removeEventListener("pointerdown", triggerWelcome);
-      window.removeEventListener("keydown", triggerWelcome);
-    };
-  }, [language, t]);
+    audio.playWelcomeSpeech(language);
+  }, [language]);
   const [isLoading, setIsLoading] = useState(false);
   const [fogOn, setFogOn] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -267,7 +227,6 @@ export default function App() {
   }) => {
     // Instantly terminate any previous ambient or welcome voice
     audio.stopSpeech();
-    try { sessionStorage.setItem("ouija_welcome_narrative_played", "true"); } catch {}
     setIsLoading(true);
     setErrorMsg("");
     setSeekerName(data.name || "Buscador");
@@ -304,7 +263,6 @@ export default function App() {
   const handleGeneralConsult = async (question: string, name: string) => {
     // Instantly terminate any previous ambient or welcome voice
     audio.stopSpeech();
-    try { sessionStorage.setItem("ouija_welcome_narrative_played", "true"); } catch {}
     setIsLoading(true);
     setErrorMsg("");
     setSeekerName(name);
@@ -537,6 +495,21 @@ export default function App() {
                     {t("makeAnotherConsultation")}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* When Oracle is processing: Custom Glowing & Flickering Crystal Ball Animation */}
+            {isLoading && (
+              <div className="w-full max-w-2xl bg-[#0c0717]/95 border border-purple-500/60 rounded-3xl p-5 sm:p-7 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.35)] text-center animate-fade-in relative overflow-hidden">
+                <div className="absolute -top-16 -left-16 w-44 h-44 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-16 -right-16 w-44 h-44 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+
+                <CrystalBallLoader
+                  variant="full"
+                  size="md"
+                  text="El oráculo contempla las visiones en la bola de cristal..."
+                  subtext="Canalizando los Registros Akáshicos y los ecos del tiempo..."
+                />
               </div>
             )}
 
