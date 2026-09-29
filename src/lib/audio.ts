@@ -198,7 +198,7 @@ class OuijaAudioEngine {
     }
   }
 
-  private initContext() {
+  public initContext() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtx();
@@ -733,90 +733,124 @@ class OuijaAudioEngine {
 
   private hasPlayedWelcome = false;
 
-  public playWelcomeSpeech(lang: string = "es") {
-    if (typeof window === "undefined") return;
-    if (this.isMuted || this.hasPlayedWelcome) return;
+  public playWelcomeSpeech(lang: string = "es", force: boolean = false): Promise<boolean> {
+    if (typeof window === "undefined") return Promise.resolve(false);
+    if (this.isMuted) return Promise.resolve(false);
 
-    try {
-      if (localStorage.getItem("ouija_welcome_speech_active") === "false") {
-        return;
-      }
-    } catch {}
-
-    try {
-      const voice = this.selectedAiVoice || "Fenrir";
-      const audioUrl = `/api/welcome-audio?lang=${encodeURIComponent(lang)}&voice=${encodeURIComponent(voice)}`;
-      const welcomeEl = new Audio(audioUrl);
-      welcomeEl.preload = "auto";
-      const playbackId = ++this.currentPlaybackId;
-
-      welcomeEl.onplay = () => {
-        this.hasPlayedWelcome = true;
-        this.currentAudioElement = welcomeEl;
-        this.startCavernResonance();
-      };
-
-      welcomeEl.onended = () => {
-        this.stopCavernResonance();
-        if (this.currentAudioElement === welcomeEl) {
-          this.currentAudioElement = null;
+    if (!force) {
+      if (this.hasPlayedWelcome) return Promise.resolve(false);
+      try {
+        if (localStorage.getItem("ouija_welcome_speech_active") === "false") {
+          return Promise.resolve(false);
         }
-      };
+      } catch {}
+    } else {
+      this.hasPlayedWelcome = false;
+    }
 
-      welcomeEl.onerror = () => {
-        console.warn("Welcome stream audio failed, falling back to speech synthesis");
-        this.hasPlayedWelcome = true;
-        const text = (lang === "en")
-          ? "I speak from beyond the veil of death. The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary."
-          : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas.";
-        this.speakSpiritTextFallback(text, undefined, undefined, lang, playbackId);
-      };
+    this.stopSpeech();
+    this.initContext();
 
-      const setupSilentUnlock = () => {
-        const events = ["pointerdown", "touchstart", "mousedown", "click", "keydown"];
-        const unlock = () => {
-          events.forEach((ev) => window.removeEventListener(ev, unlock));
-          if (this.hasPlayedWelcome) return;
-          try {
-            this.initContext();
-            this.currentAudioElement = welcomeEl;
-            const p = welcomeEl.play();
-            if (p !== undefined) {
-              p.then(() => {
-                this.hasPlayedWelcome = true;
-              }).catch(() => {
-                const text = (lang === "en")
-                  ? "I speak from beyond the veil of death. The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary."
-                  : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas.";
-                this.speakSpiritTextFallback(text, undefined, undefined, lang, playbackId);
-              });
-            }
-          } catch (e) {
-            console.warn("Silent unlock play notice:", e);
-          }
+    const voice = this.selectedAiVoice || "Fenrir";
+    const playbackId = ++this.currentPlaybackId;
+
+    const fallbackText = (lang === "en")
+      ? "I speak from beyond the veil of death. The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary. Discover who you were in your past incarnations and the ancient wisdom of your soul through the channeling of the Ouija board."
+      : (lang === "pt")
+      ? "Falo do limiar do além-túmulo... O véu dos tempos foi rasgado. Dou-lhe as boas-vindas aos Registos Akáshicos e Vidas Passadas."
+      : (lang === "fr")
+      ? "Je parle depuis le seuil d'outre-tombe... Le voile des temps est déchiré. Bienvenue aux Annales Akashiques et Vies Antérieures."
+      : (lang === "it")
+      ? "Parlo dalla soglia dell'oltretomba... Il velo dei tempi è squarciato. Ti do il benvenuto ai Registri Akashici e alle Vite Passate."
+      : (lang === "de")
+      ? "Ich spreche von der Schwelle des Jenseits... Der Schleier der Zeit ist zerrissen. Willkommen in der Akasha-Chronik und bei den früheren Leben."
+      : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas. Descubre aquí quién fuiste en tus encarnaciones anteriores y la sabiduría ancestral de tu alma a través de la canalización de la tabla ouija.";
+
+    return new Promise(async (resolve) => {
+      try {
+        const audioUrl = `/api/welcome-audio?lang=${encodeURIComponent(lang)}&voice=${encodeURIComponent(voice)}`;
+        const res = await fetch(audioUrl);
+
+        if (playbackId !== this.currentPlaybackId) {
+          resolve(false);
+          return;
+        }
+
+        if (!res.ok || res.status === 204) {
+          throw new Error("No server welcome audio available");
+        }
+
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("audio")) {
+          throw new Error("Non-audio response from server welcome audio");
+        }
+
+        const blob = await res.blob();
+        if (playbackId !== this.currentPlaybackId) {
+          resolve(false);
+          return;
+        }
+
+        const blobUrl = URL.createObjectURL(blob);
+        const welcomeEl = new Audio(blobUrl);
+        this.currentAudioElement = welcomeEl;
+
+        welcomeEl.onplay = () => {
+          this.hasPlayedWelcome = true;
+          this.startCavernResonance();
+          window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: true, label: "Voz de Ultratumba" } }));
         };
 
-        events.forEach((ev) => window.addEventListener(ev, unlock, { once: true, passive: true }));
-      };
+        welcomeEl.onended = () => {
+          this.stopCavernResonance();
+          URL.revokeObjectURL(blobUrl);
+          if (this.currentAudioElement === welcomeEl) {
+            this.currentAudioElement = null;
+          }
+          window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+          resolve(true);
+        };
 
-      // Attempt direct autoplay
-      try {
-        const playPromise = welcomeEl.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              this.hasPlayedWelcome = true;
-            })
-            .catch(() => {
-              setupSilentUnlock();
-            });
+        welcomeEl.onerror = () => {
+          URL.revokeObjectURL(blobUrl);
+          if (this.currentAudioElement === welcomeEl) {
+            this.currentAudioElement = null;
+          }
+          this.speakSpiritTextFallback(fallbackText, undefined, () => {
+            window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+            resolve(true);
+          }, lang, playbackId);
+        };
+
+        try {
+          await welcomeEl.play();
+          this.hasPlayedWelcome = true;
+          resolve(true);
+        } catch (playErr) {
+          // Browser autoplay restriction: start seamlessly on first touch/interaction
+          const unlockEvents = ["pointerdown", "touchstart", "mousedown", "click", "keydown", "scroll"];
+          const silentUnlock = () => {
+            unlockEvents.forEach((ev) => window.removeEventListener(ev, silentUnlock));
+            this.initContext();
+            welcomeEl.play().catch(() => {});
+          };
+          unlockEvents.forEach((ev) => window.addEventListener(ev, silentUnlock, { once: true, passive: true }));
+          resolve(true);
         }
-      } catch (playErr) {
-        setupSilentUnlock();
+      } catch (err: any) {
+        console.warn("Server welcome audio notice, using speech synthesis fallback:", err);
+        if (playbackId !== this.currentPlaybackId) {
+          resolve(false);
+          return;
+        }
+        this.hasPlayedWelcome = true;
+        this.speakSpiritTextFallback(fallbackText, undefined, () => {
+          window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+          resolve(true);
+        }, lang, playbackId);
+        resolve(true);
       }
-    } catch (e) {
-      console.warn("playWelcomeSpeech exception handled:", e);
-    }
+    });
   }
 
   /**

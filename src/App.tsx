@@ -73,7 +73,7 @@ export default function App() {
     return () => window.removeEventListener("ouija_coffee_link_updated", handleUpdate);
   }, []);
 
-  // Spoken welcome narration on initial portal visit (Fenrir/selected solemn voice)
+  // Spoken welcome narration directly on initial visit
   useEffect(() => {
     audio.playWelcomeSpeech(language);
   }, [language]);

@@ -33,6 +33,28 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   const [isCreatorMode, setIsCreatorMode] = useState<boolean>(() => isAdminSession());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [logoClickCount, setLogoClickCount] = useState(0);
+  const [isSpeakingVoice, setIsSpeakingVoice] = useState(false);
+
+  useEffect(() => {
+    const handleVoiceState = (e: any) => {
+      if (e?.detail?.isSpeaking !== undefined) {
+        setIsSpeakingVoice(e.detail.isSpeaking);
+      }
+    };
+    window.addEventListener("ouija_voice_state", handleVoiceState);
+    return () => window.removeEventListener("ouija_voice_state", handleVoiceState);
+  }, []);
+
+  const toggleWelcomeVoice = () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    if (isSpeakingVoice) {
+      audio.stopSpeech();
+      setIsSpeakingVoice(false);
+    } else {
+      audio.initContext();
+      audio.playWelcomeSpeech(language, true);
+    }
+  };
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -172,6 +194,22 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             }`}
           >
             <span className="hidden md:inline font-medium">{t("etherealMusic")}</span>
+          </button>
+
+          {/* Welcome Voice (Voz) Button */}
+          <button
+            onClick={toggleWelcomeVoice}
+            title={isSpeakingVoice ? "Silenciar Voz" : "Escuchar Voz de Bienvenida"}
+            className={`px-2.5 sm:px-3 py-1.5 rounded-xl border flex items-center space-x-1.5 transition cursor-pointer ${
+              isSpeakingVoice
+                ? "bg-amber-950/80 border-amber-400 text-amber-200 shadow-[0_0_14px_rgba(245,158,11,0.5)] animate-pulse"
+                : "bg-purple-950/70 hover:bg-purple-900 border-purple-700/60 text-purple-200 hover:text-amber-300"
+            }`}
+          >
+            <Volume2 className={`w-3.5 h-3.5 ${isSpeakingVoice ? "text-amber-300 animate-bounce" : "text-purple-300"}`} />
+            <span className="text-[11px] font-cinzel font-semibold hidden md:inline">
+              {isSpeakingVoice ? "Silenciar" : "Voz"}
+            </span>
           </button>
 
           {/* Sound Mute/Unmute */}
