@@ -73,9 +73,28 @@ export default function App() {
     return () => window.removeEventListener("ouija_coffee_link_updated", handleUpdate);
   }, []);
 
-  // Spoken welcome narration directly on initial visit
+  // Spoken welcome narration and ambient sound directly on initial visit
   useEffect(() => {
     audio.playWelcomeSpeech(language);
+
+    // Direct capture listener for immediate unmuting on first touch or click anywhere
+    const unlockOnGesture = () => {
+      audio.initContext();
+      if (!audio.getIsMuted()) {
+        audio.startDrone();
+      }
+    };
+    const events = ["click", "touchstart", "touchend", "pointerdown", "mousedown", "keydown"];
+    events.forEach((ev) => {
+      window.addEventListener(ev, unlockOnGesture, { capture: true, once: true, passive: true });
+      document.addEventListener(ev, unlockOnGesture, { capture: true, once: true, passive: true });
+    });
+    return () => {
+      events.forEach((ev) => {
+        window.removeEventListener(ev, unlockOnGesture, true);
+        document.removeEventListener(ev, unlockOnGesture, true);
+      });
+    };
   }, [language]);
   const [isLoading, setIsLoading] = useState(false);
   const [fogOn, setFogOn] = useState(true);

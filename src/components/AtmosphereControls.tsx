@@ -25,7 +25,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const [isAudioMuted, setIsAudioMuted] = useState(false);
-  const [isDroneActive, setIsDroneActive] = useState(false);
+  const [isDroneActive, setIsDroneActive] = useState<boolean>(() => audio.getIsDroneRunning());
   const [showGuide, setShowGuide] = useState(false);
   const [showAdminConfigModal, setShowAdminConfigModal] = useState(false);
   const [showAdminUnlockModal, setShowAdminUnlockModal] = useState(false);
@@ -34,6 +34,16 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [isSpeakingVoice, setIsSpeakingVoice] = useState(false);
+
+  useEffect(() => {
+    const handleDroneChange = (e: any) => {
+      if (e?.detail?.isDroneRunning !== undefined) {
+        setIsDroneActive(e.detail.isDroneRunning);
+      }
+    };
+    window.addEventListener("ouija-drone-change", handleDroneChange);
+    return () => window.removeEventListener("ouija-drone-change", handleDroneChange);
+  }, []);
 
   useEffect(() => {
     const handleVoiceState = (e: any) => {

@@ -234,12 +234,19 @@ class OuijaAudioEngine {
     }
   }
 
+  public getIsDroneRunning(): boolean {
+    return this.isDroneRunning;
+  }
+
   public startDrone() {
     this.initContext();
     if (!this.ctx || this.isDroneRunning) return;
 
     try {
       this.isDroneRunning = true;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("ouija-drone-change", { detail: { isDroneRunning: true } }));
+      }
       const now = this.ctx.currentTime;
 
       // Master drone gain
@@ -285,6 +292,9 @@ class OuijaAudioEngine {
     this.isDroneRunning = false;
     const now = this.ctx.currentTime;
     this.droneGain.gain.setTargetAtTime(0, now, 0.5);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("ouija-drone-change", { detail: { isDroneRunning: false } }));
+    }
   }
 
   public playWoodSlide() {
@@ -828,13 +838,39 @@ class OuijaAudioEngine {
           resolve(true);
         } catch (playErr) {
           // Browser autoplay restriction: start seamlessly on first touch/interaction
-          const unlockEvents = ["pointerdown", "touchstart", "mousedown", "click", "keydown", "scroll"];
+          const unlockEvents = ["click", "touchstart", "touchend", "pointerdown", "mousedown", "keydown"];
           const silentUnlock = () => {
-            unlockEvents.forEach((ev) => window.removeEventListener(ev, silentUnlock));
+            unlockEvents.forEach((ev) => {
+              window.removeEventListener(ev, silentUnlock, true);
+              document.removeEventListener(ev, silentUnlock, true);
+            });
             this.initContext();
-            welcomeEl.play().catch(() => {});
+            this.startDrone();
+            const freshAudio = new Audio(blobUrl);
+            this.currentAudioElement = freshAudio;
+            freshAudio.onplay = () => {
+              this.hasPlayedWelcome = true;
+              this.startCavernResonance();
+              window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: true, label: "Voz de Ultratumba" } }));
+            };
+            freshAudio.onended = () => {
+              this.stopCavernResonance();
+              if (this.currentAudioElement === freshAudio) {
+                this.currentAudioElement = null;
+              }
+              window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+            };
+            freshAudio.play().catch(() => {
+              this.speakSpiritTextFallback(fallbackText, undefined, () => {
+                window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+              }, lang, playbackId);
+              this.hasPlayedWelcome = true;
+            });
           };
-          unlockEvents.forEach((ev) => window.addEventListener(ev, silentUnlock, { once: true, passive: true }));
+          unlockEvents.forEach((ev) => {
+            window.addEventListener(ev, silentUnlock, { capture: true, once: true, passive: true });
+            document.addEventListener(ev, silentUnlock, { capture: true, once: true, passive: true });
+          });
           resolve(true);
         }
       } catch (err: any) {
