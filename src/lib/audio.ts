@@ -734,6 +734,7 @@ class OuijaAudioEngine {
   private hasPlayedWelcome = false;
 
   public playWelcomeSpeech(lang: string = "es") {
+    if (typeof window === "undefined") return;
     if (this.isMuted || this.hasPlayedWelcome) return;
 
     try {
@@ -742,65 +743,79 @@ class OuijaAudioEngine {
       }
     } catch {}
 
-    const voice = this.selectedAiVoice || "Fenrir";
-    const audioUrl = `/api/welcome-audio?lang=${encodeURIComponent(lang)}&voice=${encodeURIComponent(voice)}`;
-    const welcomeEl = new Audio(audioUrl);
-    welcomeEl.preload = "auto";
-    const playbackId = ++this.currentPlaybackId;
+    try {
+      const voice = this.selectedAiVoice || "Fenrir";
+      const audioUrl = `/api/welcome-audio?lang=${encodeURIComponent(lang)}&voice=${encodeURIComponent(voice)}`;
+      const welcomeEl = new Audio(audioUrl);
+      welcomeEl.preload = "auto";
+      const playbackId = ++this.currentPlaybackId;
 
-    welcomeEl.onplay = () => {
-      this.hasPlayedWelcome = true;
-      this.currentAudioElement = welcomeEl;
-      this.startCavernResonance();
-    };
+      welcomeEl.onplay = () => {
+        this.hasPlayedWelcome = true;
+        this.currentAudioElement = welcomeEl;
+        this.startCavernResonance();
+      };
 
-    welcomeEl.onended = () => {
-      this.stopCavernResonance();
-      if (this.currentAudioElement === welcomeEl) {
-        this.currentAudioElement = null;
-      }
-    };
+      welcomeEl.onended = () => {
+        this.stopCavernResonance();
+        if (this.currentAudioElement === welcomeEl) {
+          this.currentAudioElement = null;
+        }
+      };
 
-    welcomeEl.onerror = () => {
-      console.warn("Welcome stream audio failed, falling back to speech synthesis");
-      this.hasPlayedWelcome = true;
-      const text = (lang === "en")
-        ? "I speak from beyond the veil of death. The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary."
-        : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas.";
-      this.speakSpiritTextFallback(text, undefined, undefined, lang, playbackId);
-    };
+      welcomeEl.onerror = () => {
+        console.warn("Welcome stream audio failed, falling back to speech synthesis");
+        this.hasPlayedWelcome = true;
+        const text = (lang === "en")
+          ? "I speak from beyond the veil of death. The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary."
+          : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas.";
+        this.speakSpiritTextFallback(text, undefined, undefined, lang, playbackId);
+      };
 
-    // Attempt direct autoplay
-    const playPromise = welcomeEl.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          this.hasPlayedWelcome = true;
-        })
-        .catch(() => {
-          // If browser policy defers autoplay without user gesture:
-          // Start the voice invisibly on the first touch/click anywhere on the screen
-          // ZERO panels, ZERO buttons, ZERO popups.
-          const events = ["pointerdown", "touchstart", "mousedown", "click", "keydown"];
-          const unlock = () => {
-            events.forEach((ev) => window.removeEventListener(ev, unlock));
-            if (this.hasPlayedWelcome) return;
+      const setupSilentUnlock = () => {
+        const events = ["pointerdown", "touchstart", "mousedown", "click", "keydown"];
+        const unlock = () => {
+          events.forEach((ev) => window.removeEventListener(ev, unlock));
+          if (this.hasPlayedWelcome) return;
+          try {
             this.initContext();
             this.currentAudioElement = welcomeEl;
-            welcomeEl.play()
-              .then(() => {
+            const p = welcomeEl.play();
+            if (p !== undefined) {
+              p.then(() => {
                 this.hasPlayedWelcome = true;
-              })
-              .catch(() => {
+              }).catch(() => {
                 const text = (lang === "en")
                   ? "I speak from beyond the veil of death. The shroud of time is torn. Welcome to the Akashic Records and Past Lives sanctuary."
                   : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas.";
                 this.speakSpiritTextFallback(text, undefined, undefined, lang, playbackId);
               });
-          };
+            }
+          } catch (e) {
+            console.warn("Silent unlock play notice:", e);
+          }
+        };
 
-          events.forEach((ev) => window.addEventListener(ev, unlock, { once: true, passive: true }));
-        });
+        events.forEach((ev) => window.addEventListener(ev, unlock, { once: true, passive: true }));
+      };
+
+      // Attempt direct autoplay
+      try {
+        const playPromise = welcomeEl.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              this.hasPlayedWelcome = true;
+            })
+            .catch(() => {
+              setupSilentUnlock();
+            });
+        }
+      } catch (playErr) {
+        setupSilentUnlock();
+      }
+    } catch (e) {
+      console.warn("playWelcomeSpeech exception handled:", e);
     }
   }
 

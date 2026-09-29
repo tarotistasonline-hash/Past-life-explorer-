@@ -4,30 +4,28 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { MAJOR_ARCANA, getUniversalArcanaForDate, drawPersonalArcana } from "./src/lib/tarotData";
+import {
+  buildStrictSpiritQuestionPrompt,
+  getCoherentFallbackSpiritAnswer,
+  getCoherentPastLifeFallback,
+} from "./src/lib/oracleCoherence";
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.NODE_ENV === "production" ? (Number(process.env.PORT) || 8080) : 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(process.cwd(), "public")));
 
-// Google Site Verification Endpoints (supports with and without .html)
-app.get(["/googleaf622c464da9a177.html", "/googleaf622c464da9a177"], (req, res) => {
-  const file = path.join(process.cwd(), "public", "googleaf622c464da9a177.html");
-  if (fs.existsSync(file)) {
-    res.sendFile(file);
-  } else {
-    res.type("text/html").send("google-site-verification: googleaf622c464da9a177.html\n");
+// Universal Google Site Verification Endpoints (supports ANY Google verification file or token)
+app.get(/^\/google([a-zA-Z0-9_-]+)(?:\.html)?$/, (req, res) => {
+  const token = req.params[0];
+  const fullFileName = `google${token}.html`;
+  const existingFile = path.join(process.cwd(), "public", fullFileName);
+  if (fs.existsSync(existingFile)) {
+    return res.sendFile(existingFile);
   }
-});
-
-app.get(["/googlee814d7c05b3fbac6.html", "/googlee814d7c05b3fbac6"], (req, res) => {
-  const file = path.join(process.cwd(), "public", "googlee814d7c05b3fbac6.html");
-  if (fs.existsSync(file)) {
-    res.sendFile(file);
-  } else {
-    res.type("text/html").send("google-site-verification: googlee814d7c05b3fbac6.html\n");
-  }
+  // Standard Google Search Console HTML verification file payload
+  res.type("text/html").send(`google-site-verification: ${fullFileName}\n`);
 });
 
 // Robots.txt for Search Engine Crawlers
@@ -266,6 +264,8 @@ function buildPastLifeNarrationText(details: any, lang: string = "es"): string {
     .trim();
 }
 
+let ttsQuotaCooldownUntil = 0;
+
 async function generateAndCacheTTS(
   text: string,
   voice: string = "Fenrir",
@@ -290,8 +290,13 @@ async function generateAndCacheTTS(
         return { audioData: parsed.audioData, mimeType: parsed.mimeType || "audio/wav" };
       }
     } catch (e) {
-      console.warn("Could not read TTS cache file:", e);
+      // ignore
     }
+  }
+
+  // If currently in quota cooldown, avoid making failing remote calls
+  if (Date.now() < ttsQuotaCooldownUntil) {
+    return null;
   }
 
   const ai = getAIClient();
@@ -322,148 +327,40 @@ async function generateAndCacheTTS(
       try {
         fs.writeFileSync(cacheFile, JSON.stringify({ audioData, mimeType, voice: chosenVoice, text: cleanText }), "utf-8");
       } catch (e) {
-        console.warn("Could not write TTS cache:", e);
+        // ignore
       }
       return { audioData, mimeType };
     }
   } catch (error: any) {
-    console.warn("TTS generation error in generateAndCacheTTS:", error?.message || error);
+    const errText = String(error?.message || error || "");
+    if (
+      errText.includes("429") ||
+      errText.includes("RESOURCE_EXHAUSTED") ||
+      errText.includes("quota") ||
+      error?.status === "RESOURCE_EXHAUSTED" ||
+      error?.code === 429
+    ) {
+      // Cooldown for 10 minutes to respect daily rate limits and allow seamless browser fallback
+      ttsQuotaCooldownUntil = Date.now() + 10 * 60 * 1000;
+      console.log("TTS daily quota reached; falling back to high-quality browser Web Speech engine.");
+    } else {
+      console.log("TTS service note: utilizing native voice synthesis fallback.");
+    }
   }
   return null;
 }
 
-// Fallback generator for past life when API key is missing or on error
+// Coherent fallback generator for past life when API key is missing or on error
 function getFallbackPastLife(name?: string, query?: string, lang = "es") {
-  const language = lang?.toLowerCase() || "es";
-  const seeker = name || (language === "en" ? "Soul Seeker" : language === "pt" ? "Buscador de Almas" : language === "fr" ? "Chercheur d'Âme" : language === "it" ? "Cercatore d'Anima" : language === "de" ? "Seelensucher" : "Buscador del Destino");
-
-  const eraOptionsEs = [
-    { title: "El Alquimista de Praga", eraLocation: "Praga, Sacro Imperio Romano (1642)", role: "Alquimista y Astrónomo de la Corte", spelled: "ALQUIMISTA PRAGA 1642", color: "#7c3aed", narrative: `En una vida pasada, el alma de ${seeker} caminó bajo las estrellas de Praga. Dedicaste tu existencia a descifrar los secretos de la creación y la armonía celeste.`, death: "Dejaste la vida terrenal pacíficamente durante un eclipse cósmico, rodeado de tus pergaminos.", karma: "Confiar en la intuición sobre la razón pura. En esta vida presente, debes plasmar tus visiones sin temor.", connection: "Sientes una resonancia especial con espíritus creativos y personas que leen la verdad en tus ojos.", relic: "Un astrolabio de bronce grabado con inscripciones zodiacales ancianas." },
-    { title: "La Guardiana del Faro de Alejandría", eraLocation: "Egipto Ptolemaico (130 a.C.)", role: "Sacerdotisa de Isis y Astrónoma", spelled: "SACERDOTISA EGIPTO 130AC", color: "#06b6d4", narrative: `Fuiste guardiana de los misterios celestes en las costas de Alejandría, guiando embarcaciones y almas perdidas en la noche del Mediterráneo.`, death: "Trascendiste en oración durante el solsticio de verano junto a las aguas del Nilo.", karma: "Aprender a guiar a otros sin descuidar tu propio fuego interior.", connection: "Atracción magnética hacia el mar, la noche estrellada y los libros antiguos.", relic: "Un amuleto de lapislázuli con el ojo de Horus tallado." },
-  ];
-
-  const eraOptionsEn = [
-    { title: "The Alchemist of Prague", eraLocation: "Prague, Holy Roman Empire (1642)", role: "Court Alchemist & Astronomer", spelled: "ALCHEMIST PRAGUE 1642", color: "#7c3aed", narrative: `In a past life, the soul of ${seeker} walked beneath the starlit spires of Prague, dedicating their existence to the cosmic arts.`, death: "You passed away peacefully during a celestial eclipse, surrounded by scrolls and arcane instruments.", karma: "Trust spiritual intuition over rigid reason. In this lifetime, express your inner visions without fear.", connection: "You feel an instant resonance with creative and authentic souls.", relic: "A bronze astrolabe engraved with ancient zodiacal symbols." },
-    { title: "The High Priestess of Alexandria", eraLocation: "Ptolemaic Egypt (130 BC)", role: "Priestess of Isis & Navigator", spelled: "PRIESTESS EGYPT 130BC", color: "#06b6d4", narrative: `You tended the sacred beacon of Alexandria, guiding lost ships and souls through the waters of antiquity.`, death: "You ascended peacefully at dawn during the summer solstice by the Nile.", karma: "Guide others with empathy without exhausting your own inner light.", connection: "A deep magnetic affinity for the open sea and nocturnal skies.", relic: "A polished lapis lazuli amulet inscribed with the Eye of Horus." },
-  ];
-
-  const eraList = language === "en" ? eraOptionsEn : eraOptionsEs;
-  const chosen = eraList[Math.floor(Math.random() * eraList.length)];
-
-  const details = {
-    title: chosen.title,
-    eraLocation: chosen.eraLocation,
-    identityRole: chosen.role,
-    narrative: chosen.narrative,
-    deathTransition: chosen.death,
-    karmicLesson: chosen.karma,
-    soulConnection: chosen.connection,
-    soulRelic: chosen.relic,
-    vibeColor: chosen.color || "#d97706",
-    narrationText: "",
-  };
-  details.narrationText = buildPastLifeNarrationText(details, lang);
-
-  // Background pre-cache TTS for fallback too
-  generateAndCacheTTS(details.narrationText, "Fenrir", lang).catch(() => {});
-
-  return {
-    spelledWord: chosen.spelled,
-    pastLifeDetails: details,
-  };
+  const result = getCoherentPastLifeFallback(name, query, lang);
+  result.pastLifeDetails.narrationText = buildPastLifeNarrationText(result.pastLifeDetails, lang);
+  generateAndCacheTTS(result.pastLifeDetails.narrationText, "Fenrir", lang).catch(() => {});
+  return result;
 }
 
-function getFallbackSpiritAnswer(question: string, lang = "es") {
-  const language = lang?.toLowerCase() || "es";
-
-  const answersEs = [
-    {
-      spelledWord: "BUSCA EN TU ALMA",
-      answerType: "YES" as const,
-      spiritMessage: "El portal de ultratumba se abre ante ti. Los ancestros confirman que la respuesta que anhelas reside en la sabiduría silenciosa de tu intuición más pura.",
-      spiritName: "Guardián de la Bruma",
-    },
-    {
-      spelledWord: "NO TEMAS EL CAMBIO",
-      answerType: "NO" as const,
-      spirit: "Las sombras ancestrales revelan que lo desconocido no tiene poder para dañarte. Suelta el temor y abraza la metamorfosis de tu alma.",
-      spiritMessage: "Las sombras ancestrales revelan que lo desconocido no tiene poder para dañarte. Suelta el temor y abraza la metamorfosis de tu alma.",
-      spiritName: "Sombra Benefactora",
-    },
-    {
-      spelledWord: "LA LUZ GUIA TU PASO",
-      answerType: "SPELLOUT" as const,
-      spiritMessage: "El hilo dorado del destino teje protección alrededor de tus pasos. Confía en las sincronicidades que el universo coloca frente a ti.",
-      spiritName: "Oráculo Celeste",
-    },
-    {
-      spelledWord: "CONFIA EN TU DESTINO",
-      answerType: "YES" as const,
-      spiritMessage: "Desde el plano akáshico, los guías espirituales te recuerdan que cada prueba es un peldaño sagrado hacia tu mayor elevación.",
-      spiritName: "Consejo de Ultratumba",
-    },
-    {
-      spelledWord: "PACIENCIA Y FE",
-      answerType: "SPELLOUT" as const,
-      spiritMessage: "El tiempo cósmico no coincide con la prisa terrenal. Aquello que está destinado a tu mayor bien llegará en el momento exacto.",
-      spiritName: "Escriba del Velo",
-    },
-  ];
-
-  const answersEn = [
-    {
-      spelledWord: "LOOK WITHIN YOUR SOUL",
-      answerType: "YES" as const,
-      spiritMessage: "The portal opens before you. The spirits confirm that the truth you seek already dwells within your deepest intuition.",
-      spiritName: "Guardian of the Mist",
-    },
-    {
-      spelledWord: "DO NOT FEAR UNKNOWN",
-      answerType: "NO" as const,
-      spiritMessage: "The shadows reveal that what you fear holds no power over your divine spark. Release apprehension and embrace renewal.",
-      spiritName: "Benevolent Shadow",
-    },
-    {
-      spelledWord: "LIGHT GUIDES YOUR PATH",
-      answerType: "SPELLOUT" as const,
-      spiritMessage: "Destiny weaves golden protective threads around your soul. Heed the quiet signs and synchronicities guiding your steps.",
-      spiritName: "Celestial Oracle",
-    },
-  ];
-
-  const answersPt = [
-    {
-      spelledWord: "OLHE EM SUA ALMA",
-      answerType: "YES" as const,
-      spiritMessage: "O portal de outrotumba se abre. Os ancestrais confirmam que a resposta que você procura reside na sua intuição mais profunda.",
-      spiritName: "Guardião da Névoa",
-    },
-    {
-      spelledWord: "A LUZ GUIA SEU PASSO",
-      answerType: "SPELLOUT" as const,
-      spiritMessage: "O destino tece fios de ouro ao redor de sua jornada. Confie nos sinais que o universo coloca em seu caminho.",
-      spiritName: "Oráculo Celeste",
-    },
-  ];
-
-  const answersFr = [
-    {
-      spelledWord: "REGARDE EN TON AME",
-      answerType: "YES" as const,
-      spiritMessage: "Le portail s'ouvre devant vous. Les ancêtres confirment que la vérité réside dans votre intuition la plus pure.",
-      spiritName: "Gardien de la Brume",
-    },
-    {
-      spelledWord: "LA LUMIERE TE GUIDE",
-      answerType: "SPELLOUT" as const,
-      spiritMessage: "Le destin tisse des fils dorés autour de vos pas. Ayez foi dans les synchronicités du cosmos.",
-      spiritName: "Oracle Céleste",
-    },
-  ];
-
-  const list = language === "en" ? answersEn : language === "pt" ? answersPt : language === "fr" ? answersFr : answersEs;
-  const chosen = list[Math.floor(Math.random() * list.length)];
-
+// Coherent, topic-aware fallback generator for spirit questions
+function getFallbackSpiritAnswer(question: string, seekerName = "Buscador", lang = "es") {
+  const chosen = getCoherentFallbackSpiritAnswer(question, seekerName, lang);
   return {
     spelledWord: chosen.spelledWord,
     answerType: chosen.answerType,
@@ -495,9 +392,14 @@ app.get("/api/welcome-audio", async (req, res) => {
     const chosenVoice = ["Fenrir", "Puck", "Charon"].includes(voice) ? voice : "Fenrir";
     const text = WELCOME_TEXTS[lang] || WELCOME_TEXTS.es;
 
-    const result = await generateAndCacheTTS(text, chosenVoice, lang);
+    let result = await generateAndCacheTTS(text, chosenVoice, lang);
     if (!result || !result.audioData) {
-      return res.status(500).send("No audio generated");
+      // Fallback to pre-cached Spanish welcome audio
+      result = await generateAndCacheTTS(WELCOME_TEXTS.es, "Fenrir", "es");
+    }
+
+    if (!result || !result.audioData) {
+      return res.status(204).end();
     }
 
     const audioBuffer = Buffer.from(result.audioData, "base64");
@@ -506,8 +408,7 @@ app.get("/api/welcome-audio", async (req, res) => {
     res.setHeader("Cache-Control", "public, max-age=86400");
     return res.end(audioBuffer);
   } catch (err: any) {
-    console.warn("Error in /api/welcome-audio:", err?.message || err);
-    return res.status(500).send(err?.message || "Audio error");
+    return res.status(204).end();
   }
 });
 
@@ -523,8 +424,13 @@ app.post("/api/tts", async (req, res) => {
     const chosenVoice = ["Fenrir", "Puck", "Charon"].includes(voice) ? voice : "Fenrir";
     const result = await generateAndCacheTTS(cleanText, chosenVoice, lang);
 
-    if (!result) {
-      return res.status(500).json({ error: "No audio generated", fallback: true });
+    if (!result || !result.audioData) {
+      // Graceful fallback to client Web Speech API without 500 error
+      return res.json({
+        audioData: null,
+        fallback: true,
+        voice: chosenVoice,
+      });
     }
 
     return res.json({
@@ -533,8 +439,7 @@ app.post("/api/tts", async (req, res) => {
       voice: chosenVoice,
     });
   } catch (error: any) {
-    console.warn("Error in /api/tts:", error?.message || error);
-    return res.status(500).json({ error: error?.message || "TTS error", fallback: true });
+    return res.json({ audioData: null, fallback: true });
   }
 });
 
@@ -559,9 +464,11 @@ Seeker details:
 - Intuitive feeling: ${feeling || "Search for higher purpose"}
 - Target Language for output: ${targetLangName} (Translate and formulate all narrative and details in ${targetLangName})
 
-Generate a deep, solemn, transcendental and historical past life revelation.
+CRITICAL MANDATE - COHERENCE WITH SEEKER'S INQUIRY:
+The revealed past life incarnation, identity, historical narrative, and karmic lesson MUST directly resonate with and explain the seeker's intention: "${focusQuery || 'Who was I in my past life?'}". Connect their present question to their ancient soul memory.
+
 IMPORTANT for 'spelledWord':
-Must be a SHORT phrase in UPPERCASE without accents or symbols (maximum 25 characters, only A-Z, 0-9 and spaces) that the Ouija planchette will physically spell letter-by-letter on the board. Example: "ALCHEMIST PRAGUE 1642" or "ALQUIMISTA PRAGA 1642" or "SACERDOTE EGIPTO 130BC".
+Must be a SHORT phrase in UPPERCASE without accents or symbols (maximum 22 characters, only A-Z, 0-9 and spaces) that the Ouija planchette will physically spell letter-by-letter on the board. Example: "ALCHEMIST PRAGUE 1642" or "ALQUIMISTA PRAGA 1642" or "SACERDOTE EGIPTO 130BC".
 
 Respond strictly in JSON format with this structure:
 {
@@ -617,11 +524,6 @@ Respond strictly in JSON format with this structure:
       const narrationText = buildPastLifeNarrationText(parsed.pastLifeDetails, lang);
       parsed.pastLifeDetails.narrationText = narrationText;
 
-      // Start background pre-warming of the TTS audio while the user watches the Ouija board!
-      generateAndCacheTTS(narrationText, "Fenrir", lang).catch((err) => {
-        console.warn("Background TTS pre-warm notice:", err?.message || err);
-      });
-
       return res.json(parsed);
     } else {
       return res.json(getFallbackPastLife(name, focusQuery, lang));
@@ -632,7 +534,7 @@ Respond strictly in JSON format with this structure:
   }
 });
 
-// API Route 2: General Spirit Query
+// API Route 2: General Spirit Query (Guarantees 100% Coherence with the Question)
 app.post("/api/ouija/spirit-question", async (req, res) => {
   incrementConsultation(req);
   try {
@@ -641,31 +543,17 @@ app.post("/api/ouija/spirit-question", async (req, res) => {
     const targetLangName = getLanguageName(lang);
 
     if (!ai) {
-      return res.json(getFallbackSpiritAnswer(question, lang));
+      return res.json(getFallbackSpiritAnswer(question, seekerName, lang));
     }
 
-    const prompt = `Act as the consciousness of the Akashic Records channeled through the Ouija Board.
-Question by ${seekerName || "the seeker"}: "${question || "What is the lesson for my soul?"}"
-Target Language for response: ${targetLangName}.
-
-Respond with deep spiritual wisdom, solemn, elevated and protective tone.
-Determine if the main reply is YES, NO, or a SPELLOUT.
-SpelledWord must be SHORT (max 20 chars in UPPERCASE without accents, e.g. "LOOK WITHIN", "CONFIA EN TU LUZ", "SEEK THE LIGHT").
-
-Respond strictly in JSON format:
-{
-  "spelledWord": "SHORT UPPERCASE TEXT",
-  "answerType": "YES" | "NO" | "SPELLOUT",
-  "spiritMessage": "Poetic, solemn and revealing message in ${targetLangName}",
-  "spiritName": "Title of the channeling plane or energy in ${targetLangName} (e.g. Akashic Guardian, Soul Guide)"
-}`;
+    const prompt = buildStrictSpiritQuestionPrompt(question, seekerName, targetLangName);
 
     const response = await ai.models.generateContent({
       model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        temperature: 0.85,
+        temperature: 0.75,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -699,11 +587,11 @@ Respond strictly in JSON format:
         name: safeName,
       });
     } else {
-      return res.json(getFallbackSpiritAnswer(question, lang));
+      return res.json(getFallbackSpiritAnswer(question, seekerName, lang));
     }
   } catch (error) {
     console.error("Error in /api/ouija/spirit-question:", error);
-    return res.json(getFallbackSpiritAnswer(req.body?.question || "", req.body?.lang));
+    return res.json(getFallbackSpiritAnswer(req.body?.question || "", req.body?.seekerName || "Buscador", req.body?.lang || "es"));
   }
 });
 
@@ -745,14 +633,16 @@ app.post("/api/tarot/draw", async (req, res) => {
     const prompt = `Act as the Oracle of the Akashic Records and Master of Esoteric Marseille Tarot.
 The seeker "${seekerName || "Seeker"}" has drawn the Major Arcana: "${baseCard.name}" (${baseCard.romanNumber}) / "${baseCard.marseilleTitle || baseCard.englishName}".
 Archetype: ${baseCard.archetype}. Element: ${baseCard.element}. Sign/Planet: ${baseCard.astrologicalSign}.
-${focusQuery ? `Seeker's inquiry or intention: "${focusQuery}"` : "The seeker seeks guidance and wisdom for their path today."}
+${focusQuery ? `CRITICAL REQUIREMENT - DIRECT COHERENCE WITH SEEKER'S INQUIRY:
+The seeker is consulting about: "${focusQuery}".
+You MUST directly address this exact situation, dilemma, or question in the dailyMessage and practicalAdvice through the archetypal wisdom of ${baseCard.name}. Do NOT deflect to generic unrelated platitudes.` : "The seeker seeks guidance and wisdom for their path today."}
 Target Language: ${targetLangName}.
 
-Provide a profound, solemn, poetic and transcendental tarot reading in ${targetLangName} personalized for the seeker today.
+Provide a profound, solemn, poetic and transcendental tarot reading in ${targetLangName} that specifically and coherently addresses their situation.
 Return strictly a JSON object with:
 {
-  "dailyMessage": "Inspiring and revealing message in ${targetLangName} (2-3 sentences)",
-  "practicalAdvice": "Practical, actionable guidance for today in ${targetLangName}",
+  "dailyMessage": "Inspiring and revealing message in ${targetLangName} directly addressing their situation (2-3 sentences)",
+  "practicalAdvice": "Practical, actionable guidance for their situation in ${targetLangName}",
   "dailyAffirmation": "Powerful first-person affirmation in ${targetLangName}",
   "meditationQuestion": "Deep self-inquiry reflection question in ${targetLangName}"
 }`;
@@ -820,13 +710,15 @@ app.post("/api/tarot/karmic-spread", async (req, res) => {
 
   try {
     const prompt = `Act as the Master Oracle of Esoteric Marseille Tarot and Akashic Reincarnation Chronicles.
-The seeker "${seekerName || "Seeker"}" has invoked a 3-Card Karmic Spread regarding "${queryTopic || "Soul Purpose and Destiny"}":
+The seeker "${seekerName || "Seeker"}" has invoked a 3-Card Karmic Spread regarding: "${queryTopic || "Soul Purpose and Destiny"}":
 - Card 1 (Past / Soul Roots): ${cards[0]}
 - Card 2 (Present / Current Evolutionary Test): ${cards[1]}
 - Card 3 (Future / Karmic Transcendence): ${cards[2]}
 Language: ${targetLangName}.
 
-Write a profound, cohesive, illuminating synthesis (3-4 sentences in ${targetLangName}) explaining how these three cards connect karmically from the soul's origin into the present lesson and future resolution.
+CRITICAL REQUIREMENT - DIRECT COHERENCE WITH QUERY:
+You MUST specifically relate the meaning of these 3 cards to the seeker's inquiry: "${queryTopic || 'Soul Destiny'}".
+Write a profound, cohesive, illuminating synthesis (3-4 sentences in ${targetLangName}) explaining how these three cards answer and guide their specific situation from past roots to present challenge and future outcome.
 Return strictly JSON: { "synthesis": "..." }`;
 
     const response = await ai.models.generateContent({
@@ -883,19 +775,6 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
-    // Prewarm welcome audio cache for instantaneous zero-latency playback
-    setTimeout(async () => {
-      try {
-        await Promise.all([
-          generateAndCacheTTS(WELCOME_TEXTS.es, "Fenrir", "es"),
-          generateAndCacheTTS(WELCOME_TEXTS.en, "Fenrir", "en"),
-          generateAndCacheTTS(WELCOME_TEXTS.pt, "Fenrir", "pt"),
-        ]);
-        console.log("Welcome audio cache prewarmed successfully.");
-      } catch (err) {
-        console.warn("Welcome audio prewarm notice:", err);
-      }
-    }, 1500);
   });
 }
 

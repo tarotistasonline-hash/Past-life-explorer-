@@ -1,10 +1,17 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Sparkles, ExternalLink } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
+import { getDonationLink } from "../lib/donationLink";
 
 export const MysticCoffeeOffer: React.FC = () => {
   const { t } = useLanguage();
-  const mpLink = "https://mpago.la/2m7bcUT";
+  const [coffeeLink, setCoffeeLink] = useState<string>(getDonationLink);
+
+  useEffect(() => {
+    const handleUpdate = () => setCoffeeLink(getDonationLink());
+    window.addEventListener("ouija_coffee_link_updated", handleUpdate);
+    return () => window.removeEventListener("ouija_coffee_link_updated", handleUpdate);
+  }, []);
 
   return (
     <div className="w-full max-w-3xl mx-auto my-4 relative overflow-hidden rounded-2xl border border-amber-500/35 bg-gradient-to-r from-[#170c26]/90 via-[#10061c]/95 to-[#0b0314]/90 p-3 sm:p-4 shadow-[0_0_20px_rgba(251,191,36,0.08)] backdrop-blur-md text-purple-100 transition-all duration-300 hover:border-amber-500/50">
@@ -69,7 +76,7 @@ export const MysticCoffeeOffer: React.FC = () => {
         {/* Right: Direct Mercado Pago Button */}
         <div className="flex items-center space-x-2 flex-shrink-0">
           <a
-            href={mpLink}
+            href={coffeeLink}
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-purple-700 hover:from-amber-400 hover:to-purple-600 text-neutral-950 font-cinzel font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_0_14px_rgba(251,191,36,0.35)] hover:shadow-[0_0_20px_rgba(251,191,36,0.55)] flex items-center space-x-1.5 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"

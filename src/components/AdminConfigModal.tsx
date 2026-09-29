@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { X, Volume2, Ghost, Shield, ShieldCheck, Eye, LogOut, Check, Play, Sparkles, Link2, Copy } from "lucide-react";
+import { X, Volume2, Ghost, Shield, ShieldCheck, Eye, LogOut, Check, Play, Sparkles, Link2, Copy, Coffee, ExternalLink, RotateCcw } from "lucide-react";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { VisitsStats } from "../types";
 import { deauthorizeAdmin, setAdminSession } from "../lib/adminTracking";
 import { CANONICAL_PUBLIC_URL, getPublicPortalUrl } from "../lib/constants";
+import { getDonationLink, setDonationLink, DEFAULT_COFFEE_LINK } from "../lib/donationLink";
 
 interface AdminConfigModalProps {
   isOpen: boolean;
@@ -74,7 +75,26 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
     }
   });
 
+  const [coffeeInput, setCoffeeInput] = useState<string>(getDonationLink);
+  const [coffeeSaveMsg, setCoffeeSaveMsg] = useState<string>("");
+
   if (!isOpen) return null;
+
+  const handleSaveCoffeeLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    setDonationLink(coffeeInput);
+    setCoffeeSaveMsg("¡Enlace actualizado correctamente!");
+    setTimeout(() => setCoffeeSaveMsg(""), 3500);
+  };
+
+  const handleResetCoffeeLink = () => {
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    setCoffeeInput(DEFAULT_COFFEE_LINK);
+    setDonationLink(DEFAULT_COFFEE_LINK);
+    setCoffeeSaveMsg("Restablecido al enlace original.");
+    setTimeout(() => setCoffeeSaveMsg(""), 3500);
+  };
 
   const handleSelectVoice = (voiceId: string) => {
     triggerHaptic(HAPTIC_PATTERNS.click);
@@ -316,6 +336,64 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
             </div>
           </div>
 
+          {/* Section: Donation & Cafecito Link Management */}
+          <div className="p-3.5 bg-black/40 border border-amber-500/30 rounded-2xl space-y-2.5 mt-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-amber-300">
+                <Coffee className="w-4 h-4 text-amber-400" />
+                <span>Enlace de Contribución / Invitar Cafecito (Mercado Pago)</span>
+              </div>
+              <a
+                href={coffeeInput}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 flex items-center space-x-1 cursor-pointer transition"
+                title="Probar en una pestaña nueva si el link está activo en Mercado Pago"
+              >
+                <span>Probar link</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+
+            <p className="text-[11px] text-purple-300/80 font-gothic">
+              Si Mercado Pago muestra el aviso <em>"Lo que querés pagar no está activo"</em>, significa que el link venció o fue pausado en tu cuenta. Crea un nuevo link en Mercado Pago (o Cafecito) y pégalo aquí:
+            </p>
+
+            <form onSubmit={handleSaveCoffeeLink} className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="url"
+                  value={coffeeInput}
+                  onChange={(e) => setCoffeeInput(e.target.value)}
+                  placeholder="https://mpago.la/... o https://cafecito.app/..."
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 placeholder-purple-400/40 focus:outline-none focus:border-amber-400 transition"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-cinzel font-bold transition cursor-pointer whitespace-nowrap"
+                >
+                  Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetCoffeeLink}
+                  title="Restablecer al link original"
+                  className="p-1.5 rounded-xl bg-purple-900/60 hover:bg-purple-800 text-purple-300 border border-purple-700/50 cursor-pointer transition"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {coffeeSaveMsg && (
+                <div className="text-[11px] text-emerald-400 font-cinzel flex items-center space-x-1">
+                  <Check className="w-3 h-3" />
+                  <span>{coffeeSaveMsg}</span>
+                </div>
+              )}
+            </form>
+          </div>
+
           {/* Official URLs & SEO Indexing */}
           <div className="p-3.5 bg-black/40 border border-amber-500/30 rounded-2xl space-y-2.5 mt-3">
             <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-amber-300">
@@ -340,6 +418,15 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
               </div>
               <p className="font-mono text-[11px] text-emerald-300 bg-black/60 p-1.5 rounded border border-purple-900/50 break-all select-all">
                 {CANONICAL_PUBLIC_URL}
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-purple-900/40 text-xs space-y-1">
+              <span className="text-amber-300 font-cinzel font-semibold flex items-center space-x-1">
+                <span>✓ Verificación Google Search Console:</span>
+              </span>
+              <p className="text-[11px] text-purple-200/90 leading-relaxed font-gothic">
+                El servidor está configurado para responder automáticamente al método <strong>Archivo HTML</strong> de Google Search Console. En la pantalla donde te apareció el error, pulsa <strong>«Aceptar»</strong> y luego haz clic en <strong>«VERIFICAR»</strong>.
               </p>
             </div>
 

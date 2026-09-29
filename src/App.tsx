@@ -14,6 +14,7 @@ import { useLanguage } from "./context/LanguageContext";
 import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Coffee, Globe } from "lucide-react";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders } from "./lib/adminTracking";
+import { getDonationLink } from "./lib/donationLink";
 
 const CACHE_VISITS_KEY = "ouija_real_visits_clean";
 
@@ -64,6 +65,13 @@ export default function App() {
   const [visitsStats, setVisitsStats] = useState<VisitsStats>(getInitialVisitsStats);
   const [prefilledOuijaQuestion, setPrefilledOuijaQuestion] = useState("");
   const [showGrimorioModal, setShowGrimorioModal] = useState(false);
+  const [coffeeLink, setCoffeeLink] = useState<string>(getDonationLink);
+
+  useEffect(() => {
+    const handleUpdate = () => setCoffeeLink(getDonationLink());
+    window.addEventListener("ouija_coffee_link_updated", handleUpdate);
+    return () => window.removeEventListener("ouija_coffee_link_updated", handleUpdate);
+  }, []);
 
   // Spoken welcome narration on initial portal visit (Fenrir/selected solemn voice)
   useEffect(() => {
@@ -575,7 +583,7 @@ export default function App() {
 
         <div className="flex items-center space-x-4">
           <a
-            href="https://mpago.la/2m7bcUT"
+            href={coffeeLink}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center space-x-1 text-amber-400 hover:text-amber-300 transition"
