@@ -77,14 +77,15 @@ export default function App() {
   useEffect(() => {
     audio.playWelcomeSpeech(language);
 
-    // Direct capture listener for immediate unmuting on first touch or click anywhere
+    // Direct capture listener for immediate unmuting and welcome voice on first touch or click anywhere
     const unlockOnGesture = () => {
       audio.initContext();
       if (!audio.getIsMuted()) {
         audio.startDrone();
+        audio.playWelcomeSpeech(language);
       }
     };
-    const events = ["click", "touchstart", "touchend", "pointerdown", "mousedown", "keydown"];
+    const events = ["click", "touchstart", "touchend", "pointerdown", "mousedown", "keydown", "scroll"];
     events.forEach((ev) => {
       window.addEventListener(ev, unlockOnGesture, { capture: true, once: true, passive: true });
       document.addEventListener(ev, unlockOnGesture, { capture: true, once: true, passive: true });

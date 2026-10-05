@@ -3,15 +3,15 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { MAJOR_ARCANA, getUniversalArcanaForDate, drawPersonalArcana } from "./src/lib/tarotData";
+import { MAJOR_ARCANA, getUniversalArcanaForDate, drawPersonalArcana } from "./src/lib/tarotData.ts";
 import {
   buildStrictSpiritQuestionPrompt,
   getCoherentFallbackSpiritAnswer,
   getCoherentPastLifeFallback,
-} from "./src/lib/oracleCoherence";
+} from "./src/lib/oracleCoherence.ts";
 
 const app = express();
-const PORT = process.env.NODE_ENV === "production" ? (Number(process.env.PORT) || 8080) : 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(process.cwd(), "public")));

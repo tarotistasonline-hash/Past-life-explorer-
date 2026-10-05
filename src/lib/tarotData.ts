@@ -1,4 +1,4 @@
-import { DailyArcana } from "../types";
+import type { DailyArcana } from "../types.ts";
 
 export const MAJOR_ARCANA: DailyArcana[] = [
   {

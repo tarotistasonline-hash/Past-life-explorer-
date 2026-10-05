@@ -45,6 +45,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&family=Cinzel:wght@600;800&display=swap" rel="stylesheet">
   </head>
   <body class="bg-[#080503] text-amber-100 font-serif antialiased">
+    <!-- Direct preloaded welcome audio player for instant playback -->
+    <audio
+      id="ouija-welcome-audio"
+      src="/api/welcome-audio?lang=es&voice=Fenrir"
+      preload="auto"
+      playsinline
+    ></audio>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

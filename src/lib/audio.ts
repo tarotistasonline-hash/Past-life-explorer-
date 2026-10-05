@@ -747,6 +747,17 @@ class OuijaAudioEngine {
     if (typeof window === "undefined") return Promise.resolve(false);
     if (this.isMuted) return Promise.resolve(false);
 
+    // If already playing welcome speech, don't interrupt
+    const domEl = document.getElementById("ouija-welcome-audio") as HTMLAudioElement | null;
+    if (domEl && !domEl.paused && domEl.currentTime > 0) {
+      this.hasPlayedWelcome = true;
+      return Promise.resolve(true);
+    }
+    if (this.currentAudioElement && !this.currentAudioElement.paused && this.currentAudioElement.currentTime > 0) {
+      this.hasPlayedWelcome = true;
+      return Promise.resolve(true);
+    }
+
     if (!force) {
       if (this.hasPlayedWelcome) return Promise.resolve(false);
       try {
@@ -776,114 +787,89 @@ class OuijaAudioEngine {
       ? "Ich spreche von der Schwelle des Jenseits... Der Schleier der Zeit ist zerrissen. Willkommen in der Akasha-Chronik und bei den früheren Leben."
       : "Hablo desde el umbral sagrado... El velo de los tiempos se ha rasgado. Te doy la bienvenida a los Registros Akáshicos y Vidas Pasadas. Descubre aquí quién fuiste en tus encarnaciones anteriores y la sabiduría ancestral de tu alma a través de la canalización de la tabla ouija.";
 
-    return new Promise(async (resolve) => {
+    const audioUrl = `/api/welcome-audio?lang=${encodeURIComponent(lang)}&voice=${encodeURIComponent(voice)}`;
+    const welcomeEl = domEl || new Audio(audioUrl);
+    welcomeEl.setAttribute("playsinline", "true");
+    welcomeEl.volume = 1.0;
+
+    if (!welcomeEl.src || !welcomeEl.src.includes(`lang=${encodeURIComponent(lang)}`)) {
+      welcomeEl.src = audioUrl;
       try {
-        const audioUrl = `/api/welcome-audio?lang=${encodeURIComponent(lang)}&voice=${encodeURIComponent(voice)}`;
-        const res = await fetch(audioUrl);
+        welcomeEl.load();
+      } catch {}
+    }
 
-        if (playbackId !== this.currentPlaybackId) {
-          resolve(false);
-          return;
-        }
+    this.currentAudioElement = welcomeEl;
 
-        if (!res.ok || res.status === 204) {
-          throw new Error("No server welcome audio available");
-        }
-
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("audio")) {
-          throw new Error("Non-audio response from server welcome audio");
-        }
-
-        const blob = await res.blob();
-        if (playbackId !== this.currentPlaybackId) {
-          resolve(false);
-          return;
-        }
-
-        const blobUrl = URL.createObjectURL(blob);
-        const welcomeEl = new Audio(blobUrl);
-        this.currentAudioElement = welcomeEl;
-
-        welcomeEl.onplay = () => {
-          this.hasPlayedWelcome = true;
-          this.startCavernResonance();
-          window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: true, label: "Voz de Ultratumba" } }));
-        };
-
-        welcomeEl.onended = () => {
-          this.stopCavernResonance();
-          URL.revokeObjectURL(blobUrl);
-          if (this.currentAudioElement === welcomeEl) {
-            this.currentAudioElement = null;
-          }
-          window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
-          resolve(true);
-        };
-
-        welcomeEl.onerror = () => {
-          URL.revokeObjectURL(blobUrl);
-          if (this.currentAudioElement === welcomeEl) {
-            this.currentAudioElement = null;
-          }
-          this.speakSpiritTextFallback(fallbackText, undefined, () => {
-            window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
-            resolve(true);
-          }, lang, playbackId);
-        };
-
-        try {
-          await welcomeEl.play();
-          this.hasPlayedWelcome = true;
-          resolve(true);
-        } catch (playErr) {
-          // Browser autoplay restriction: start seamlessly on first touch/interaction
-          const unlockEvents = ["click", "touchstart", "touchend", "pointerdown", "mousedown", "keydown"];
-          const silentUnlock = () => {
-            unlockEvents.forEach((ev) => {
-              window.removeEventListener(ev, silentUnlock, true);
-              document.removeEventListener(ev, silentUnlock, true);
-            });
-            this.initContext();
-            this.startDrone();
-            const freshAudio = new Audio(blobUrl);
-            this.currentAudioElement = freshAudio;
-            freshAudio.onplay = () => {
-              this.hasPlayedWelcome = true;
-              this.startCavernResonance();
-              window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: true, label: "Voz de Ultratumba" } }));
-            };
-            freshAudio.onended = () => {
-              this.stopCavernResonance();
-              if (this.currentAudioElement === freshAudio) {
-                this.currentAudioElement = null;
-              }
-              window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
-            };
-            freshAudio.play().catch(() => {
-              this.speakSpiritTextFallback(fallbackText, undefined, () => {
-                window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
-              }, lang, playbackId);
-              this.hasPlayedWelcome = true;
-            });
-          };
-          unlockEvents.forEach((ev) => {
-            window.addEventListener(ev, silentUnlock, { capture: true, once: true, passive: true });
-            document.addEventListener(ev, silentUnlock, { capture: true, once: true, passive: true });
-          });
-          resolve(true);
-        }
-      } catch (err: any) {
-        console.warn("Server welcome audio notice, using speech synthesis fallback:", err);
-        if (playbackId !== this.currentPlaybackId) {
-          resolve(false);
-          return;
-        }
+    return new Promise((resolve) => {
+      welcomeEl.onplay = () => {
         this.hasPlayedWelcome = true;
+        this.startCavernResonance();
+        window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: true, label: "Voz de Ultratumba" } }));
+      };
+
+      welcomeEl.onended = () => {
+        this.stopCavernResonance();
+        if (this.currentAudioElement === welcomeEl) {
+          this.currentAudioElement = null;
+        }
+        window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+        resolve(true);
+      };
+
+      welcomeEl.onerror = () => {
         this.speakSpiritTextFallback(fallbackText, undefined, () => {
           window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
-          resolve(true);
         }, lang, playbackId);
+        resolve(true);
+      };
+
+      const playPromise = welcomeEl.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            this.hasPlayedWelcome = true;
+            resolve(true);
+          })
+          .catch(() => {
+            try {
+              if (typeof window !== "undefined" && "speechSynthesis" in window && !window.speechSynthesis.speaking) {
+                this.speakSpiritTextFallback(fallbackText, () => {
+                  this.hasPlayedWelcome = true;
+                }, () => {
+                  window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+                }, lang, playbackId);
+              }
+            } catch {}
+
+            const unlockEvents = ["click", "touchstart", "touchend", "pointerdown", "mousedown", "keydown", "scroll"];
+            const silentUnlock = () => {
+              unlockEvents.forEach((ev) => {
+                window.removeEventListener(ev, silentUnlock, true);
+                document.removeEventListener(ev, silentUnlock, true);
+              });
+              this.initContext();
+              if (!this.isMuted) {
+                this.startDrone();
+              }
+              if (welcomeEl.paused) {
+                welcomeEl.play().then(() => {
+                  this.hasPlayedWelcome = true;
+                }).catch(() => {
+                  this.speakSpiritTextFallback(fallbackText, undefined, () => {
+                    window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+                  }, lang, playbackId);
+                  this.hasPlayedWelcome = true;
+                });
+              }
+            };
+            unlockEvents.forEach((ev) => {
+              window.addEventListener(ev, silentUnlock, { capture: true, once: true, passive: true });
+              document.addEventListener(ev, silentUnlock, { capture: true, once: true, passive: true });
+            });
+            resolve(true);
+          });
+      } else {
         resolve(true);
       }
     });
@@ -1237,7 +1223,18 @@ class OuijaAudioEngine {
     this.clearAutoplayQueue();
     this.stopCavernResonance();
 
-    if (this.currentAudioElement) {
+    const domWelcome = typeof document !== "undefined"
+      ? (document.getElementById("ouija-welcome-audio") as HTMLAudioElement | null)
+      : null;
+
+    if (domWelcome) {
+      try {
+        domWelcome.pause();
+        domWelcome.currentTime = 0;
+      } catch {}
+    }
+
+    if (this.currentAudioElement && this.currentAudioElement !== domWelcome) {
       try {
         this.currentAudioElement.pause();
         this.currentAudioElement.onplay = null;
@@ -1248,6 +1245,8 @@ class OuijaAudioEngine {
       } catch {
         // ignore
       }
+    } else {
+      this.currentAudioElement = null;
     }
 
     if (typeof window !== "undefined" && 'speechSynthesis' in window) {
