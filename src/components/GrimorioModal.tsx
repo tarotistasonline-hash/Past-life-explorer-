@@ -7,6 +7,7 @@ import {
 } from "../lib/grimorioStorage";
 import { useLanguage } from "../context/LanguageContext";
 import { copyMysticShareText } from "../lib/parchmentExport";
+import { audio } from "../lib/audio";
 import {
   BookOpen,
   X,
@@ -165,6 +166,7 @@ export const GrimorioModal: React.FC<GrimorioModalProps> = ({
               <div
                 key={record.id}
                 onClick={() => {
+                  audio.fadeOutForSelection();
                   if (record.type === "PAST_LIFE" && record.pastLifeData && onOpenPastLifeDetails) {
                     onOpenPastLifeDetails(record);
                   } else {

@@ -12,6 +12,7 @@ interface MarseilleCardArtProps {
   isHovered?: boolean;
   isFlipped?: boolean;
   arcana?: DailyArcana;
+  compact?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export const MarseilleCardArt: React.FC<MarseilleCardArtProps> = ({
   isHovered = false,
   isFlipped = false,
   arcana,
+  compact = false,
 }) => {
   const actualCardId = typeof cardId === "number" ? cardId : (arcana?.id ?? 0);
   const actualRomanNumber = romanNumber || arcana?.romanNumber || "";
@@ -690,8 +692,8 @@ export const MarseilleCardArt: React.FC<MarseilleCardArtProps> = ({
         className={`absolute inset-0 pointer-events-none transition-all duration-500 mix-blend-color-dodge ${
           isFlipping ? "animate-candle-flicker-fast opacity-95" : "animate-candle-flicker opacity-85"
         }`}
-        style={{
-          background: `radial-gradient(ellipse at 50% 40%, ${colorHex}99 0%, rgba(251,191,36,0.45) 40%, rgba(217,119,6,0.2) 65%, transparent 80%)`,
+      style={{
+          background: `radial-gradient(ellipse at 50% 40%, ${actualColorHex}99 0%, rgba(251,191,36,0.45) 40%, rgba(217,119,6,0.2) 65%, transparent 80%)`,
         }}
       />
 
@@ -713,28 +715,34 @@ export const MarseilleCardArt: React.FC<MarseilleCardArtProps> = ({
       </div>
 
       {/* 4. Golden Sparkle Glints & Mystic Embers */}
-      <div className="absolute top-3 right-3 text-amber-500 animate-spark-twinkle pointer-events-none opacity-90">
-        <Sparkles className="w-3.5 h-3.5 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
-      </div>
-      <div className="absolute bottom-11 left-3 text-amber-500 animate-spark-twinkle pointer-events-none opacity-85" style={{ animationDelay: "1.1s" }}>
-        <Sparkles className="w-3 h-3 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]" />
-      </div>
-      <div className="absolute top-12 left-2.5 text-amber-400 animate-spark-twinkle pointer-events-none opacity-70" style={{ animationDelay: "1.8s" }}>
-        <Sparkles className="w-2.5 h-2.5 drop-shadow" />
-      </div>
+      {!compact && (
+        <>
+          <div className="absolute top-3 right-3 text-amber-500 animate-spark-twinkle pointer-events-none opacity-90">
+            <Sparkles className="w-3.5 h-3.5 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+          </div>
+          <div className="absolute bottom-11 left-3 text-amber-500 animate-spark-twinkle pointer-events-none opacity-85" style={{ animationDelay: "1.1s" }}>
+            <Sparkles className="w-3 h-3 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]" />
+          </div>
+          <div className="absolute top-12 left-2.5 text-amber-400 animate-spark-twinkle pointer-events-none opacity-70" style={{ animationDelay: "1.8s" }}>
+            <Sparkles className="w-2.5 h-2.5 drop-shadow" />
+          </div>
+        </>
+      )}
 
       {/* === TOP MARSEILLE BANNER: ROMAN NUMERAL === */}
-      <div className="relative z-10 text-center pt-0.5 pb-1 border-b border-[#2b1810]">
-        <span className="text-xs sm:text-sm font-cinzel font-black tracking-widest text-[#2b1810] drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-          {romanNumber}
+      <div className={`relative z-10 text-center border-b border-[#2b1810] ${compact ? "pt-0 pb-0.5" : "pt-0.5 pb-1"}`}>
+        <span className={`${compact ? "text-[9px]" : "text-xs sm:text-sm"} font-cinzel font-black tracking-widest text-[#2b1810] drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]`}>
+          {actualRomanNumber}
         </span>
       </div>
 
       {/* === CENTER SVG WOODCUT ARTWORK (Tarot de Marseille) === */}
-      <div className="relative z-10 my-auto flex items-center justify-center py-1">
+      <div className={`relative z-10 my-auto flex items-center justify-center ${compact ? "py-0.5 flex-1 min-h-0" : "py-1"}`}>
         <svg
           viewBox="0 0 120 180"
-          className="w-full max-h-52 sm:max-h-56 filter drop-shadow-[0_2px_4px_rgba(43,24,16,0.25)] transition-transform duration-500 group-hover:scale-105"
+          className={`w-full filter drop-shadow-[0_2px_4px_rgba(43,24,16,0.25)] transition-transform duration-500 group-hover:scale-105 animate-tarot-figure-breathe ${
+            compact ? "max-h-20 sm:max-h-24" : "max-h-52 sm:max-h-56"
+          }`}
         >
           {/* Subtle Vintage Etching Grid / Sky Tint */}
           <rect x="10" y="10" width="100" height="160" fill="none" stroke="#d4b896" strokeWidth="0.5" strokeDasharray="2 4" />
@@ -743,12 +751,12 @@ export const MarseilleCardArt: React.FC<MarseilleCardArtProps> = ({
       </div>
 
       {/* === BOTTOM MARSEILLE BANNER: FRENCH TRADITIONAL TITLE === */}
-      <div className="relative z-10 text-center py-1 bg-[#ecd9b8]/90 border-t-2 border-[#2b1810] rounded-b-md shadow-sm">
-        <h4 className="text-[10px] sm:text-[11px] font-black font-cinzel text-[#2b1810] tracking-wider uppercase drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+      <div className={`relative z-10 text-center bg-[#ecd9b8]/90 border-t-2 border-[#2b1810] rounded-b-md shadow-sm ${compact ? "py-0.5 px-0.5" : "py-1"}`}>
+        <h4 className={`${compact ? "text-[7px] leading-tight truncate" : "text-[10px] sm:text-[11px]"} font-black font-cinzel text-[#2b1810] tracking-wider uppercase drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]`}>
           {traditionalMarseilleLabel}
         </h4>
-        <div className="text-[8px] font-semibold text-[#664228] font-gothic tracking-tight">
-          {name}
+        <div className={`${compact ? "text-[7px] leading-tight truncate" : "text-[8px]"} font-semibold text-[#664228] font-gothic tracking-tight`}>
+          {actualName}
         </div>
       </div>
     </div>

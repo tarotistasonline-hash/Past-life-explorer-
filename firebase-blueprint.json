@@ -70,20 +70,14 @@
     },
     "MonetizationConfig": {
       "title": "MonetizationConfig",
-      "description": "Global monetization and consultation limit configuration (Mercado Pago and Ko-fi) controlled by the portal owner.",
+      "description": "Global monetization and consultation limit configuration (Mercado Pago only) controlled by the portal owner.",
       "type": "object",
       "properties": {
         "mpLink": {
           "type": "string",
           "minLength": 0,
           "maxLength": 300,
-          "description": "Mercado Pago URL for LATAM contributions and passes."
-        },
-        "kofiLink": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 300,
-          "description": "Ko-fi page URL (https://ko-fi.com/...) for international contributions and passes."
+          "description": "Mercado Pago URL for consultation passes."
         },
         "paywallEnabled": {
           "type": "boolean",
@@ -93,12 +87,6 @@
           "type": "integer",
           "description": "Number of free past-life and spirit consultations allowed before requiring payment (typically 1 or 2)."
         },
-        "passPriceUsd": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 32,
-          "description": "Display price in USD for unlocking remaining consultations via Ko-fi."
-        },
         "passPriceArs": {
           "type": "string",
           "minLength": 0,
@@ -107,27 +95,14 @@
         },
         "passAmountArs": {
           "type": "integer",
-          "description": "Numeric ARS amount used when creating automatic Mercado Pago Checkout Pro preferences."
-        },
-        "passMpLink": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 300,
-          "description": "Optional dedicated Mercado Pago URL for the consultation pass."
-        },
-        "unlockCodeHash": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 64,
-          "pattern": "^(|[a-f0-9]{64})$",
-          "description": "SHA-256 hex digest of the owner's optional fallback unlock code."
+          "description": "Numeric ARS amount for the Mercado Pago pass."
         },
         "autoReturnTokenHash": {
           "type": "string",
           "minLength": 0,
           "maxLength": 64,
           "pattern": "^(|[a-f0-9]{64})$",
-          "description": "SHA-256 hex digest of the secret return token appended to automatic Mercado Pago / Ko-fi post-payment redirect URLs."
+          "description": "SHA-256 hex digest of the secret return token appended to automatic Mercado Pago post-payment redirect URLs."
         },
         "updatedAt": {
           "type": "string",
@@ -137,21 +112,17 @@
       },
       "required": [
         "mpLink",
-        "kofiLink",
         "paywallEnabled",
         "freeConsultationsLimit",
-        "passPriceUsd",
         "passPriceArs",
         "passAmountArs",
-        "passMpLink",
-        "unlockCodeHash",
         "autoReturnTokenHash",
         "updatedAt"
       ]
     },
     "PaymentSession": {
       "title": "PaymentSession",
-      "description": "Real-time payment session state used for automatic consultation unlock across browser tabs and webhooks.",
+      "description": "Real-time Mercado Pago payment session state used for automatic consultation unlock across browser tabs.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -170,9 +141,9 @@
         },
         "provider": {
           "type": "string",
-          "enum": ["mercadopago", "kofi", "auto"],
+          "enum": ["mercadopago", "auto"],
           "maxLength": 32,
-          "description": "Payment provider used for this session."
+          "description": "Payment provider used for this session (Mercado Pago)."
         },
         "status": {
           "type": "string",
@@ -191,7 +162,7 @@
           "pattern": "^[a-zA-Z0-9_\\-]+$",
           "minLength": 4,
           "maxLength": 32,
-          "description": "Short reference code for Ko-fi payment matching."
+          "description": "Short reference code for Mercado Pago session tracking."
         },
         "approvalProof": {
           "type": "string",

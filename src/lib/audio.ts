@@ -28,6 +28,12 @@ export const VOICE_STYLE_PRESETS: Record<VoiceStyle, { pitch: number; rate: numb
 class OuijaAudioEngine {
   private ctx: AudioContext | null = null;
   private droneGain: GainNode | null = null;
+  private droneNodes: AudioNode[] = [];
+  private droneTimers: Array<ReturnType<typeof setInterval>> = [];
+  private droneCleanupTimeout: ReturnType<typeof setTimeout> | null = null;
+  private hasSelectedInterest: boolean = false;
+  private pendingMusicWaiting: boolean = false;
+  private isVoiceDuckingAmbient: boolean = false;
   private cavernGain: GainNode | null = null;
   private cavernNodes: any[] = [];
   private isMuted: boolean = false;
@@ -211,22 +217,32 @@ class OuijaAudioEngine {
     }
   }
 
+  public getAudioContextState(): AudioContextState | "uninitialized" {
+    return this.ctx ? this.ctx.state : "uninitialized";
+  }
+
   public initContext() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtx();
     }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume().then(() => {
+        if (this.pendingMusicWaiting && !this.hasSelectedInterest && !this.isMuted && !this.isDroneRunning) {
+          this.pendingMusicWaiting = false;
+          this.startDrone(false);
+        }
+      }).catch(() => {});
     }
   }
 
   public setMuted(muted: boolean) {
     this.isMuted = muted;
     if (muted && this.droneGain && this.ctx) {
-      this.droneGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+      this.droneGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.15);
     } else if (!muted && this.droneGain && this.ctx && this.isDroneRunning) {
-      this.droneGain.gain.setTargetAtTime(0.12, this.ctx.currentTime, 0.5);
+      const targetVol = this.isVoiceDuckingAmbient ? 0.055 : 0.16;
+      this.droneGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.6);
     }
   }
 
@@ -242,7 +258,7 @@ class OuijaAudioEngine {
       this.stopDrone();
       return false;
     } else {
-      this.startDrone();
+      this.startDrone(true);
       return true;
     }
   }
@@ -251,63 +267,235 @@ class OuijaAudioEngine {
     return this.isDroneRunning;
   }
 
-  public startDrone() {
+  public startBrowsingMusicIfWaiting() {
+    if (this.isMuted || this.hasSelectedInterest || this.isDroneRunning) return;
+    this.startDrone(false);
+  }
+
+  public async resumeAndStartWaitingMusic(): Promise<boolean> {
+    if (this.isMuted || this.hasSelectedInterest) return false;
+    this.initContext();
+    if (!this.ctx) return false;
+    if (this.ctx.state === "suspended") {
+      try {
+        await this.ctx.resume();
+      } catch {
+        // ignore
+      }
+    }
+    if (this.ctx.state === "running" && !this.hasSelectedInterest && !this.isDroneRunning) {
+      this.pendingMusicWaiting = false;
+      this.startDrone(false);
+      return true;
+    }
+    return this.isDroneRunning;
+  }
+
+  public fadeOutForSelection() {
+    this.hasSelectedInterest = true;
+    this.pendingMusicWaiting = false;
+    if (this.isDroneRunning) {
+      this.stopDrone();
+    }
+  }
+
+  private duckAmbientForSpeech(ducking: boolean) {
+    this.isVoiceDuckingAmbient = ducking;
+    if (!this.ctx || !this.droneGain || !this.isDroneRunning || this.isMuted) return;
+    const targetVol = ducking ? 0.055 : 0.16;
+    this.droneGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.7);
+  }
+
+  public startDrone(forceManual: boolean = false) {
+    if (forceManual) {
+      this.hasSelectedInterest = false;
+    }
     this.initContext();
     if (!this.ctx || this.isDroneRunning) return;
 
+    // Wait until browser unlocks AudioContext instead of trapping oscillators while suspended
+    if (this.ctx.state === "suspended") {
+      this.pendingMusicWaiting = true;
+      this.ctx.resume().then(() => {
+        if (this.ctx?.state === "running" && this.pendingMusicWaiting && !this.hasSelectedInterest && !this.isDroneRunning && !this.isMuted) {
+          this.pendingMusicWaiting = false;
+          this.startDrone(forceManual);
+        }
+      }).catch(() => {});
+      return;
+    }
+
+    this.pendingMusicWaiting = false;
+
     try {
+      if (this.droneCleanupTimeout) {
+        clearTimeout(this.droneCleanupTimeout);
+        this.droneCleanupTimeout = null;
+      }
+
       this.isDroneRunning = true;
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("ouija-drone-change", { detail: { isDroneRunning: true } }));
       }
       const now = this.ctx.currentTime;
+      const targetVol = this.isMuted ? 0 : (this.isVoiceDuckingAmbient ? 0.055 : 0.16);
 
-      // Master drone gain
-      this.droneGain = this.ctx.createGain();
-      this.droneGain.gain.setValueAtTime(this.isMuted ? 0 : 0.01, now);
-      this.droneGain.gain.exponentialRampToValueAtTime(this.isMuted ? 0 : 0.12, now + 3);
-      this.droneGain.connect(this.ctx.destination);
+      // Master ambient music gain with silky fade-in
+      const masterGain = this.ctx.createGain();
+      masterGain.gain.setValueAtTime(0.0001, now);
+      masterGain.gain.linearRampToValueAtTime(targetVol, now + 1.8);
+      masterGain.connect(this.ctx.destination);
+      this.droneGain = masterGain;
 
-      // Low binaural frequencies (432Hz & 436Hz)
-      const osc1 = this.ctx.createOscillator();
-      const osc2 = this.ctx.createOscillator();
-      const subOsc = this.ctx.createOscillator();
+      // Warm low-pass filter with subtle organic LFO breathing
+      const padFilter = this.ctx.createBiquadFilter();
+      padFilter.type = "lowpass";
+      padFilter.frequency.setValueAtTime(580, now);
+      padFilter.Q.setValueAtTime(0.7, now);
+      padFilter.connect(masterGain);
 
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(108, now); // Sub-harmonic of 432Hz
+      const filterLfo = this.ctx.createOscillator();
+      const filterLfoDepth = this.ctx.createGain();
+      filterLfo.type = "sine";
+      filterLfo.frequency.setValueAtTime(0.08, now);
+      filterLfoDepth.gain.setValueAtTime(140, now);
+      filterLfo.connect(filterLfoDepth);
+      filterLfoDepth.connect(padFilter.frequency);
+      filterLfo.start(now);
 
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(109.5, now); // Slight beat frequency for ethereal feel
+      // 432Hz-tuned harmonic pad progression (Dm9 -> Bbmaj7 -> Fmaj7 -> Asus4)
+      const chords: Array<[number, number, number]> = [
+        [144, 216, 345.6],   // Dm (soft open voicing)
+        [115.2, 216, 288],   // Bbmaj7 feel
+        [172.8, 259.2, 324], // Fmaj7 feel
+        [108, 216, 288],     // Asus4 resolution
+      ];
 
-      subOsc.type = 'triangle';
-      subOsc.frequency.setValueAtTime(54, now); // Deep bass floor
+      const padVoices = chords[0].map((freq, i) => {
+        const osc = this.ctx!.createOscillator();
+        const vGain = this.ctx!.createGain();
+        osc.type = i === 0 ? "triangle" : "sine";
+        osc.frequency.setValueAtTime(freq, now);
+        osc.detune.setValueAtTime(i === 1 ? -4 : i === 2 ? 5 : 0, now);
+        vGain.gain.setValueAtTime(i === 0 ? 0.36 : 0.28, now);
+        osc.connect(vGain);
+        vGain.connect(padFilter);
+        osc.start(now);
+        return osc;
+      });
 
-      // Low pass filter
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(220, now);
+      this.droneNodes = [filterLfo, ...padVoices];
 
-      osc1.connect(filter);
-      osc2.connect(filter);
-      subOsc.connect(filter);
-      filter.connect(this.droneGain);
+      let chordIdx = 0;
+      const chordInterval = setInterval(() => {
+        if (!this.ctx || !this.isDroneRunning || this.droneGain !== masterGain) return;
+        chordIdx = (chordIdx + 1) % chords.length;
+        const t = this.ctx.currentTime;
+        const nextChord = chords[chordIdx];
+        padVoices.forEach((osc, i) => {
+          try {
+            osc.frequency.setTargetAtTime(nextChord[i], t, 2.2);
+          } catch {
+            // ignore
+          }
+        });
+      }, 7500);
 
-      osc1.start(now);
-      osc2.start(now);
-      subOsc.start(now);
+      // Soft celestial harp / chime arpeggio notes in matching D Aeolian / 432Hz scale
+      const harpScale = [288, 324, 345.6, 432, 518.4, 576, 648];
+      let noteStep = 0;
+      const playSoftHarpNote = () => {
+        if (!this.ctx || !this.isDroneRunning || this.isMuted || this.droneGain !== masterGain) return;
+        if (this.ctx.state !== "running") return;
+
+        const t = this.ctx.currentTime;
+        const freq = harpScale[(noteStep * 2 + Math.floor(Math.random() * 2)) % harpScale.length];
+        noteStep++;
+
+        const noteOsc = this.ctx.createOscillator();
+        const overtoneOsc = this.ctx.createOscillator();
+        const noteGain = this.ctx.createGain();
+        const overtoneGain = this.ctx.createGain();
+
+        noteOsc.type = "sine";
+        noteOsc.frequency.setValueAtTime(freq, t);
+
+        overtoneOsc.type = "sine";
+        overtoneOsc.frequency.setValueAtTime(freq * 2, t);
+
+        const peak = this.isVoiceDuckingAmbient ? 0.12 : 0.22;
+        noteGain.gain.setValueAtTime(0.0001, t);
+        noteGain.gain.linearRampToValueAtTime(peak, t + 0.08);
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.9);
+
+        overtoneGain.gain.setValueAtTime(0.0001, t);
+        overtoneGain.gain.linearRampToValueAtTime(peak * 0.25, t + 0.06);
+        overtoneGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+
+        noteOsc.connect(noteGain);
+        overtoneOsc.connect(overtoneGain);
+        noteGain.connect(masterGain);
+        overtoneGain.connect(masterGain);
+
+        noteOsc.start(t);
+        overtoneOsc.start(t);
+        noteOsc.stop(t + 3.0);
+        overtoneOsc.stop(t + 1.7);
+      };
+
+      // Initial soft note quickly after fade-in begins, then spacious calm intervals
+      const firstHarpTimer = setTimeout(playSoftHarpNote, 450);
+      const harpInterval = setInterval(playSoftHarpNote, 2200);
+      this.droneTimers = [chordInterval, harpInterval, firstHarpTimer as unknown as ReturnType<typeof setInterval>];
     } catch (e) {
-      console.warn("Audio drone start error", e);
+      console.warn("Audio ambient music start error", e);
     }
   }
 
   public stopDrone() {
-    if (!this.ctx || !this.droneGain) return;
     this.isDroneRunning = false;
-    const now = this.ctx.currentTime;
-    this.droneGain.gain.setTargetAtTime(0, now, 0.5);
+    this.droneTimers.forEach((timer) => {
+      clearInterval(timer);
+      clearTimeout(timer as unknown as ReturnType<typeof setTimeout>);
+    });
+    this.droneTimers = [];
+
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("ouija-drone-change", { detail: { isDroneRunning: false } }));
     }
+
+    if (!this.ctx || !this.droneGain) return;
+    const now = this.ctx.currentTime;
+    const gainToStop = this.droneGain;
+    const nodesToStop = [...this.droneNodes];
+    this.droneGain = null;
+    this.droneNodes = [];
+
+    try {
+      gainToStop.gain.cancelScheduledValues(now);
+      gainToStop.gain.setValueAtTime(Math.max(0.0001, gainToStop.gain.value), now);
+      gainToStop.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+    } catch {
+      // ignore
+    }
+
+    this.droneCleanupTimeout = setTimeout(() => {
+      nodesToStop.forEach((node) => {
+        try {
+          if ("stop" in node && typeof (node as OscillatorNode).stop === "function") {
+            (node as OscillatorNode).stop();
+          }
+          node.disconnect();
+        } catch {
+          // ignore
+        }
+      });
+      try {
+        gainToStop.disconnect();
+      } catch {
+        // ignore
+      }
+    }, 1100);
   }
 
   public playWoodSlide() {
@@ -817,11 +1005,13 @@ class OuijaAudioEngine {
     return new Promise((resolve) => {
       welcomeEl.onplay = () => {
         this.hasPlayedWelcome = true;
+        this.duckAmbientForSpeech(true);
         this.startCavernResonance();
         window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: true, label: "Voz de Ultratumba" } }));
       };
 
       welcomeEl.onended = () => {
+        this.duckAmbientForSpeech(false);
         this.stopCavernResonance();
         if (this.currentAudioElement === welcomeEl) {
           this.currentAudioElement = null;
@@ -832,6 +1022,7 @@ class OuijaAudioEngine {
 
       welcomeEl.onerror = () => {
         this.speakSpiritTextFallback(fallbackText, undefined, () => {
+          this.duckAmbientForSpeech(false);
           window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
         }, lang, playbackId);
         resolve(true);
@@ -849,7 +1040,9 @@ class OuijaAudioEngine {
               if (typeof window !== "undefined" && "speechSynthesis" in window && !window.speechSynthesis.speaking) {
                 this.speakSpiritTextFallback(fallbackText, () => {
                   this.hasPlayedWelcome = true;
+                  this.duckAmbientForSpeech(true);
                 }, () => {
+                  this.duckAmbientForSpeech(false);
                   window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
                 }, lang, playbackId);
               }
@@ -863,7 +1056,7 @@ class OuijaAudioEngine {
               });
               this.initContext();
               if (!this.isMuted) {
-                this.startDrone();
+                this.startBrowsingMusicIfWaiting();
               }
               // If preloaded audio is already fully buffered in memory (readyState >= 3), play it:
               if (welcomeEl && welcomeEl.readyState >= 3) {

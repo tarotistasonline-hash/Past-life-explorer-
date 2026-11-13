@@ -10,15 +10,10 @@ import {
   Play,
   Link2,
   Copy,
-  Coffee,
   ExternalLink,
   RotateCcw,
-  Globe,
-  HelpCircle,
   Stars,
 } from "lucide-react";
-import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
-import { auth } from "../lib/firebase";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
@@ -27,16 +22,13 @@ import { deauthorizeAdmin } from "../lib/adminTracking";
 import { CANONICAL_PUBLIC_URL } from "../lib/constants";
 import {
   useMonetizationConfig,
-  saveMonetizationConfigToFirestore,
+  saveMonetizationConfig,
   DEFAULT_MONETIZATION_CONFIG,
   MonetizationConfig,
   getEffectiveMpUrl,
-  getEffectiveKofiUrl,
-  sha256Hex,
   sha256ExactHex,
   resetFreeConsultationsUsed,
 } from "../lib/monetization";
-import { setDonationLink, DEFAULT_COFFEE_LINK } from "../lib/donationLink";
 
 interface AdminConfigModalProps {
   isOpen: boolean;
@@ -112,7 +104,6 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
   const ADMIN_RETURN_TOKEN_KEY = "ouija_admin_auto_return_token_v1";
 
   const [formCfg, setFormCfg] = useState<MonetizationConfig>(cloudConfig);
-  const [unlockCodeInput, setUnlockCodeInput] = useState<string>("");
   const [autoReturnToken, setAutoReturnToken] = useState<string>(() => {
     try {
       const existing = localStorage.getItem(ADMIN_RETURN_TOKEN_KEY);
@@ -127,116 +118,48 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
     }
   });
   const [copiedAutoUrl, setCopiedAutoUrl] = useState<boolean>(false);
-  const [paymentCapabilities, setPaymentCapabilities] = useState<{
-    mpCheckoutProReady: boolean;
-    kofiWebhookReady: boolean;
-  }>({ mpCheckoutProReady: false, kofiWebhookReady: false });
-  const [showKofiHelp, setShowKofiHelp] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [isSavingCloud, setIsSavingCloud] = useState<boolean>(false);
-  const [isFirebaseAdminAuth, setIsFirebaseAdminAuth] = useState<boolean>(
-    () =>
-      auth.currentUser?.email?.toLowerCase() === OWNER_EMAIL &&
-      auth.currentUser?.emailVerified === true
-  );
 
   useEffect(() => {
     setFormCfg(cloudConfig);
   }, [cloudConfig]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    fetch("/api/payments/capabilities")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d) {
-          setPaymentCapabilities({
-            mpCheckoutProReady: Boolean(d.mpCheckoutProReady),
-            kofiWebhookReady: Boolean(d.kofiWebhookReady),
-          });
-        }
-      })
-      .catch(() => {});
-  }, [isOpen]);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      const valid =
-        user?.email?.toLowerCase() === OWNER_EMAIL && user?.emailVerified === true;
-      setIsFirebaseAdminAuth(valid);
-    });
-    return () => unsub();
-  }, []);
-
   if (!isOpen) return null;
 
-  const handleConnectGoogle = async () => {
-    triggerHaptic(HAPTIC_PATTERNS.click);
+  const publishMonetization = async (customSuccessMsg?: string) => {
     setSaveStatus(null);
+    setIsSavingCloud(true);
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ login_hint: OWNER_EMAIL });
-      const res = await signInWithPopup(auth, provider);
-      const email = (res.user?.email || "").toLowerCase();
-      if (email !== OWNER_EMAIL || !res.user?.emailVerified) {
-        await signOut(auth).catch(() => {});
-        setSaveStatus({
-          type: "err",
-          msg: `Debes iniciar sesión con ${OWNER_EMAIL} para publicar cambios globales.`,
-        });
-      } else {
-        setSaveStatus({
-          type: "ok",
-          msg: "Cuenta Google verificada. Ya puedes publicar cambios para todos los usuarios.",
-        });
+      const nextCfg = { ...formCfg };
+      if (autoReturnToken.trim()) {
+        nextCfg.autoReturnTokenHash = await sha256ExactHex(autoReturnToken);
       }
+      const saved = await saveMonetizationConfig(nextCfg);
+      setFormCfg(saved);
+      setSaveStatus({
+        type: "ok",
+        msg:
+          customSuccessMsg ||
+          "¡Guardado! Tu link de Mercado Pago y los límites de consultas ya están activos en la página.",
+      });
+      setTimeout(() => setSaveStatus(null), 6000);
+      return true;
     } catch {
       setSaveStatus({
         type: "err",
-        msg: "No se pudo completar el inicio de sesión con Google.",
+        msg: "No se pudo guardar la configuración. Inténtalo nuevamente.",
       });
+      return false;
+    } finally {
+      setIsSavingCloud(false);
     }
   };
 
   const handleSaveMonetization = async (e: React.FormEvent) => {
     e.preventDefault();
     triggerHaptic(HAPTIC_PATTERNS.click);
-    setSaveStatus(null);
-
-    if (!isFirebaseAdminAuth) {
-      setSaveStatus({
-        type: "err",
-        msg: "Conecta primero tu cuenta Google (botón arriba) para guardar estos enlaces en la nube para todos los visitantes.",
-      });
-      return;
-    }
-
-    setIsSavingCloud(true);
-    try {
-      let nextCfg = { ...formCfg };
-      if (unlockCodeInput.trim()) {
-        nextCfg.unlockCodeHash = await sha256Hex(unlockCodeInput);
-      }
-      if (autoReturnToken.trim()) {
-        nextCfg.autoReturnTokenHash = await sha256ExactHex(autoReturnToken);
-      }
-      const saved = await saveMonetizationConfigToFirestore(nextCfg);
-      setFormCfg(saved);
-      setUnlockCodeInput("");
-      setDonationLink(saved.mpLink);
-      setSaveStatus({
-        type: "ok",
-        msg: "¡Publicado en Firestore! El desbloqueo automático y tus límites ya están activos para todos los visitantes.",
-      });
-      setTimeout(() => setSaveStatus(null), 5000);
-    } catch {
-      setSaveStatus({
-        type: "err",
-        msg: "Error de permisos en la nube. Verifica haber iniciado sesión con Google como tarotistasonline@gmail.com.",
-      });
-    } finally {
-      setIsSavingCloud(false);
-    }
+    await publishMonetization();
   };
 
   const handleRegenerateAutoReturnToken = () => {
@@ -252,18 +175,16 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
     }
     setSaveStatus({
       type: "ok",
-      msg: "Se generó un nuevo enlace de retorno automático. Pulsa 'Guardar y Publicar para Todos' y actualiza el redirect en Mercado Pago / Ko-fi.",
+      msg: "Se generó un nuevo enlace de retorno automático. Pulsa 'Guardar y Publicar para Todos' y actualiza el redirect en Mercado Pago.",
     });
   };
 
   const handleResetMonetization = () => {
     triggerHaptic(HAPTIC_PATTERNS.click);
     setFormCfg({ ...DEFAULT_MONETIZATION_CONFIG });
-    setUnlockCodeInput("");
-    setDonationLink(DEFAULT_COFFEE_LINK);
     setSaveStatus({
       type: "ok",
-      msg: "Valores restablecidos en el formulario. Pulsa 'Publicar para Todos' para aplicarlos en la nube.",
+      msg: "Valores restablecidos en el formulario. Pulsa 'Guardar Configuración' para aplicarlos.",
     });
   };
 
@@ -327,9 +248,8 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
     );
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     triggerHaptic(HAPTIC_PATTERNS.click);
-    await signOut(auth).catch(() => {});
     deauthorizeAdmin();
     onClose();
   };
@@ -339,8 +259,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
   const totalConsultationsVal = visitsStats?.totalConsultations ?? 0;
   const uniqueVisitorsVal = visitsStats?.uniqueVisitorsCount ?? 0;
 
-  const previewMpTipUrl = getEffectiveMpUrl(formCfg, "tip");
-  const previewKofiTipUrl = getEffectiveKofiUrl(formCfg);
+  const previewMpUrl = getEffectiveMpUrl(formCfg);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-5 bg-black/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
@@ -515,121 +434,47 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
             </div>
           </div>
 
-          {/* Section 3: Global Monetization (Mercado Pago + Ko-fi + Private Readings) */}
+          {/* Section 3: Global Monetization (Mercado Pago + Private Readings) */}
           <form
             onSubmit={handleSaveMonetization}
             className="p-4 bg-black/45 border border-amber-500/35 rounded-2xl space-y-3.5 mt-3"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-amber-300">
-                <Coffee className="w-4 h-4 text-amber-400" />
-                <span>Monetización Global (Mercado Pago + Ko-fi)</span>
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>Desbloqueo de Consultas (Mercado Pago)</span>
               </div>
-              {isFirebaseAdminAuth ? (
-                <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 font-cinzel flex items-center space-x-1">
-                  <Check className="w-3 h-3" />
-                  <span>Google Conectado</span>
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleConnectGoogle}
-                  className="text-[10px] px-2.5 py-1 rounded-full bg-white hover:bg-neutral-200 text-neutral-900 font-cinzel font-bold flex items-center space-x-1 cursor-pointer transition"
-                >
-                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                  <span>Conectar Google para Publicar</span>
-                </button>
-              )}
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-sky-950/80 border border-sky-500/50 text-sky-300 font-cinzel flex items-center space-x-1">
+                <Check className="w-3 h-3" />
+                <span>Solo Mercado Pago</span>
+              </span>
             </div>
 
-            {/* Ko-fi Quick Setup Helper Toggle */}
-            <div className="rounded-xl bg-[#240d18]/70 border border-rose-500/35 p-3 space-y-2">
+            {/* Mercado Pago Primary Link */}
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-xs font-cinzel font-semibold text-rose-200">
-                  <Globe className="w-4 h-4 text-rose-400" />
-                  <span>¿Cómo activar Ko-fi en 1 minuto?</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowKofiHelp(!showKofiHelp)}
-                  className="text-[11px] text-rose-300 hover:text-white flex items-center space-x-1 cursor-pointer"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>{showKofiHelp ? "Ocultar guía" : "Ver pasos"}</span>
-                </button>
+                <label className="text-[11px] font-cinzel text-amber-200">
+                  Link de Cobro Mercado Pago
+                </label>
+                {previewMpUrl && (
+                  <a
+                    href={previewMpUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-amber-300 hover:underline flex items-center space-x-0.5"
+                  >
+                    <span>Probar link</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                )}
               </div>
-
-              {showKofiHelp && (
-                <div className="text-[11px] font-gothic text-rose-100/90 space-y-1 pt-1 border-t border-rose-800/50">
-                  <p>
-                    Crea tu página gratis en{" "}
-                    <a
-                      href="https://ko-fi.com/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline text-rose-300 hover:text-white"
-                    >
-                      ko-fi.com
-                    </a>{" "}
-                    con tu correo <code className="text-amber-200">tarotistasonline@gmail.com</code>, vincula tu método de cobro dentro de Ko-fi y pega abajo tu enlace o usuario (ej. <code className="text-amber-200">https://ko-fi.com/tunombre</code>).
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Payment Links Row: ONLY Mercado Pago + Ko-fi */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-cinzel text-amber-200">
-                    Link Mercado Pago
-                  </label>
-                  {previewMpTipUrl && (
-                    <a
-                      href={previewMpTipUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-amber-300 hover:underline flex items-center space-x-0.5"
-                    >
-                      <span>Probar</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  value={formCfg.mpLink}
-                  onChange={(e) => setFormCfg({ ...formCfg, mpLink: e.target.value })}
-                  placeholder="https://mpago.la/2cv7Gii"
-                  className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 placeholder-purple-400/40 focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-cinzel text-rose-200">
-                    Página Ko-fi (Enlace o usuario)
-                  </label>
-                  {previewKofiTipUrl && (
-                    <a
-                      href={previewKofiTipUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-rose-300 hover:underline flex items-center space-x-0.5"
-                    >
-                      <span>Probar Ko-fi</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  value={formCfg.kofiLink}
-                  onChange={(e) => setFormCfg({ ...formCfg, kofiLink: e.target.value })}
-                  placeholder="https://ko-fi.com/tuusuario"
-                  className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 placeholder-purple-400/40 focus:outline-none focus:border-rose-400"
-                />
-              </div>
+              <input
+                type="text"
+                value={formCfg.mpLink}
+                onChange={(e) => setFormCfg({ ...formCfg, mpLink: e.target.value })}
+                placeholder="https://mpago.la/2cv7Gii"
+                className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 placeholder-purple-400/40 focus:outline-none focus:border-amber-400"
+              />
             </div>
 
             {/* Free Limit & Paywall Config (Past Lives + Questions) */}
@@ -657,7 +502,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                 </button>
               </div>
 
-              <div className={`grid grid-cols-1 ${paymentCapabilities.mpCheckoutProReady ? "sm:grid-cols-4" : "sm:grid-cols-3"} gap-2.5`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[10px] font-cinzel text-purple-300 block mb-1">
                     Consultas Gratis
@@ -679,64 +524,40 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                 </div>
                 <div>
                   <label className="text-[10px] font-cinzel text-purple-300 block mb-1">
-                    Precio Pase Mercado Pago
+                    Importe elegido por el creador (opcional)
                   </label>
                   <input
                     type="text"
                     value={formCfg.passPriceArs}
-                    onChange={(e) =>
-                      setFormCfg({ ...formCfg, passPriceArs: e.target.value })
-                    }
-                    placeholder="$3.500 ARS"
-                    className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-                {paymentCapabilities.mpCheckoutProReady && (
-                  <div>
-                    <label className="text-[10px] font-cinzel text-purple-300 block mb-1">
-                      Monto ARS Numérico
-                    </label>
-                    <input
-                      type="number"
-                      min={100}
-                      value={formCfg.passAmountArs}
-                      onChange={(e) =>
-                        setFormCfg({
-                          ...formCfg,
-                          passAmountArs: Number(e.target.value) || 3500,
-                        })
-                      }
-                      placeholder="3500"
-                      className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 focus:outline-none focus:border-amber-400"
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="text-[10px] font-cinzel text-purple-300 block mb-1">
-                    Precio Pase Ko-fi
-                  </label>
-                  <input
-                    type="text"
-                    value={formCfg.passPriceUsd}
-                    onChange={(e) =>
-                      setFormCfg({ ...formCfg, passPriceUsd: e.target.value })
-                    }
-                    placeholder="4 USD"
-                    className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 focus:outline-none focus:border-rose-400"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const digits = Number(val.replace(/[^\d]/g, ""));
+                      setFormCfg({
+                        ...formCfg,
+                        passPriceArs: val,
+                        passAmountArs: Number.isFinite(digits) && digits > 0 ? digits : 0,
+                      });
+                    }}
+                    placeholder="Ej: $15.000 ARS (o déjalo vacío)"
+                    className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 placeholder-purple-400/40 focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
 
-              {/* Automatic Post-Payment Return URL Generator (Works 100% with Payment Links, No API needed) */}
+              <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-500/35 text-[11px] font-gothic text-amber-100/90 leading-relaxed">
+                <strong className="text-amber-300">Tú eliges el importe:</strong> Puedes definir libremente el monto directamente al crear tu link en Mercado Pago (y dejar el campo de importe vacío para no mostrar un precio fijo en la página), o escribir aquí el importe exacto que deseas mostrar a tus consultantes.
+              </div>
+
+              {/* Automatic Post-Payment Return URL Generator (Works 100% with Mercado Pago Link) */}
               <div className="p-3 rounded-xl bg-emerald-950/35 border border-emerald-500/40 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-[11px] font-cinzel font-bold text-emerald-300">
-                    Desbloqueo Automático desde tus Links (Sin API)
+                    Desbloqueo Automático desde tu Link de Mercado Pago
                   </span>
                   <div className="flex items-center space-x-1.5">
                     {formCfg.autoReturnTokenHash && (
                       <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-900/80 border border-emerald-500/40 text-emerald-200 font-mono">
-                        ✓ Activo en Firestore
+                        ✓ Activo
                       </span>
                     )}
                   </div>
@@ -744,29 +565,29 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
 
                 <div className="text-[11px] font-gothic text-emerald-100/85 leading-relaxed space-y-1">
                   <p>
-                    <strong>1. En Mercado Pago:</strong> Editá tu link de pago → <em>Más opciones</em> → <em>Redireccionar cuando el pago sea aprobado</em> y pegá esta URL. Quien abone vuelve solo y la lectura arranca al instante.
-                  </p>
-                  <p>
-                    <strong>2. En Ko-fi:</strong> En <em>Settings → Payment → Thank You Message</em> (gratis), pegá esta misma URL para que quien pague haga clic y se desbloquee al momento.
+                    <strong>En Mercado Pago:</strong> Editá tu link de pago → <em>Más opciones</em> → <em>Redireccionar cuando el pago sea aprobado</em> y pegá esta URL. Quien abone vuelve solo y la lectura arranca al instante.
                   </p>
                 </div>
 
-                <div className="flex items-center space-x-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <input
                     type="text"
                     readOnly
                     value={`${CANONICAL_PUBLIC_URL}/?pago_aprobado=1&token=${autoReturnToken}`}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-black/60 border border-emerald-700/50 text-[10px] font-mono text-emerald-200 select-all"
+                    className="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg bg-black/60 border border-emerald-700/50 text-[10px] font-mono text-emerald-200 select-all"
                   />
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       triggerHaptic(HAPTIC_PATTERNS.click);
                       navigator.clipboard.writeText(
                         `${CANONICAL_PUBLIC_URL}/?pago_aprobado=1&token=${autoReturnToken}`
                       );
                       setCopiedAutoUrl(true);
-                      setTimeout(() => setCopiedAutoUrl(false), 2500);
+                      setTimeout(() => setCopiedAutoUrl(false), 3000);
+                      await publishMonetization(
+                        "¡URL copiada y activada para todos los visitantes!"
+                      );
                     }}
                     className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-cinzel font-bold flex items-center space-x-1 cursor-pointer shrink-0"
                   >
@@ -782,42 +603,33 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-[10px] font-cinzel text-purple-300 block mb-1">
-                    Link Mercado Pago para Pase (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formCfg.passMpLink}
-                    onChange={(e) =>
-                      setFormCfg({ ...formCfg, passMpLink: e.target.value })
-                    }
-                    placeholder="Si queda vacío usa https://mpago.la/2cv7Gii"
-                    className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 placeholder-purple-400/40 focus:outline-none focus:border-amber-400"
-                  />
+                {/* Inline Save Action */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={isSavingCloud}
+                    onClick={async () => {
+                      triggerHaptic(HAPTIC_PATTERNS.click);
+                      await publishMonetization();
+                    }}
+                    className="flex-1 min-w-[200px] py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-[11px] font-cinzel font-bold transition cursor-pointer disabled:opacity-60 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                  >
+                    {isSavingCloud ? "Guardando..." : "Guardar Link de Mercado Pago"}
+                  </button>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-cinzel text-purple-300">
-                      Código Manual de Respaldo (opcional)
-                    </label>
-                    {formCfg.unlockCodeHash && (
-                      <span className="text-[9px] text-emerald-300 font-mono">
-                        ✓ Configurado
-                      </span>
-                    )}
+
+                {saveStatus && (
+                  <div
+                    className={`text-[11px] font-gothic p-2 rounded-lg border ${
+                      saveStatus.type === "ok"
+                        ? "bg-emerald-950/70 border-emerald-500/50 text-emerald-200"
+                        : "bg-red-950/70 border-red-500/50 text-red-200"
+                    }`}
+                  >
+                    {saveStatus.msg}
                   </div>
-                  <input
-                    type="text"
-                    value={unlockCodeInput}
-                    onChange={(e) => setUnlockCodeInput(e.target.value)}
-                    placeholder="Ej: LUZ2026 (opcional)"
-                    className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 placeholder-purple-400/40 focus:outline-none focus:border-amber-400 uppercase font-mono"
-                  />
-                </div>
+                )}
               </div>
 
               <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-800/40 text-[11px] font-gothic text-purple-200/85 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -859,7 +671,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                 disabled={isSavingCloud}
                 className="flex-1 py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-xs font-cinzel font-bold transition cursor-pointer disabled:opacity-60"
               >
-                {isSavingCloud ? "Publicando en Firestore..." : "Guardar y Publicar para Todos"}
+                {isSavingCloud ? "Guardando..." : "Guardar Configuración"}
               </button>
               <button
                 type="button"
@@ -904,7 +716,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                 <span>✓ Verificación Google Search Console:</span>
               </span>
               <p className="text-[11px] text-purple-200/90 leading-relaxed font-gothic">
-                El servidor está configurado para responder automáticamente al método <strong>Archivo HTML</strong> de Google Search Console.
+                El sitio ya incluye tu <strong>Etiqueta HTML</strong> (<code className="text-amber-200">-65C7BeuJvMEITH_3oTuWc6wC6V4GDSmTcBxusk0WEA</code>) y responde al método <strong>Archivo HTML</strong> en Google Search Console.
               </p>
             </div>
 
@@ -914,24 +726,37 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-purple-900/60">
+        {/* Sticky Footer Actions (always visible) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-purple-900/60">
           <button
             type="button"
             onClick={handleLogout}
-            className="px-4 py-2 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 rounded-xl text-red-300 text-xs font-cinzel flex items-center space-x-1.5 transition cursor-pointer"
+            className="px-3.5 py-2 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 rounded-xl text-red-300 text-xs font-cinzel flex items-center space-x-1.5 transition cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Cerrar Sesión de Administración</span>
+            <span>Cerrar Sesión</span>
           </button>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 bg-purple-900/80 hover:bg-purple-800 border border-purple-600/60 rounded-xl text-purple-100 text-xs font-cinzel font-bold transition cursor-pointer"
-          >
-            Cerrar
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              disabled={isSavingCloud}
+              onClick={async () => {
+                triggerHaptic(HAPTIC_PATTERNS.click);
+                await publishMonetization();
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 rounded-xl text-neutral-950 text-xs font-cinzel font-bold transition cursor-pointer disabled:opacity-60 shadow-md"
+            >
+              {isSavingCloud ? "Guardando..." : "Guardar"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-purple-900/80 hover:bg-purple-800 border border-purple-600/60 rounded-xl text-purple-100 text-xs font-cinzel font-bold transition cursor-pointer"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       </div>
     </div>

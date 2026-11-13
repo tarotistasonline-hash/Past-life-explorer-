@@ -955,14 +955,12 @@ app.get("/api/tarot/all", (req, res) => {
 });
 
 // ============================================================================
-// Automatic Payment & Instant Unlock System (Mercado Pago + Ko-fi + Webhooks)
+// Automatic Payment & Instant Unlock System (Mercado Pago Only)
 // ============================================================================
 const PAYMENT_SESSIONS_FILE = path.join(VISITS_DATA_DIR, "payment_sessions.json");
 const PAYMENT_HMAC_KEY_FILE = path.join(VISITS_DATA_DIR, "payment_hmac.key");
 
 function loadOrCreateHmacSecret(): string {
-  const fromEnv = (process.env.PAYMENT_HMAC_SECRET || "").trim();
-  if (fromEnv.length >= 16) return fromEnv;
   try {
     if (fs.existsSync(PAYMENT_HMAC_KEY_FILE)) {
       const existing = fs.readFileSync(PAYMENT_HMAC_KEY_FILE, "utf-8").trim();
@@ -984,7 +982,7 @@ const PAYMENT_HMAC_KEY = loadOrCreateHmacSecret();
 interface ServerPaymentSession {
   sessionId: string;
   visitorId: string;
-  provider: "mercadopago" | "kofi" | "auto";
+  provider: "mercadopago" | "auto";
   status: "pending" | "approved";
   pendingType: "past-life" | "spirit-question" | "pass";
   refCode: string;
@@ -994,19 +992,7 @@ interface ServerPaymentSession {
   updatedAt: string;
 }
 
-interface VerifiedKofiTx {
-  txId: string;
-  amount: string;
-  currency: string;
-  email: string;
-  fromName: string;
-  message: string;
-  receivedAt: number;
-  consumedBySessionId?: string;
-}
-
 const paymentSessions = new Map<string, ServerPaymentSession>();
-const verifiedKofiTxs: VerifiedKofiTx[] = [];
 const sseClientsBySession = new Map<string, Set<express.Response>>();
 
 try {
@@ -1071,45 +1057,119 @@ function normalizeOrigin(rawOrigin: unknown, req: express.Request): string {
   return "https://ais-pre-ulzgbsculea2d4feemykvi-172786148761.us-east1.run.app";
 }
 
-async function readMonetizationConfigServer(): Promise<{
+const MONETIZATION_FILE = path.join(VISITS_DATA_DIR, "monetization.json");
+
+interface ServerMonetizationConfig {
   mpLink: string;
-  passMpLink: string;
-  kofiLink: string;
+  paywallEnabled: boolean;
+  freeConsultationsLimit: number;
+  passPriceArs: string;
   passAmountArs: number;
-  unlockCodeHash: string;
   autoReturnTokenHash: string;
-}> {
-  const defaults = {
-    mpLink: "https://mpago.la/2cv7Gii",
-    passMpLink: "",
-    kofiLink: "",
-    passAmountArs: 3500,
-    unlockCodeHash: "",
-    autoReturnTokenHash: "",
-  };
-  if (!firestoreDb) return defaults;
-  try {
-    const snap = await getDocFromServer(doc(firestoreDb, "config", "monetization"));
-    if (snap.exists()) {
-      const d = snap.data();
-      return {
-        mpLink: typeof d.mpLink === "string" && d.mpLink ? d.mpLink : defaults.mpLink,
-        passMpLink: typeof d.passMpLink === "string" ? d.passMpLink : "",
-        kofiLink: typeof d.kofiLink === "string" ? d.kofiLink : "",
-        passAmountArs:
-          typeof d.passAmountArs === "number" && d.passAmountArs >= 100
-            ? Math.round(d.passAmountArs)
-            : defaults.passAmountArs,
-        unlockCodeHash: typeof d.unlockCodeHash === "string" ? d.unlockCodeHash.toLowerCase() : "",
-        autoReturnTokenHash:
-          typeof d.autoReturnTokenHash === "string" ? d.autoReturnTokenHash.toLowerCase() : "",
-      };
-    }
-  } catch (e) {
-    console.warn("Could not read config/monetization on server:", e);
-  }
-  return defaults;
 }
+
+const DEFAULT_SERVER_MONETIZATION: ServerMonetizationConfig = {
+  mpLink: "https://mpago.la/2cv7Gii",
+  paywallEnabled: true,
+  freeConsultationsLimit: 2,
+  passPriceArs: "",
+  passAmountArs: 0,
+  autoReturnTokenHash: "",
+};
+
+function sanitizeServerMpUrl(raw: unknown): string {
+  if (typeof raw !== "string") return DEFAULT_SERVER_MONETIZATION.mpLink;
+  const trimmed = raw.trim();
+  if (!trimmed) return DEFAULT_SERVER_MONETIZATION.mpLink;
+  if (/^https:\/\//i.test(trimmed)) return trimmed.slice(0, 300);
+  if (/^http:\/\//i.test(trimmed)) return ("https://" + trimmed.slice(7)).slice(0, 300);
+  if (/^(www\.)?(mpago\.la|mercadopago\.com)\//i.test(trimmed)) {
+    return `https://${trimmed}`.slice(0, 300);
+  }
+  return DEFAULT_SERVER_MONETIZATION.mpLink;
+}
+
+function readLocalMonetizationFile(): ServerMonetizationConfig | null {
+  try {
+    if (!fs.existsSync(MONETIZATION_FILE)) return null;
+    const raw = JSON.parse(fs.readFileSync(MONETIZATION_FILE, "utf-8"));
+    return {
+      mpLink: sanitizeServerMpUrl(raw.mpLink),
+      paywallEnabled: typeof raw.paywallEnabled === "boolean" ? raw.paywallEnabled : true,
+      freeConsultationsLimit:
+        typeof raw.freeConsultationsLimit === "number"
+          ? Math.min(10, Math.max(1, Math.round(raw.freeConsultationsLimit)))
+          : 2,
+      passPriceArs:
+        typeof raw.passPriceArs === "string"
+          ? raw.passPriceArs.trim().slice(0, 32)
+          : "",
+      passAmountArs:
+        typeof raw.passAmountArs === "number" && raw.passAmountArs >= 0
+          ? Math.min(10000000, Math.round(raw.passAmountArs))
+          : 0,
+      autoReturnTokenHash:
+        typeof raw.autoReturnTokenHash === "string" && /^[a-f0-9]{64}$/i.test(raw.autoReturnTokenHash.trim())
+          ? raw.autoReturnTokenHash.trim().toLowerCase()
+          : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function readMonetizationConfigServer(): Promise<ServerMonetizationConfig> {
+  const fromFile = readLocalMonetizationFile();
+  if (fromFile) return fromFile;
+  return { ...DEFAULT_SERVER_MONETIZATION };
+}
+
+app.get("/api/monetization", async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const cfg = await readMonetizationConfigServer();
+  return res.json(cfg);
+});
+
+app.post("/api/monetization", async (req, res) => {
+  try {
+    const adminHeader = String(req.headers["x-admin-email"] || "").trim().toLowerCase();
+    if (adminHeader !== "tarotistasonline@gmail.com") {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+    const body = req.body || {};
+    const existing = await readMonetizationConfigServer();
+    const nextCfg: ServerMonetizationConfig = {
+      mpLink: sanitizeServerMpUrl(body.mpLink ?? existing.mpLink),
+      paywallEnabled:
+        typeof body.paywallEnabled === "boolean" ? body.paywallEnabled : existing.paywallEnabled,
+      freeConsultationsLimit:
+        typeof body.freeConsultationsLimit === "number"
+          ? Math.min(10, Math.max(1, Math.round(body.freeConsultationsLimit)))
+          : existing.freeConsultationsLimit,
+      passPriceArs:
+        typeof body.passPriceArs === "string"
+          ? body.passPriceArs.trim().slice(0, 32)
+          : existing.passPriceArs,
+      passAmountArs:
+        typeof body.passAmountArs === "number" && body.passAmountArs >= 0
+          ? Math.min(10000000, Math.round(body.passAmountArs))
+          : existing.passAmountArs,
+      autoReturnTokenHash:
+        typeof body.autoReturnTokenHash === "string" && /^[a-f0-9]{64}$/i.test(body.autoReturnTokenHash.trim())
+          ? body.autoReturnTokenHash.trim().toLowerCase()
+          : existing.autoReturnTokenHash,
+    };
+
+    if (!fs.existsSync(VISITS_DATA_DIR)) {
+      fs.mkdirSync(VISITS_DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(MONETIZATION_FILE, JSON.stringify(nextCfg, null, 2), "utf-8");
+    return res.json(nextCfg);
+  } catch (e) {
+    console.error("Error saving /api/monetization:", e);
+    return res.status(500).json({ error: "No se pudo guardar la configuración de Mercado Pago" });
+  }
+});
 
 function broadcastSseApproval(session: ServerPaymentSession) {
   const clients = sseClientsBySession.get(session.sessionId);
@@ -1161,7 +1221,7 @@ async function syncPaymentSessionToFirestore(session: ServerPaymentSession, isCr
 
 async function approvePaymentSession(
   sessionId: string,
-  provider: "mercadopago" | "kofi" | "auto",
+  provider: "mercadopago" | "auto",
   paymentRef?: string
 ): Promise<ServerPaymentSession | null> {
   let session = paymentSessions.get(sessionId);
@@ -1174,7 +1234,7 @@ async function approvePaymentSession(
         session = {
           sessionId: String(d.sessionId),
           visitorId: String(d.visitorId),
-          provider: (d.provider as "mercadopago" | "kofi" | "auto") || provider,
+          provider: d.provider === "mercadopago" || d.provider === "auto" ? d.provider : provider,
           status: (d.status as "pending" | "approved") || "pending",
           pendingType: (d.pendingType as "past-life" | "spirit-question" | "pass") || "pass",
           refCode: String(d.refCode || "AK-AUTO"),
@@ -1211,47 +1271,17 @@ async function approvePaymentSession(
   return session;
 }
 
-async function fetchMercadoPagoPayment(paymentId: string): Promise<{
-  approved: boolean;
-  externalReference: string;
-  status: string;
-} | null> {
-  const token = (process.env.MP_ACCESS_TOKEN || "").trim();
-  if (!token) return null;
-  const cleanId = paymentId.replace(/[^0-9a-zA-Z_\-]/g, "");
-  if (!cleanId) return null;
-
-  try {
-    const resp = await fetch(`https://api.mercadopago.com/v1/payments/${cleanId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!resp.ok) return null;
-    const data: any = await resp.json();
-    return {
-      approved: data?.status === "approved",
-      externalReference: String(data?.external_reference || ""),
-      status: String(data?.status || ""),
-    };
-  } catch (e) {
-    console.warn("Error verifying payment with Mercado Pago API:", e);
-    return null;
-  }
-}
-
-// Payment capabilities (exposes only boolean readiness, never secrets)
+// Payment capabilities (Mercado Pago direct link + auto-return mode)
 app.get("/api/payments/capabilities", (req, res) => {
   res.json({
-    mpCheckoutProReady: Boolean((process.env.MP_ACCESS_TOKEN || "").trim()),
-    kofiWebhookReady: Boolean((process.env.KOFI_VERIFICATION_TOKEN || "").trim()),
+    mpCheckoutProReady: false,
   });
 });
 
-// Create tracked payment session (+ dynamic Mercado Pago Checkout Pro preference when MP_ACCESS_TOKEN is set)
+// Create tracked payment session using configured Mercado Pago link
 app.post("/api/payments/create-session", async (req, res) => {
   try {
-    const { visitorId, pendingType = "pass", origin } = req.body || {};
+    const { visitorId, pendingType = "pass" } = req.body || {};
     const cleanVisitorId = sanitizeIdParam(visitorId, 4, 128) || `vis_${crypto.randomBytes(6).toString("hex")}`;
     const validType: "past-life" | "spirit-question" | "pass" =
       pendingType === "past-life" || pendingType === "spirit-question" ? pendingType : "pass";
@@ -1277,56 +1307,13 @@ app.post("/api/payments/create-session", async (req, res) => {
     syncPaymentSessionToFirestore(session, true).catch(() => {});
 
     const cfg = await readMonetizationConfigServer();
-    const baseOrigin = normalizeOrigin(origin, req);
-    let mpUrl = cfg.passMpLink || cfg.mpLink || "https://mpago.la/2cv7Gii";
-    let checkoutMode: "checkout_pro" | "link" = "link";
-
-    const mpAccessToken = (process.env.MP_ACCESS_TOKEN || "").trim();
-    if (mpAccessToken) {
-      try {
-        const prefResp = await fetch("https://api.mercadopago.com/checkout/preferences", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${mpAccessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            items: [
-              {
-                title: "Pase Consultas Akáshicas y Vidas Pasadas",
-                quantity: 1,
-                unit_price: cfg.passAmountArs || 3500,
-                currency_id: "ARS",
-              },
-            ],
-            external_reference: sessionId,
-            notification_url: `${baseOrigin}/api/payments/mercadopago/webhook`,
-            back_urls: {
-              success: `${baseOrigin}/?mp_payment=success&session_id=${encodeURIComponent(sessionId)}`,
-              pending: `${baseOrigin}/?mp_payment=pending&session_id=${encodeURIComponent(sessionId)}`,
-              failure: `${baseOrigin}/?mp_payment=failure&session_id=${encodeURIComponent(sessionId)}`,
-            },
-            auto_return: "approved",
-          }),
-        });
-        if (prefResp.ok) {
-          const prefData: any = await prefResp.json();
-          if (prefData?.init_point) {
-            mpUrl = prefData.init_point;
-            checkoutMode = "checkout_pro";
-          }
-        }
-      } catch (mpErr) {
-        console.warn("Checkout Pro preference fallback to mpLink:", mpErr);
-      }
-    }
+    const mpUrl = cfg.mpLink || "https://mpago.la/2cv7Gii";
 
     return res.json({
       sessionId,
       refCode,
       mpUrl,
-      kofiUrl: cfg.kofiLink || "",
-      checkoutMode,
+      checkoutMode: "link",
     });
   } catch (err) {
     console.error("Error in /api/payments/create-session:", err);
@@ -1388,7 +1375,7 @@ app.get("/api/payments/stream/:sessionId", (req, res) => {
   });
 });
 
-// Check session status (also auto-matches recent Ko-fi webhook payment by refCode)
+// Check session status
 app.get("/api/payments/session/:sessionId", async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const sessionId = sanitizeIdParam(req.params.sessionId, 8, 128);
@@ -1413,21 +1400,6 @@ app.get("/api/payments/session/:sessionId", async (req, res) => {
     return res.status(404).json({ error: "Session not found" });
   }
 
-  // If still pending, check if a verified Ko-fi webhook contains this session's refCode
-  if (session.status === "pending") {
-    const upperRef = session.refCode.toUpperCase();
-    const matchedTx = verifiedKofiTxs.find(
-      (tx) =>
-        !tx.consumedBySessionId &&
-        Date.now() - tx.receivedAt < 60 * 60 * 1000 &&
-        tx.message.toUpperCase().includes(upperRef)
-    );
-    if (matchedTx) {
-      matchedTx.consumedBySessionId = session.sessionId;
-      session = (await approvePaymentSession(session.sessionId, "kofi", matchedTx.txId)) || session;
-    }
-  }
-
   const verified = isValidApprovalProof(session);
   return res.json({
     sessionId: session.sessionId,
@@ -1437,143 +1409,13 @@ app.get("/api/payments/session/:sessionId", async (req, res) => {
   });
 });
 
-// Verify a Mercado Pago payment_id on return redirect or manual operation lookup
-app.post("/api/payments/mercadopago/verify", async (req, res) => {
-  try {
-    const { paymentId, sessionId } = req.body || {};
-    const cleanPaymentId = typeof paymentId === "string" ? paymentId.trim() : String(paymentId || "").trim();
-    if (!cleanPaymentId) {
-      return res.status(400).json({ approved: false, error: "missing_payment_id" });
-    }
-
-    const mpResult = await fetchMercadoPagoPayment(cleanPaymentId);
-    if (!mpResult) {
-      return res.json({ approved: false, reason: "mp_api_unavailable" });
-    }
-
-    if (!mpResult.approved) {
-      return res.json({ approved: false, status: mpResult.status });
-    }
-
-    const targetSessionId =
-      sanitizeIdParam(sessionId, 8, 128) ||
-      sanitizeIdParam(mpResult.externalReference, 8, 128);
-
-    if (targetSessionId) {
-      const updated = await approvePaymentSession(targetSessionId, "mercadopago", cleanPaymentId);
-      if (updated) {
-        return res.json({
-          approved: true,
-          sessionId: updated.sessionId,
-          approvalProof: updated.approvalProof,
-        });
-      }
-    }
-
-    // Create an approved session receipt directly for this verified Mercado Pago payment
-    const fallbackSessionId = targetSessionId || `ps_mp_${crypto.randomBytes(10).toString("hex")}`;
-    const nowIso = new Date().toISOString();
-    const created: ServerPaymentSession = {
-      sessionId: fallbackSessionId,
-      visitorId: "vis_mp_verified",
-      provider: "mercadopago",
-      status: "approved",
-      pendingType: "pass",
-      refCode: "AK-MP",
-      approvalProof: signApprovalProof(fallbackSessionId, "vis_mp_verified", "mercadopago"),
-      paymentRef: cleanPaymentId,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
-    paymentSessions.set(fallbackSessionId, created);
-    savePaymentSessionsDisk();
-    return res.json({
-      approved: true,
-      sessionId: created.sessionId,
-      approvalProof: created.approvalProof,
-    });
-  } catch (err) {
-    console.error("Error in /api/payments/mercadopago/verify:", err);
-    return res.status(500).json({ approved: false });
-  }
+// Payment link verification endpoints (Mercado Pago direct links & auto-return URL mode)
+app.post("/api/payments/mercadopago/verify", (_req, res) => {
+  return res.json({ approved: false, reason: "link_mode_only" });
 });
 
-// Mercado Pago Webhook / IPN listener
-app.post("/api/payments/mercadopago/webhook", async (req, res) => {
-  res.status(200).json({ received: true });
-  try {
-    const topic = req.body?.type || req.body?.topic || req.query?.topic || req.query?.type;
-    const paymentId =
-      req.body?.data?.id ||
-      req.query?.["data.id"] ||
-      (topic === "payment" ? req.query?.id : null);
-
-    if (paymentId && (!topic || String(topic).includes("payment"))) {
-      const mpResult = await fetchMercadoPagoPayment(String(paymentId));
-      if (mpResult?.approved && mpResult.externalReference) {
-        await approvePaymentSession(mpResult.externalReference, "mercadopago", String(paymentId));
-      }
-    }
-  } catch (e) {
-    console.warn("Mercado Pago webhook processing error:", e);
-  }
-});
-
-// Ko-fi Webhook listener (https://ko-fi.com/manage/webhooks)
-app.post("/api/payments/kofi/webhook", async (req, res) => {
-  try {
-    let payload: any = req.body;
-    if (typeof req.body?.data === "string") {
-      payload = JSON.parse(req.body.data);
-    } else if (req.body?.data && typeof req.body.data === "object") {
-      payload = req.body.data;
-    }
-
-    const expectedToken = (process.env.KOFI_VERIFICATION_TOKEN || "").trim();
-    if (!expectedToken || payload?.verification_token !== expectedToken) {
-      return res.status(403).json({ error: "Invalid Ko-fi verification token" });
-    }
-
-    const tx: VerifiedKofiTx = {
-      txId: String(payload.kofi_transaction_id || payload.message_id || crypto.randomBytes(6).toString("hex")),
-      amount: String(payload.amount || ""),
-      currency: String(payload.currency || "USD"),
-      email: String(payload.email || ""),
-      fromName: String(payload.from_name || ""),
-      message: String(payload.message || ""),
-      receivedAt: Date.now(),
-    };
-    verifiedKofiTxs.push(tx);
-    if (verifiedKofiTxs.length > 200) verifiedKofiTxs.shift();
-
-    // Try matching refCode (AK-XXXX) or sessionId (ps_...) in Ko-fi message
-    const msgUpper = tx.message.toUpperCase();
-    const refMatch = msgUpper.match(/AK-[A-F0-9]{4}/);
-    const sessionMatch = tx.message.match(/ps_[a-f0-9]{16,32}/i);
-
-    let targetSession: ServerPaymentSession | undefined;
-    if (sessionMatch) {
-      targetSession = paymentSessions.get(sessionMatch[0]);
-    }
-    if (!targetSession && refMatch) {
-      for (const s of paymentSessions.values()) {
-        if (s.status === "pending" && s.refCode.toUpperCase() === refMatch[0]) {
-          targetSession = s;
-          break;
-        }
-      }
-    }
-
-    if (targetSession) {
-      tx.consumedBySessionId = targetSession.sessionId;
-      await approvePaymentSession(targetSession.sessionId, "kofi", tx.txId);
-    }
-
-    return res.status(200).json({ ok: true });
-  } catch (e) {
-    console.warn("Ko-fi webhook error:", e);
-    return res.status(400).json({ error: "Malformed Ko-fi payload" });
-  }
+app.post("/api/payments/mercadopago/webhook", (_req, res) => {
+  return res.status(200).json({ received: true });
 });
 
 // Auto-Return URL Token or Fallback Code Verification (server-verified against Firestore config hashes)
@@ -1592,11 +1434,8 @@ app.post("/api/payments/verify-return", async (req, res) => {
     const matchesAutoReturn =
       Boolean(cfg.autoReturnTokenHash) &&
       (hashExact === cfg.autoReturnTokenHash || hashUpper === cfg.autoReturnTokenHash);
-    const matchesUnlockCode =
-      Boolean(cfg.unlockCodeHash) &&
-      (hashExact === cfg.unlockCodeHash || hashUpper === cfg.unlockCodeHash);
 
-    if (!matchesAutoReturn && !matchesUnlockCode) {
+    if (!matchesAutoReturn) {
       return res.json({ approved: false, reason: "invalid_token" });
     }
 

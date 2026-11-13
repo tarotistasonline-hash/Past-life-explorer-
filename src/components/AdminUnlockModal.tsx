@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import { X, Lock, Key, ShieldCheck } from "lucide-react";
-import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { X, Lock, Key } from "lucide-react";
 import { authorizeAdmin } from "../lib/adminTracking";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 
@@ -11,42 +9,11 @@ interface AdminUnlockModalProps {
   onSuccess: () => void;
 }
 
-const OWNER_EMAIL = "tarotistasonline@gmail.com";
-
 export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [inputVal, setInputVal] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   if (!isOpen) return null;
-
-  const handleGoogleSignIn = async () => {
-    triggerHaptic(HAPTIC_PATTERNS.click);
-    setErrorMsg("");
-    setIsGoogleLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ login_hint: OWNER_EMAIL });
-      const result = await signInWithPopup(auth, provider);
-      const email = (result.user?.email || "").trim().toLowerCase();
-      if (email === OWNER_EMAIL && result.user?.emailVerified) {
-        authorizeAdmin(email);
-        onSuccess();
-      } else {
-        await signOut(auth).catch(() => {});
-        setErrorMsg(`Solo la cuenta verificada ${OWNER_EMAIL} puede modificar la configuración global.`);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("popup-closed-by-user")) {
-        setErrorMsg("Ventana de inicio de sesión cerrada antes de completar.");
-      } else {
-        setErrorMsg("No se pudo abrir la ventana de Google. Puedes usar tu correo abajo para ver el panel.");
-      }
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,28 +49,10 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
           </div>
         </div>
 
-        {/* Google Sign-In (Required by Firestore Security Rules to publish global PayPal/MP links) */}
-        <div className="space-y-2">
-          <button
-            type="button"
-            disabled={isGoogleLoading}
-            onClick={handleGoogleSignIn}
-            className="w-full py-2.5 px-3 bg-white hover:bg-neutral-100 text-neutral-900 font-cinzel font-bold text-xs rounded-xl shadow flex items-center justify-center space-x-2 transition cursor-pointer disabled:opacity-60"
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>
-              {isGoogleLoading ? "Conectando con Google..." : "Entrar con Google (Recomendado)"}
-            </span>
-          </button>
-          <p className="text-[10px] text-purple-300/75 font-gothic text-center">
-            Permite publicar tus enlaces de Mercado Pago y Ko-fi en la nube para todos los visitantes.
+        <div className="space-y-1 text-[11px] text-purple-300/80 font-gothic">
+          <p>
+            Ingresa con tu correo de propietario para administrar el link de Mercado Pago y las opciones de voz.
           </p>
-        </div>
-
-        <div className="relative flex items-center py-1">
-          <div className="flex-grow border-t border-purple-900/60" />
-          <span className="px-2 text-[10px] font-cinzel text-purple-400 uppercase">o acceso rápido</span>
-          <div className="flex-grow border-t border-purple-900/60" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">

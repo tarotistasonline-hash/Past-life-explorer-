@@ -6,18 +6,16 @@ import { PastLifeModal } from "./components/PastLifeModal";
 import { PastLifeCodex } from "./components/PastLifeCodex";
 import { AtmosphereControls } from "./components/AtmosphereControls";
 import { DailyTarotCard } from "./components/DailyTarotCard";
-import { MysticCoffeeOffer } from "./components/MysticCoffeeOffer";
 import { GrimorioModal } from "./components/GrimorioModal";
 import { CrystalBallLoader } from "./components/CrystalBallLoader";
+import { StarfieldBackground } from "./components/StarfieldBackground";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Coffee, Globe } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Globe } from "lucide-react";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
 import {
   useMonetizationConfig,
-  getEffectiveMpUrl,
-  getEffectiveKofiUrl,
   canPerformConsultation,
   getRemainingFreeConsultations,
   incrementFreeConsultationsUsed,
@@ -30,6 +28,7 @@ import {
   markConsultationPassUnlocked,
   isPaywallModalActiveInAnotherTab,
   getOrCreateVisitorId,
+  getEffectiveMpUrl,
 } from "./lib/monetization";
 import { ConsultationPaywallModal } from "./components/ConsultationPaywallModal";
 import { doc, onSnapshot, runTransaction } from "firebase/firestore";
@@ -91,8 +90,6 @@ export default function App() {
   const [paymentSuccessBanner, setPaymentSuccessBanner] = useState<string>("");
   const [allowanceTick, setAllowanceTick] = useState(0);
   const monetizationCfg = useMonetizationConfig();
-  const footerMpUrl = getEffectiveMpUrl(monetizationCfg, "tip");
-  const footerKofiUrl = getEffectiveKofiUrl(monetizationCfg);
 
   useEffect(() => {
     const bump = () => setAllowanceTick((v) => v + 1);
@@ -111,25 +108,30 @@ export default function App() {
   const isPassUnlocked = isConsultationPassUnlocked(monetizationCfg);
   const remainingFree = getRemainingFreeConsultations(monetizationCfg);
 
-  // Spoken welcome narration and ambient sound directly on initial visit
+  // Spoken welcome narration and soft ambient music until user picks a reading/record
   useEffect(() => {
+    audio.startBrowsingMusicIfWaiting();
     audio.playWelcomeSpeech(language);
 
-    // Direct capture listener for immediate unmuting and welcome voice on first touch or click anywhere
-    const unlockOnGesture = () => {
-      audio.initContext();
-      if (!audio.getIsMuted()) {
-        audio.startDrone();
-        audio.playWelcomeSpeech(language);
+    const gestureEvents = ["pointerdown", "touchstart", "touchend", "mousedown", "keydown", "click"];
+    const unlockOnGesture = async () => {
+      if (audio.getIsMuted()) return;
+      const started = await audio.resumeAndStartWaitingMusic();
+      audio.playWelcomeSpeech(language);
+      if (started || audio.getAudioContextState() === "running") {
+        gestureEvents.forEach((ev) => {
+          window.removeEventListener(ev, unlockOnGesture, true);
+          document.removeEventListener(ev, unlockOnGesture, true);
+        });
       }
     };
-    const events = ["click", "touchstart", "touchend", "pointerdown", "mousedown", "keydown", "scroll"];
-    events.forEach((ev) => {
-      window.addEventListener(ev, unlockOnGesture, { capture: true, once: true, passive: true });
-      document.addEventListener(ev, unlockOnGesture, { capture: true, once: true, passive: true });
+
+    gestureEvents.forEach((ev) => {
+      window.addEventListener(ev, unlockOnGesture, { capture: true, passive: true });
+      document.addEventListener(ev, unlockOnGesture, { capture: true, passive: true });
     });
     return () => {
-      events.forEach((ev) => {
+      gestureEvents.forEach((ev) => {
         window.removeEventListener(ev, unlockOnGesture, true);
         document.removeEventListener(ev, unlockOnGesture, true);
       });
@@ -367,6 +369,7 @@ export default function App() {
       feeling: string;
     }) => {
       const adminBypass = isAdminSession() || isAuthorizedAdmin();
+      audio.fadeOutForSelection();
       audio.stopSpeech();
       setActiveMainSection("OUIJA");
       setIsLoading(true);
@@ -410,6 +413,7 @@ export default function App() {
   const executeGeneralConsult = useCallback(
     async (question: string, name: string) => {
       const adminBypass = isAdminSession() || isAuthorizedAdmin();
+      audio.fadeOutForSelection();
       audio.stopSpeech();
       setActiveMainSection("OUIJA");
       setIsLoading(true);
@@ -497,7 +501,7 @@ export default function App() {
     return true;
   }, [executeGeneralConsult, executePastLifeConsult, pendingConsultation]);
 
-  // Automatic post-payment return handler (Mercado Pago Checkout Pro / Auto-Return URL / Ko-fi Redirect)
+  // Automatic post-payment return handler (Mercado Pago Auto-Return URL)
   const paymentReturnHandledRef = useRef(false);
   useEffect(() => {
     if (paymentReturnHandledRef.current) return;
@@ -508,7 +512,7 @@ export default function App() {
     const paymentId = params.get("payment_id") || params.get("collection_id");
     const sessionIdParam = params.get("session_id") || "";
     const autoToken = params.get("token") || params.get("auto_unlock") || "";
-    const isAutoApprovedFlag = params.get("pago_aprobado") === "1" || params.get("kofi_return") === "1";
+    const isAutoApprovedFlag = params.get("pago_aprobado") === "1";
 
     if (!autoToken && !paymentId && mpPaymentStatus !== "success" && mpPaymentStatus !== "approved") {
       return;
@@ -674,9 +678,18 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#07040d] text-purple-100 flex flex-col items-center justify-between p-3 sm:p-6 relative overflow-x-hidden selection:bg-purple-600 selection:text-white font-gothic">
-      {/* Mystical Cosmic Glow Particle Effect Layer */}
+      {/* Dynamic Starfield Canvas & Stardust Backdrop Layer */}
+      <StarfieldBackground
+        isLoading={isLoading}
+        isOracleActive={isLoading || mode === "SPELLING" || mode === "REVEALED" || isModalOpen}
+      />
+
+      {/* Mystical Cosmic Glow & Drifting Ether Layers */}
       {fogOn && (
-        <div className="fixed inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen bg-[radial-gradient(circle_at_50%_40%,rgba(139,92,246,0.2),transparent_70%)] animate-pulse" />
+        <>
+          <div className="fixed inset-0 pointer-events-none z-10 mix-blend-screen bg-[radial-gradient(circle_at_35%_30%,rgba(139,92,246,0.22),transparent_62%)] animate-ethereal-mist" />
+          <div className="fixed inset-0 pointer-events-none z-10 mix-blend-screen bg-[radial-gradient(circle_at_70%_70%,rgba(245,158,11,0.12),transparent_60%)] animate-ethereal-mist-alt" />
+        </>
       )}
 
       {/* Prominent Global Multi-language Switcher Bar */}
@@ -801,16 +814,16 @@ export default function App() {
 
             {/* General Spirit Message Card (If Spirit Query) */}
             {currentSpiritResponse && mode === "REVEALED" && (
-              <div className="w-full max-w-2xl bg-[#0f0918]/95 border border-purple-500/50 rounded-2xl p-5 sm:p-6 backdrop-blur-md shadow-2xl text-center space-y-3 animate-fade-in">
-                <div className="text-xs uppercase tracking-[0.2em] text-purple-300 font-cinzel font-semibold">
+              <div className="w-full max-w-2xl bg-[#0f0918]/95 border border-purple-500/50 rounded-2xl p-5 sm:p-6 backdrop-blur-md shadow-2xl text-center space-y-3 animate-word-emerge">
+                <div className="text-xs uppercase tracking-[0.2em] text-purple-300 font-cinzel font-semibold animate-rune-breath">
                   <span>{t("channeledMessageTitle")}</span>
                 </div>
 
-                <div className="text-xl sm:text-2xl font-bold text-purple-100 py-1 font-cinzel">
+                <div className="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-purple-100 to-amber-300 animate-spectral-shimmer py-1 font-cinzel">
                   "{currentSpiritResponse.spelledWord}"
                 </div>
 
-                <p className="text-sm sm:text-base text-purple-200/90 leading-relaxed italic font-gothic">
+                <p className="text-sm sm:text-base text-purple-200/90 leading-relaxed italic font-gothic animate-fade-in">
                   {currentSpiritResponse.spiritMessage}
                 </p>
 
@@ -856,6 +869,8 @@ export default function App() {
               isPassUnlocked={isPassUnlocked}
               isCreatorUnlimited={isCreatorOrAdmin}
               onOpenPaywall={() => setIsPaywallOpen(true)}
+              mpLink={getEffectiveMpUrl(monetizationCfg)}
+              passPriceArs={monetizationCfg.passPriceArs}
             />
           </div>
         )}
@@ -870,6 +885,7 @@ export default function App() {
           <PastLifeCodex
             records={savedRecords}
             onSelectRecord={(rec) => {
+              audio.fadeOutForSelection();
               setCurrentPastLife(rec.pastLifeDetails);
               setSeekerName(rec.seekerName);
               setIsModalOpen(true);
@@ -908,7 +924,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Consultation Limit & Automatic Unlock Modal (Mercado Pago + Ko-fi) */}
+      {/* Consultation Limit & Automatic Unlock Modal (Mercado Pago) */}
       <ConsultationPaywallModal
         isOpen={isPaywallOpen}
         onClose={() => setIsPaywallOpen(false)}
@@ -919,42 +935,13 @@ export default function App() {
         }}
       />
 
-      {/* Section: Mystic Coffee Offering / Invitación a Cafecito + Ko-fi */}
-      <MysticCoffeeOffer
-        onOpenPaywall={() => setIsPaywallOpen(true)}
-      />
-
       {/* Footer with Real Visitor Counter */}
-      <footer className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between py-4 text-[11px] font-gothic text-purple-400/70 z-20 border-t border-purple-900/30 mt-4 gap-3">
+      <footer className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between py-4 text-[11px] font-gothic text-purple-400/70 z-20 border-t border-purple-900/30 mt-6 gap-3">
         <div className="flex items-center space-x-3">
           <p>{t("footerTitle")}</p>
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-4">
-          {footerKofiUrl && (
-            <a
-              href={footerKofiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1 text-rose-300 hover:text-rose-200 transition"
-              title="Ko-fi"
-            >
-              <span>☕</span>
-              <span>Ko-fi</span>
-            </a>
-          )}
-
-          <a
-            href={footerMpUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center space-x-1 text-amber-400 hover:text-amber-300 transition"
-            title="Invitar un Cafecito por Mercado Pago"
-          >
-            <Coffee className="w-3.5 h-3.5 text-amber-400" />
-            <span>{t("footerCoffeeLink")}</span>
-          </a>
-
           <div className="flex items-center space-x-1.5 text-purple-300/80">
             <Eye className="w-3.5 h-3.5 text-purple-400" />
             <span>

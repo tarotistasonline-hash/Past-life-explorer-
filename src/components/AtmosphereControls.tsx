@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen } from "lucide-react";
+import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Music } from "lucide-react";
 import { audio } from "../lib/audio";
 import { VisitsStats } from "../types";
 import { useLanguage } from "../context/LanguageContext";
@@ -146,15 +146,15 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
           <div 
             onClick={handleLogoClick}
             title="Tabla Ouija - Registros Akáshicos"
-            className="w-8 h-8 rounded-full bg-purple-950/90 border border-purple-500/60 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.3)] shrink-0 cursor-pointer hover:border-amber-400 transition"
+            className="w-8 h-8 rounded-full bg-purple-950/90 border border-purple-500/60 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.3)] shrink-0 cursor-pointer hover:border-amber-400 transition animate-mystic-float"
           >
-            <span className="text-xs font-bold text-purple-300 font-cinzel">RA</span>
+            <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-amber-200 to-purple-200 animate-spectral-shimmer font-cinzel">RA</span>
           </div>
           <div>
-            <h1 className="font-decorative font-bold text-xs sm:text-sm md:text-base text-transparent bg-clip-text bg-gradient-to-r from-purple-100 via-indigo-200 to-purple-300 tracking-wide">
+            <h1 className="font-decorative font-bold text-xs sm:text-sm md:text-base text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-purple-100 to-fuchsia-300 animate-spectral-shimmer tracking-wide drop-shadow-[0_0_12px_rgba(192,132,252,0.28)]">
               {t("appTitle")}
             </h1>
-            <p className="text-[10px] text-purple-300/80 font-gothic font-medium hidden sm:block tracking-widest uppercase">
+            <p className="text-[10px] text-purple-300/85 font-gothic font-medium hidden sm:block tracking-widest uppercase animate-rune-breath">
               {t("appSubtitle")}
             </p>
           </div>
@@ -199,16 +199,17 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             </button>
           )}
 
-          {/* Audio Drone Theta Tone */}
+          {/* Audio Soft Ambient Music */}
           <button
             onClick={toggleDrone}
             title={t("etherealMusic")}
             className={`px-2.5 sm:px-3 py-1.5 rounded-xl border flex items-center space-x-1.5 transition cursor-pointer ${
               isDroneActive
-                ? "bg-purple-900/60 border-purple-400 text-purple-200 shadow-[0_0_10px_rgba(168,85,247,0.4)]"
+                ? "bg-purple-900/60 border-purple-400 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.45)]"
                 : "bg-neutral-900/80 border-purple-900/40 text-neutral-400 hover:text-purple-200"
             }`}
           >
+            <Music className={`w-3.5 h-3.5 ${isDroneActive ? "text-amber-300 animate-pulse" : "text-purple-400"}`} />
             <span className="hidden md:inline font-medium">{t("etherealMusic")}</span>
           </button>
 

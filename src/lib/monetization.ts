@@ -1,32 +1,22 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "./firebase";
 
 export const DEFAULT_MP_LINK = "https://mpago.la/2cv7Gii";
 
 export interface MonetizationConfig {
   mpLink: string;
-  kofiLink: string;
   paywallEnabled: boolean;
   freeConsultationsLimit: number;
-  passPriceUsd: string;
   passPriceArs: string;
   passAmountArs: number;
-  passMpLink: string;
-  unlockCodeHash: string;
   autoReturnTokenHash: string;
 }
 
 export const DEFAULT_MONETIZATION_CONFIG: MonetizationConfig = {
   mpLink: DEFAULT_MP_LINK,
-  kofiLink: "",
   paywallEnabled: true,
   freeConsultationsLimit: 2,
-  passPriceUsd: "4 USD",
-  passPriceArs: "$3.500 ARS",
-  passAmountArs: 3500,
-  passMpLink: "",
-  unlockCodeHash: "",
+  passPriceArs: "",
+  passAmountArs: 0,
   autoReturnTokenHash: "",
 };
 
@@ -50,7 +40,7 @@ export type PendingConsultation =
       createdAt: number;
     };
 
-const LOCAL_FALLBACK_KEY = "ouija_monetization_cache_v5";
+const LOCAL_FALLBACK_KEY = "ouija_monetization_cache_v8";
 const FREE_USED_KEY = "ouija_free_consultations_used_v1";
 const PASS_UNLOCKED_KEY = "ouija_pass_unlocked_hash_v1";
 const PASS_UNLOCKED_PROOF_KEY = "ouija_pass_unlocked_proof_v2";
@@ -60,24 +50,25 @@ const PAYWALL_HEARTBEAT_KEY = "ouija_paywall_heartbeat_v1";
 const ACTIVE_SESSION_ID_KEY = "ouija_active_payment_session_v1";
 const PAYMENT_CHANNEL_NAME = "ouija_payment_channel";
 
+if (typeof window !== "undefined") {
+  try {
+    localStorage.removeItem("ouija_coffee_link");
+    localStorage.removeItem("ouija_monetization_cache_v5");
+    localStorage.removeItem("ouija_monetization_cache_v6");
+    localStorage.removeItem("ouija_monetization_cache_v7");
+    localStorage.removeItem(PASS_UNLOCKED_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function normalizeHttpsUrl(raw: string): string {
   const trimmed = (raw || "").trim();
   if (!trimmed) return "";
   if (/^https:\/\//i.test(trimmed)) return trimmed.slice(0, 300);
   if (/^http:\/\//i.test(trimmed)) return ("https://" + trimmed.slice(7)).slice(0, 300);
-  if (/^(www\.)?(mpago\.la|mercadopago\.com|cafecito\.app|ko-fi\.com)\//i.test(trimmed)) {
+  if (/^(www\.)?(mpago\.la|mercadopago\.com)\//i.test(trimmed)) {
     return `https://${trimmed}`.slice(0, 300);
-  }
-  return "";
-}
-
-export function normalizeKofiUrl(raw: string): string {
-  const trimmed = (raw || "").trim();
-  if (!trimmed) return "";
-  const asHttps = normalizeHttpsUrl(trimmed);
-  if (asHttps) return asHttps;
-  if (!trimmed.includes("@") && /^[a-zA-Z0-9._-]{2,64}$/.test(trimmed)) {
-    return `https://ko-fi.com/${trimmed}`.slice(0, 300);
   }
   return "";
 }
@@ -95,46 +86,22 @@ export function sanitizeMonetizationConfig(input: Partial<MonetizationConfig>): 
     : 2;
 
   const rawAmount = Number(input.passAmountArs);
-  const clampedAmount = Number.isFinite(rawAmount) && rawAmount >= 100
+  const clampedAmount = Number.isFinite(rawAmount) && rawAmount >= 0
     ? Math.min(10000000, Math.round(rawAmount))
-    : 3500;
+    : 0;
 
   return {
     mpLink: normalizeHttpsUrl(input.mpLink ?? DEFAULT_MP_LINK) || DEFAULT_MP_LINK,
-    kofiLink: normalizeKofiUrl(input.kofiLink ?? ""),
     paywallEnabled: typeof input.paywallEnabled === "boolean" ? input.paywallEnabled : true,
     freeConsultationsLimit: clampedLimit,
-    passPriceUsd: (input.passPriceUsd ?? "4 USD").trim().slice(0, 32),
-    passPriceArs: (input.passPriceArs ?? "$3.500 ARS").trim().slice(0, 32),
+    passPriceArs: (typeof input.passPriceArs === "string" ? input.passPriceArs : "").trim().slice(0, 32),
     passAmountArs: clampedAmount,
-    passMpLink: normalizeHttpsUrl(input.passMpLink ?? ""),
-    unlockCodeHash: normalizeHash(input.unlockCodeHash ?? ""),
     autoReturnTokenHash: normalizeHash(input.autoReturnTokenHash ?? ""),
   };
 }
 
-export function getEffectiveKofiUrl(cfg: MonetizationConfig): string {
-  return cfg.kofiLink || "";
-}
-
-export function getEffectiveMpUrl(
-  cfg: MonetizationConfig,
-  mode: "tip" | "pass"
-): string {
-  if (mode === "pass" && cfg.passMpLink) {
-    return cfg.passMpLink;
-  }
+export function getEffectiveMpUrl(cfg: MonetizationConfig): string {
   return cfg.mpLink || DEFAULT_MP_LINK;
-}
-
-export async function sha256Hex(plain: string): Promise<string> {
-  const normalized = plain.trim().toUpperCase();
-  if (!normalized) return "";
-  const encoded = new TextEncoder().encode(normalized);
-  const digest = await crypto.subtle.digest("SHA-256", encoded);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 export async function sha256ExactHex(plain: string): Promise<string> {
@@ -256,69 +223,14 @@ export function markConsultationPassUnlocked(proof: string, sessionId?: string):
   }
 }
 
-export function isConsultationPassUnlocked(cfg: MonetizationConfig): boolean {
+export function isConsultationPassUnlocked(_cfg?: MonetizationConfig): boolean {
   if (typeof window === "undefined") return false;
   try {
     const serverProof = localStorage.getItem(PASS_UNLOCKED_PROOF_KEY);
-    if (serverProof && serverProof.length >= 10) {
-      return true;
-    }
-    const storedHash = localStorage.getItem(PASS_UNLOCKED_KEY);
-    if (!storedHash) return false;
-    if (cfg.unlockCodeHash) {
-      return storedHash === cfg.unlockCodeHash;
-    }
-    return storedHash === "manual_unlocked";
+    return Boolean(serverProof && serverProof.length >= 10);
   } catch {
     return false;
   }
-}
-
-export async function verifyAndUnlockPass(
-  rawCode: string,
-  cfg: MonetizationConfig
-): Promise<boolean> {
-  const clean = rawCode.trim();
-  if (!clean) return false;
-
-  // Try server verification first (handles autoReturnTokenHash, unlockCodeHash, or MP payment lookup)
-  try {
-    const visitorId = getOrCreateVisitorId();
-    const sessionId = getActivePaymentSessionId();
-    const res = await fetch("/api/payments/verify-return", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: clean, sessionId, visitorId }),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (json?.approved && json?.approvalProof) {
-        markConsultationPassUnlocked(json.approvalProof, json.sessionId);
-        return true;
-      }
-    }
-  } catch {
-    // Fallback to client hash check below
-  }
-
-  const candidateUpper = await sha256Hex(clean);
-  const candidateExact = await sha256ExactHex(clean);
-  const matchesUnlock = Boolean(cfg.unlockCodeHash && candidateUpper === cfg.unlockCodeHash);
-  const matchesReturn = Boolean(
-    cfg.autoReturnTokenHash &&
-      (candidateExact === cfg.autoReturnTokenHash || candidateUpper === cfg.autoReturnTokenHash)
-  );
-
-  if (matchesUnlock || matchesReturn) {
-    try {
-      localStorage.setItem(PASS_UNLOCKED_KEY, matchesUnlock ? candidateUpper : candidateExact);
-      markConsultationPassUnlocked(`local_${candidateUpper.slice(0, 24)}`);
-    } catch {
-      // ignore
-    }
-    return true;
-  }
-  return false;
 }
 
 export function savePendingConsultation(item: PendingConsultation): void {
@@ -467,37 +379,30 @@ let currentConfig: MonetizationConfig = (() => {
 })();
 
 const listeners = new Set<(cfg: MonetizationConfig) => void>();
-let firestoreUnsub: (() => void) | null = null;
+let serverLoaded = false;
 
 function notifyAll() {
   listeners.forEach((cb) => cb(currentConfig));
 }
 
-function startFirestoreSync() {
-  if (firestoreUnsub) return;
-  const configRef = doc(db, "config", "monetization");
-  firestoreUnsub = onSnapshot(
-    configRef,
-    (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as Partial<MonetizationConfig>;
-        currentConfig = sanitizeMonetizationConfig(data);
-        try {
-          localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(currentConfig));
-        } catch {
-          // ignore
-        }
-        notifyAll();
-      }
-    },
-    (error) => {
+async function syncMonetizationFromServer() {
+  if (serverLoaded || typeof window === "undefined") return;
+  serverLoaded = true;
+  try {
+    const res = await fetch("/api/monetization", { cache: "no-store" });
+    if (res.ok) {
+      const data = (await res.json()) as Partial<MonetizationConfig>;
+      currentConfig = sanitizeMonetizationConfig(data);
       try {
-        handleFirestoreError(error, OperationType.GET, "config/monetization");
+        localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(currentConfig));
       } catch {
-        // Logged via handleFirestoreError
+        // ignore
       }
+      notifyAll();
     }
-  );
+  } catch {
+    // Keep local fallback config
+  }
 }
 
 export function useMonetizationConfig(): MonetizationConfig {
@@ -505,31 +410,42 @@ export function useMonetizationConfig(): MonetizationConfig {
 
   useEffect(() => {
     listeners.add(setConfig);
-    startFirestoreSync();
+    syncMonetizationFromServer();
     setConfig(currentConfig);
 
     return () => {
       listeners.delete(setConfig);
-      if (listeners.size === 0 && firestoreUnsub) {
-        firestoreUnsub();
-        firestoreUnsub = null;
-      }
     };
   }, []);
 
   return config;
 }
 
-export async function saveMonetizationConfigToFirestore(
+export async function saveMonetizationConfig(
   input: Partial<MonetizationConfig>
 ): Promise<MonetizationConfig> {
   const clean = sanitizeMonetizationConfig(input);
-  const configRef = doc(db, "config", "monetization");
   try {
-    await setDoc(configRef, {
-      ...clean,
-      updatedAt: serverTimestamp(),
+    const res = await fetch("/api/monetization", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-email": "tarotistasonline@gmail.com",
+      },
+      body: JSON.stringify(clean),
     });
+    const finalCfg = res.ok
+      ? sanitizeMonetizationConfig(await res.json())
+      : clean;
+    currentConfig = finalCfg;
+    try {
+      localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(finalCfg));
+    } catch {
+      // ignore
+    }
+    notifyAll();
+    return finalCfg;
+  } catch {
     currentConfig = clean;
     try {
       localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(clean));
@@ -538,7 +454,5 @@ export async function saveMonetizationConfigToFirestore(
     }
     notifyAll();
     return clean;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, "config/monetization");
   }
 }

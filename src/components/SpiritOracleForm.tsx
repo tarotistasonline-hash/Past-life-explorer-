@@ -15,6 +15,8 @@ interface SpiritOracleFormProps {
   isPassUnlocked?: boolean;
   isCreatorUnlimited?: boolean;
   onOpenPaywall?: () => void;
+  mpLink?: string;
+  passPriceArs?: string;
 }
 
 export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
@@ -28,6 +30,8 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
   isPassUnlocked = false,
   isCreatorUnlimited = false,
   onOpenPaywall,
+  mpLink = "https://mpago.la/2cv7Gii",
+  passPriceArs = "",
 }) => {
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<"PAST_LIFE" | "SPIRIT_ORACLE">("PAST_LIFE");
@@ -448,80 +452,114 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
         </form>
       )}
 
-      {/* Subtle Free Consultation Allowance Status Bar */}
-      {isPaywallEnabled && !isCreatorUnlimited && (
-        <div className="mt-4 pt-3 border-t border-purple-900/40 flex flex-wrap items-center justify-between gap-2 text-[11px] font-gothic">
-          {isPassUnlocked ? (
-            <span className="text-emerald-300 flex items-center space-x-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              <span>
-                {language === "es"
-                  ? "Pase Akáshico activo: lecturas y preguntas desbloqueadas."
-                  : language === "pt"
-                  ? "Passe Akáshico ativo: leituras e perguntas liberadas."
-                  : language === "fr"
-                  ? "Pass Akashique actif : lectures et questions débloquées."
-                  : language === "it"
-                  ? "Pass Akashico attivo: letture e domande sbloccate."
-                  : language === "de"
-                  ? "Akasha-Pass aktiv: Lesungen und Fragen freigeschaltet."
-                  : "Akashic Pass active: readings & questions unlocked."}
-              </span>
-            </span>
-          ) : remainingFree > 0 ? (
-            <>
-              <span className="text-purple-300/85">
-                {language === "es"
-                  ? `Consultas gratuitas disponibles: ${remainingFree} de ${freeLimit}`
-                  : language === "pt"
-                  ? `Consultas gratuitas disponíveis: ${remainingFree} de ${freeLimit}`
-                  : language === "fr"
-                  ? `Consultations gratuites restantes : ${remainingFree} sur ${freeLimit}`
-                  : language === "it"
-                  ? `Consulti gratuiti disponibili: ${remainingFree} su ${freeLimit}`
-                  : language === "de"
-                  ? `Kostenlose Abfragen übrig: ${remainingFree} von ${freeLimit}`
-                  : `Free consultations remaining: ${remainingFree} of ${freeLimit}`}
-              </span>
-              {onOpenPaywall && (
-                <button
-                  type="button"
-                  onClick={onOpenPaywall}
-                  className="text-amber-300 hover:text-amber-200 underline cursor-pointer font-cinzel text-[10px] uppercase tracking-wider"
+      {/* Mercado Pago Consultation Pass Status Bar */}
+      {isPaywallEnabled && (
+        <div className="mt-4 pt-3 border-t border-purple-900/40 text-[11px] font-gothic">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {isCreatorUnlimited ? (
+              <div className="w-full flex justify-end">
+                <a
+                  href={mpLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-4 py-2 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-[11px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_14px_rgba(0,158,227,0.35)]"
                 >
-                  {language === "es" ? "Tengo un código de pase" : "Have a pass code?"}
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <span className="text-amber-300 flex items-center space-x-1.5">
-                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  Desbloquear con Mercado Pago{passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}
+                </a>
+              </div>
+            ) : isPassUnlocked ? (
+              <span className="text-emerald-300 flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                 <span>
                   {language === "es"
-                    ? "Has usado tus consultas gratuitas. Activa tu pase para continuar."
+                    ? "Pase Akáshico activo (Mercado Pago): lecturas y preguntas desbloqueadas."
                     : language === "pt"
-                    ? "Você usou suas consultas gratuitas. Ative seu passe para continuar."
+                    ? "Passe Akáshico ativo (Mercado Pago): leituras e perguntas liberadas."
                     : language === "fr"
-                    ? "Consultations gratuites épuisées. Activez votre pass pour continuer."
+                    ? "Pass Akashique actif (Mercado Pago) : lectures et questions débloquées."
                     : language === "it"
-                    ? "Consulti gratuiti esauriti. Attiva il pass per continuare."
+                    ? "Pass Akashico attivo (Mercado Pago): letture e domande sbloccate."
                     : language === "de"
-                    ? "Kostenlose Abfragen aufgebraucht. Schalte den Zugang frei."
-                    : "Free consultations used. Unlock access to continue."}
+                    ? "Akasha-Pass aktiv (Mercado Pago): Lesungen und Fragen freigeschaltet."
+                    : "Akashic Pass active (Mercado Pago): readings & questions unlocked."}
                 </span>
               </span>
-              {onOpenPaywall && (
-                <button
-                  type="button"
-                  onClick={onOpenPaywall}
-                  className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer"
+            ) : remainingFree > 0 ? (
+              <>
+                <span className="text-purple-300/85">
+                  {language === "es"
+                    ? `Consultas gratuitas disponibles: ${remainingFree} de ${freeLimit}`
+                    : language === "pt"
+                    ? `Consultas gratuitas disponíveis: ${remainingFree} de ${freeLimit}`
+                    : language === "fr"
+                    ? `Consultations gratuites restantes : ${remainingFree} sur ${freeLimit}`
+                    : language === "it"
+                    ? `Consulti gratuiti disponibili: ${remainingFree} su ${freeLimit}`
+                    : language === "de"
+                    ? `Kostenlose Abfragen übrig: ${remainingFree} von ${freeLimit}`
+                    : `Free consultations remaining: ${remainingFree} of ${freeLimit}`}
+                </span>
+                <a
+                  href={mpLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-3.5 py-2 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_14px_rgba(0,158,227,0.35)]"
                 >
-                  {language === "es" ? "Desbloquear" : "Unlock"}
-                </button>
-              )}
-            </>
-          )}
+                  {language === "es"
+                    ? `Desbloquear con Mercado Pago${passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}`
+                    : language === "pt"
+                    ? "Desbloquear com Mercado Pago"
+                    : language === "fr"
+                    ? "Débloquer avec Mercado Pago"
+                    : language === "it"
+                    ? "Sblocca con Mercado Pago"
+                    : language === "de"
+                    ? "Mit Mercado Pago freischalten"
+                    : "Unlock with Mercado Pago"}
+                </a>
+              </>
+            ) : (
+              <>
+                <span className="text-amber-300 flex items-center space-x-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>
+                    {language === "es"
+                      ? `Consultas gratuitas agotadas (${freeLimit}/${freeLimit})`
+                      : language === "pt"
+                      ? `Consultas gratuitas usadas (${freeLimit}/${freeLimit})`
+                      : language === "fr"
+                      ? `Consultations gratuites épuisées (${freeLimit}/${freeLimit})`
+                      : language === "it"
+                      ? `Consulti gratuiti esauriti (${freeLimit}/${freeLimit})`
+                      : language === "de"
+                      ? `Kostenlose Abfragen aufgebraucht (${freeLimit}/${freeLimit})`
+                      : `Free consultations used (${freeLimit}/${freeLimit})`}
+                  </span>
+                </span>
+                <a
+                  href={mpLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-4 py-2 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_15px_rgba(0,158,227,0.4)]"
+                >
+                  {language === "es"
+                    ? `Desbloquear con Mercado Pago${passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}`
+                    : language === "pt"
+                    ? "Desbloquear com Mercado Pago"
+                    : language === "fr"
+                    ? "Débloquer avec Mercado Pago"
+                    : language === "it"
+                    ? "Sblocca con Mercado Pago"
+                    : language === "de"
+                    ? "Mit Mercado Pago freischalten"
+                    : "Unlock with Mercado Pago"}
+                </a>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

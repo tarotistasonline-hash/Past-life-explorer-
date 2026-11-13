@@ -75,45 +75,31 @@ service cloud.firestore {
     function isValidMonetizationConfig(data) {
       return data.keys().hasAll([
         'mpLink',
-        'kofiLink',
         'paywallEnabled',
         'freeConsultationsLimit',
-        'passPriceUsd',
         'passPriceArs',
         'passAmountArs',
-        'passMpLink',
-        'unlockCodeHash',
         'autoReturnTokenHash',
         'updatedAt'
       ])
       && data.keys().hasOnly([
         'mpLink',
-        'kofiLink',
         'paywallEnabled',
         'freeConsultationsLimit',
-        'passPriceUsd',
         'passPriceArs',
         'passAmountArs',
-        'passMpLink',
-        'unlockCodeHash',
         'autoReturnTokenHash',
         'updatedAt'
       ])
       && isValidHttpsOrEmpty(data.mpLink, 300)
-      && isValidHttpsOrEmpty(data.kofiLink, 300)
       && data.paywallEnabled is bool
       && data.freeConsultationsLimit is int
       && data.freeConsultationsLimit >= 1
       && data.freeConsultationsLimit <= 10
-      && data.passPriceUsd is string && data.passPriceUsd.size() <= 32
       && data.passPriceArs is string && data.passPriceArs.size() <= 32
       && data.passAmountArs is int
       && data.passAmountArs >= 100
       && data.passAmountArs <= 10000000
-      && isValidHttpsOrEmpty(data.passMpLink, 300)
-      && data.unlockCodeHash is string
-      && data.unlockCodeHash.size() <= 64
-      && (data.unlockCodeHash == '' || data.unlockCodeHash.matches('^[a-f0-9]{64}$'))
       && data.autoReturnTokenHash is string
       && data.autoReturnTokenHash.size() <= 64
       && (data.autoReturnTokenHash == '' || data.autoReturnTokenHash.matches('^[a-f0-9]{64}$'))
@@ -149,7 +135,7 @@ service cloud.firestore {
       && data.visitorId.size() >= 4
       && data.provider is string
       && data.provider.size() <= 32
-      && data.provider in ['mercadopago', 'kofi', 'auto']
+      && data.provider in ['mercadopago', 'auto']
       && data.status is string
       && data.status.size() <= 16
       && data.status in ['pending', 'approved']
@@ -253,16 +239,16 @@ service cloud.firestore {
         && incoming().updatedAt == request.time
         && incoming().diff(existing()).affectedKeys().hasOnly([
           'mpLink',
-          'kofiLink',
           'paywallEnabled',
           'freeConsultationsLimit',
-          'passPriceUsd',
           'passPriceArs',
           'passAmountArs',
-          'passMpLink',
-          'unlockCodeHash',
           'autoReturnTokenHash',
-          'updatedAt'
+          'updatedAt',
+          'kofiLink',
+          'passPriceUsd',
+          'passMpLink',
+          'unlockCodeHash'
         ]);
       allow delete: if false;
     }

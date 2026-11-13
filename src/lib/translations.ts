@@ -214,16 +214,9 @@ export interface TranslationDictionary {
   errorOracleConnection: string;
   askCardMessage: string;
   
-  // Mystic Coffee Offering
-  coffeeOfferTitle: string;
-  coffeeOfferDesc: string;
-  coffeeOfferBtn: string;
-  coffeeFooterLink: string;
-  
   // Footer
   footerDisclaimer: string;
   footerTitle: string;
-  footerCoffeeLink: string;
   footerRights: string;
   languageSelect: string;
 }
@@ -434,14 +427,8 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     errorOracleConnection: "No se pudo canalizar la información de los Registros Akáshicos.",
     askCardMessage: "¿Cuál es el mensaje del Arcano",
     
-    coffeeOfferTitle: "¿Un cafecito humeante para calmar a las entidades?",
-    coffeeOfferDesc: "Ofrenda voluntaria para apaciguar espíritus y sostener los oráculos.",
-    coffeeOfferBtn: "Invitar Cafecito",
-    coffeeFooterLink: "Cafecito para el Médium",
-    
     footerDisclaimer: "Tabla Ouija Interactiva • Registros Akáshicos y Lectura de Vidas Pasadas",
     footerTitle: "Tabla Ouija Interactiva • Registros Akáshicos y Lectura de Vidas Pasadas",
-    footerCoffeeLink: "Cafecito para el Médium",
     footerRights: "Experiencia espiritual y oracular interactiva",
     languageSelect: "Idioma",
   },
@@ -650,14 +637,8 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     errorOracleConnection: "Could not channel information from the Akashic Records.",
     askCardMessage: "What is the message of Arcana",
     
-    coffeeOfferTitle: "A steaming cup of coffee to soothe the entities?",
-    coffeeOfferDesc: "Voluntary offering to appease spirits and sustain the oracles.",
-    coffeeOfferBtn: "Treat to Coffee",
-    coffeeFooterLink: "Coffee for the Medium",
-    
     footerDisclaimer: "Interactive Ouija Board • Akashic Records & Past Life Reading",
     footerTitle: "Interactive Ouija Board • Akashic Records & Past Life Reading",
-    footerCoffeeLink: "Coffee for the Medium",
     footerRights: "Interactive spiritual and oracular experience",
     languageSelect: "Language",
   },
@@ -866,14 +847,8 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     errorOracleConnection: "Não foi possível canalizar as informações dos Registros Akáshicos.",
     askCardMessage: "Qual é a mensagem do Arcano",
     
-    coffeeOfferTitle: "Um cafezinho fumegante para acalmar as entidades?",
-    coffeeOfferDesc: "Oferenda voluntária para apaziguar espíritos e sustentar os oráculos.",
-    coffeeOfferBtn: "Oferecer Cafezinho",
-    coffeeFooterLink: "Cafezinho para o Médium",
-    
     footerDisclaimer: "Tabuleiro Ouija Interativo • Registros Akáshicos e Leitura de Vidas Passadas",
     footerTitle: "Tabuleiro Ouija Interativo • Registros Akáshicos e Leitura de Vidas Passadas",
-    footerCoffeeLink: "Cafezinho para o Médium",
     footerRights: "Experiência espiritual e oracular interativa",
     languageSelect: "Idioma",
   },
@@ -1082,14 +1057,8 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     errorOracleConnection: "Impossible de canaliser les informations des Annales Akashiques.",
     askCardMessage: "Quel est le message de l'Arcane",
     
-    coffeeOfferTitle: "Un café fumant pour apaiser les entités ?",
-    coffeeOfferDesc: "Offrande volontaire pour apaiser les esprits et maintenir les oracles.",
-    coffeeOfferBtn: "Offrir un Café",
-    coffeeFooterLink: "Café pour le Médium",
-    
     footerDisclaimer: "Planche Ouija Interactive • Annales Akashiques & Vies Antérieures",
     footerTitle: "Planche Ouija Interactive • Annales Akashiques & Vies Antérieures",
-    footerCoffeeLink: "Café pour le Médium",
     footerRights: "Expérience spirituelle et oraculaire interactive",
     languageSelect: "Langue",
   },
@@ -1298,14 +1267,8 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     errorOracleConnection: "Impossibile canalizzare le informazioni dai Registri Akashici.",
     askCardMessage: "Qual è il messaggio dell'Arcano",
     
-    coffeeOfferTitle: "Un caffè fumante per placare le entità?",
-    coffeeOfferDesc: "Offerta volontaria per pacificare gli spiriti e sostenere gli oracoli.",
-    coffeeOfferBtn: "Offri un Caffè",
-    coffeeFooterLink: "Caffè per il Medium",
-    
     footerDisclaimer: "Tavola Ouija Interattiva • Registri Akashici e Vite Passate",
     footerTitle: "Tavola Ouija Interattiva • Registri Akashici e Vite Passate",
-    footerCoffeeLink: "Caffè per il Medium",
     footerRights: "Esperienza spirituale e oracolare interattiva",
     languageSelect: "Lingua",
   },
@@ -1514,14 +1477,8 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     errorOracleConnection: "Informationen aus der Akasha-Chronik konnten nicht gechannelt werden.",
     askCardMessage: "Was ist die Botschaft von Arkanum",
     
-    coffeeOfferTitle: "Ein dampfender Kaffee zur Beruhigung der Entitäten?",
-    coffeeOfferDesc: "Freiwillige Gabe zur Besänftigung der Geister und Erhaltung der Orakel.",
-    coffeeOfferBtn: "Kaffee Spendieren",
-    coffeeFooterLink: "Kaffee für das Medium",
-    
     footerDisclaimer: "Interaktives Ouija-Brett • Akasha-Chronik & Frühere Leben",
     footerTitle: "Interaktives Ouija-Brett • Akasha-Chronik & Frühere Leben",
-    footerCoffeeLink: "Kaffee für das Medium",
     footerRights: "Interaktives spirituelles und orakelhaftes Erlebnis",
     languageSelect: "Sprache",
   },

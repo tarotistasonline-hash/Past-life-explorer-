@@ -98,12 +98,15 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
         <div className="flex items-center space-x-1 font-mono tracking-widest text-amber-200 text-sm sm:text-base font-bold min-h-[24px]">
           {spelledCharsSoFar.length > 0 ? (
             spelledCharsSoFar.map((c, i) => (
-              <span key={i} className="text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-fade-in">
+              <span
+                key={i}
+                className="text-amber-300 drop-shadow-[0_0_10px_rgba(245,158,11,0.9)] animate-word-emerge inline-block"
+              >
                 {c}
               </span>
             ))
           ) : (
-            <span className="text-neutral-500 italic text-xs font-serif">
+            <span className="text-purple-200/65 italic text-xs font-serif animate-rune-breath">
               {isSpelling ? t("invokingSpirits") : t("makeYourConsultation")}
             </span>
           )}
@@ -132,34 +135,40 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
 
         {/* Board Top Center Emblem: Eye of Providence & Mystic Sun/Moon */}
         <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 flex items-center space-x-6 text-amber-500/80 pointer-events-none">
-          <div className="text-center font-cinzel text-[10px] sm:text-xs tracking-widest text-amber-600 font-bold uppercase">
+          <div className="text-center font-cinzel text-[10px] sm:text-xs tracking-widest text-amber-500 font-bold uppercase animate-rune-breath">
             ☽ {t("moon")}
           </div>
-          <div className="relative flex items-center justify-center w-8 h-8 sm:w-12 sm:h-12 border border-amber-600/50 rounded-full bg-amber-950/40 shadow-[0_0_15px_rgba(217,119,6,0.3)]">
+          <div className="relative flex items-center justify-center w-8 h-8 sm:w-12 sm:h-12 border border-amber-600/50 rounded-full bg-amber-950/40 shadow-[0_0_15px_rgba(217,119,6,0.3)] animate-mystic-float">
             <Compass className="w-5 h-5 sm:w-7 sm:h-7 text-amber-400 animate-spin" style={{ animationDuration: "25s" }} />
           </div>
-          <div className="text-center font-cinzel text-[10px] sm:text-xs tracking-widest text-amber-600 font-bold uppercase">
+          <div
+            className="text-center font-cinzel text-[10px] sm:text-xs tracking-widest text-amber-500 font-bold uppercase animate-rune-breath"
+            style={{ animationDelay: "1.8s" }}
+          >
             {t("sun")} ☼
           </div>
         </div>
 
         {/* YES (SÍ) & NO Emblems */}
         <div className="absolute top-[14%] left-[18%] -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-          <div className={`font-cinzel text-lg sm:text-2xl font-black tracking-wider ${activeChar === "SÍ" ? "text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,1)] scale-110" : "text-amber-600/90"} transition-all duration-300`}>
+          <div className={`font-cinzel text-lg sm:text-2xl font-black tracking-wider ${activeChar === "SÍ" ? "text-amber-200 drop-shadow-[0_0_16px_rgba(251,191,36,1)] scale-115" : "text-amber-500/90 animate-rune-breath"} transition-all duration-300`}>
             {t("yes")}
           </div>
-          <div className="text-[9px] sm:text-xs text-amber-800/80 font-cinzel">YES</div>
+          <div className="text-[9px] sm:text-xs text-amber-700/80 font-cinzel">YES</div>
         </div>
 
         <div className="absolute top-[14%] right-[18%] translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-          <div className={`font-cinzel text-lg sm:text-2xl font-black tracking-wider ${activeChar === "NO" ? "text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,1)] scale-110" : "text-amber-600/90"} transition-all duration-300`}>
+          <div
+            className={`font-cinzel text-lg sm:text-2xl font-black tracking-wider ${activeChar === "NO" ? "text-amber-200 drop-shadow-[0_0_16px_rgba(251,191,36,1)] scale-115" : "text-amber-500/90 animate-rune-breath"} transition-all duration-300`}
+            style={activeChar === "NO" ? undefined : { animationDelay: "1.2s" }}
+          >
             {t("no")}
           </div>
-          <div className="text-[9px] sm:text-xs text-amber-800/80 font-cinzel">NO</div>
+          <div className="text-[9px] sm:text-xs text-amber-700/80 font-cinzel">NO</div>
         </div>
 
         {/* Render Alphabet & Numbers Grid on Board */}
-        {Object.entries(BOARD_COORDS).map(([key, coord]) => {
+        {Object.entries(BOARD_COORDS).map(([key, coord], idx) => {
           if (["SI", "YES", "NO", "ADIOS", "GOODBYE", "HOME"].includes(key)) return null;
           const isActive = activeChar === coord.char;
 
@@ -168,12 +177,13 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
               key={key}
               className={`absolute -translate-x-1/2 -translate-y-1/2 font-cinzel font-black text-base sm:text-2xl transition-all duration-200 pointer-events-none ${
                 isActive
-                  ? "text-amber-300 scale-125 font-black drop-shadow-[0_0_16px_rgba(245,158,11,1)] z-20"
-                  : "text-amber-600/90 hover:text-amber-400"
+                  ? "text-amber-200 scale-125 font-black drop-shadow-[0_0_18px_rgba(245,158,11,1)] z-20"
+                  : "text-amber-500/90 animate-rune-breath"
               }`}
               style={{
                 left: `${coord.x}%`,
                 top: `${coord.y}%`,
+                animationDelay: isActive ? undefined : `${(idx % 9) * 0.35}s`,
               }}
             >
               {coord.char}
@@ -183,10 +193,13 @@ export const OuijaBoard: React.FC<OuijaBoardProps> = ({
 
         {/* ADIÓS (GOODBYE) Emblem */}
         <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 text-center pointer-events-none">
-          <div className={`font-cinzel text-base sm:text-xl font-black tracking-[0.25em] ${activeChar === "ADIÓS" ? "text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,1)] scale-110" : "text-amber-700/80"} transition-all duration-300`}>
+          <div
+            className={`font-cinzel text-base sm:text-xl font-black tracking-[0.25em] ${activeChar === "ADIÓS" ? "text-amber-200 drop-shadow-[0_0_16px_rgba(251,191,36,1)] scale-115" : "text-amber-600/85 animate-rune-breath"} transition-all duration-300`}
+            style={activeChar === "ADIÓS" ? undefined : { animationDelay: "2.1s" }}
+          >
             {t("goodbye")}
           </div>
-          <div className="text-[8px] sm:text-[10px] text-amber-900 font-cinzel tracking-widest">GOODBYE</div>
+          <div className="text-[8px] sm:text-[10px] text-amber-800/90 font-cinzel tracking-widest">GOODBYE</div>
         </div>
 
         {/* Physical Planchette (La Plancheta / Gota) */}

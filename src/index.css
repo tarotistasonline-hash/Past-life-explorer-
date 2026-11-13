@@ -221,71 +221,6 @@
   animation: sparkTwinkle 2.4s ease-in-out infinite;
 }
 
-/* === Mystic Coffee Animated Floating & Steam === */
-@keyframes coffeeCupHover {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg) scale(1);
-  }
-  25% {
-    transform: translateY(-5px) rotate(-3deg) scale(1.02);
-  }
-  50% {
-    transform: translateY(-8px) rotate(1deg) scale(1.04);
-  }
-  75% {
-    transform: translateY(-4px) rotate(3deg) scale(1.01);
-  }
-}
-
-@keyframes steamFlow {
-  0% {
-    transform: translateY(2px) scaleX(0.7) scaleY(0.8);
-    opacity: 0;
-  }
-  25% {
-    opacity: 0.9;
-  }
-  60% {
-    transform: translateY(-14px) scaleX(1.3) scaleY(1.1) translateX(3px);
-    opacity: 0.6;
-  }
-  100% {
-    transform: translateY(-26px) scaleX(1.9) scaleY(1.3) translateX(-4px);
-    opacity: 0;
-  }
-}
-
-@keyframes coffeeLiquidShimmer {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(0.95);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.1);
-  }
-}
-
-.animate-coffee-cup {
-  animation: coffeeCupHover 3.2s ease-in-out infinite;
-}
-
-.animate-steam-1 {
-  animation: steamFlow 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.animate-steam-2 {
-  animation: steamFlow 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.5s;
-}
-
-.animate-steam-3 {
-  animation: steamFlow 2.1s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.1s;
-}
-
-.animate-coffee-shimmer {
-  animation: coffeeLiquidShimmer 2.2s ease-in-out infinite;
-}
-
 /* === Custom Mystical Crystal Ball Animations ("Brillo y Parpadeo") === */
 @keyframes crystalFlicker {
   0%, 100% {
@@ -425,4 +360,214 @@
   animation: crystalPulseAura 3s ease-in-out infinite;
 }
 
+/* Kinetic Mystical Typography & Site Life */
+@keyframes spectralTextShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes mysticFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -3px, 0);
+  }
+}
+
+@keyframes runeBreath {
+  0%, 100% {
+    opacity: 0.78;
+    filter: drop-shadow(0 0 2px rgba(217, 119, 6, 0.25));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 9px rgba(251, 191, 36, 0.65));
+  }
+}
+
+@keyframes wordEmerge {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.92);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes etherealMistDrift {
+  0%, 100% {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+    opacity: 0.26;
+  }
+  50% {
+    transform: translate3d(2%, 2%, 0) scale(1.06);
+    opacity: 0.4;
+  }
+}
+
+@keyframes etherealMistDriftAlt {
+  0%, 100% {
+    transform: translate3d(2%, 1%, 0) scale(1.04);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate3d(-2%, -2%, 0) scale(0.97);
+    opacity: 0.34;
+  }
+}
+
+.animate-spectral-shimmer {
+  background-size: 240% 240%;
+  animation: spectralTextShimmer 6s ease-in-out infinite;
+}
+
+.animate-mystic-float {
+  animation: mysticFloat 4.5s ease-in-out infinite;
+}
+
+.animate-rune-breath {
+  animation: runeBreath 4.2s ease-in-out infinite;
+}
+
+.animate-word-emerge {
+  animation: wordEmerge 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-ethereal-mist {
+  animation: etherealMistDrift 14s ease-in-out infinite;
+}
+
+.animate-ethereal-mist-alt {
+  animation: etherealMistDriftAlt 18s ease-in-out infinite;
+}
+
+/* 3D Card Utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-0 {
+  transform: rotateY(0deg);
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Tarot Card Levitation & 3D Mystical Tilt */
+@keyframes tarotCardFloat {
+  0%, 100% {
+    transform: perspective(1000px) translate3d(0, 0px, 0) rotateY(-4deg) rotateX(1.5deg) rotateZ(-1.4deg);
+  }
+  50% {
+    transform: perspective(1000px) translate3d(0, -12px, 0) rotateY(4deg) rotateX(-1.5deg) rotateZ(1.4deg);
+  }
+}
+
+@keyframes tarotFigureBreathe {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(-0.7deg);
+  }
+  50% {
+    transform: translate3d(0, -4px, 0) scale(1.045) rotate(0.7deg);
+  }
+}
+
+/* Cosmic Starfield & Stardust Particles */
+@keyframes starfieldTwinkle {
+  0%, 100% {
+    opacity: 0.25;
+    transform: translate3d(0, 0, 0) scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(6px, -8px, 0) scale(1.25);
+  }
+}
+
+@keyframes starfieldDrift {
+  0% {
+    transform: translate3d(-4px, 4px, 0);
+  }
+  50% {
+    transform: translate3d(6px, -6px, 0);
+  }
+  100% {
+    transform: translate3d(-4px, 4px, 0);
+  }
+}
+
+@keyframes stardustRise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.7);
+  }
+  25% {
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(10px, -28px, 0) scale(1.25);
+  }
+}
+
+.animate-tarot-float {
+  animation: tarotCardFloat 4.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-tarot-figure-breathe {
+  animation: tarotFigureBreathe 3.8s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.animate-starfield-drift {
+  animation-name: starfieldDrift, starfieldTwinkle;
+  animation-timing-function: ease-in-out, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+}
+
+.animate-stardust-rise {
+  animation: stardustRise 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spectral-shimmer,
+  .animate-mystic-float,
+  .animate-rune-breath,
+  .animate-word-emerge,
+  .animate-ethereal-mist,
+  .animate-ethereal-mist-alt,
+  .animate-tarot-float,
+  .animate-tarot-figure-breathe,
+  .animate-starfield-drift,
+  .animate-stardust-rise {
+    animation: none !important;
+    transform: none !important;
+  }
+}
 

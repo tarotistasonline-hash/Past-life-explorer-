@@ -291,7 +291,7 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
 
               <div 
                 onClick={() => flipCard("past", pastCard)}
-                className="cursor-pointer transition-transform hover:scale-102"
+                className="cursor-pointer transition-transform hover:scale-102 animate-tarot-float"
               >
                 {flippedCards.past ? (
                   <div className="w-40 sm:w-48 aspect-[1/1.7] rounded-xl overflow-hidden shadow-[0_0_25px_rgba(168,85,247,0.35)] border-2 border-purple-500/60">
@@ -335,7 +335,8 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
 
               <div 
                 onClick={() => flipCard("present", presentCard)}
-                className="cursor-pointer transition-transform hover:scale-102"
+                className="cursor-pointer transition-transform hover:scale-102 animate-tarot-float"
+                style={{ animationDelay: "0.9s" }}
               >
                 {flippedCards.present ? (
                   <div className="w-40 sm:w-48 aspect-[1/1.7] rounded-xl overflow-hidden shadow-[0_0_25px_rgba(99,102,241,0.35)] border-2 border-indigo-500/60">
@@ -379,7 +380,8 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
 
               <div 
                 onClick={() => flipCard("future", futureCard)}
-                className="cursor-pointer transition-transform hover:scale-102"
+                className="cursor-pointer transition-transform hover:scale-102 animate-tarot-float"
+                style={{ animationDelay: "1.8s" }}
               >
                 {flippedCards.future ? (
                   <div className="w-40 sm:w-48 aspect-[1/1.7] rounded-xl overflow-hidden shadow-[0_0_25px_rgba(245,158,11,0.35)] border-2 border-amber-500/60">
