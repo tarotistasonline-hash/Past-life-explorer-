@@ -27,6 +27,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isDroneActive, setIsDroneActive] = useState<boolean>(() => audio.getIsDroneRunning());
   const [showGuide, setShowGuide] = useState(false);
+  const [showVisitsModal, setShowVisitsModal] = useState(false);
   const [showAdminConfigModal, setShowAdminConfigModal] = useState(false);
   const [showAdminUnlockModal, setShowAdminUnlockModal] = useState(false);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean>(() => isAuthorizedAdmin());
@@ -162,9 +163,14 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
         {/* Live Visitor Counter Badge & Controls */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs font-gothic">
           {/* Visitor Counter Badge */}
-          <div
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic(HAPTIC_PATTERNS.click);
+              setShowVisitsModal(true);
+            }}
             title={t("realVisitsTitle")}
-            className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-950/70 border border-purple-600/40 text-purple-200 text-xs font-gothic shadow-[0_0_12px_rgba(147,51,234,0.25)] select-none"
+            className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-950/70 hover:bg-purple-900/70 border border-purple-600/40 hover:border-purple-400/60 text-purple-200 text-xs font-gothic shadow-[0_0_12px_rgba(147,51,234,0.25)] transition cursor-pointer select-none"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -173,7 +179,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             <Eye className="w-3.5 h-3.5 text-purple-300" />
             <span className="font-cinzel font-semibold text-purple-100">{formattedVisits}</span>
             <span className="hidden md:inline text-[11px] text-purple-300/80">{t("realVisits")}</span>
-          </div>
+          </button>
 
           {/* Language Selector Dropdown */}
           <LanguageSelector />
@@ -303,6 +309,87 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
               className="w-full py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-cinzel font-semibold text-xs rounded-xl transition cursor-pointer"
             >
               {t("enterPortalBtn")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Live Real-Time Visitor Counter Modal */}
+      {showVisitsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-[#0e0a18] border border-purple-500/40 rounded-2xl p-6 text-purple-100 shadow-2xl space-y-4">
+            <button
+              onClick={() => setShowVisitsModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-purple-950 text-purple-300 hover:bg-purple-900 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-2 text-purple-200 font-cinzel font-semibold text-lg border-b border-purple-900/50 pb-2">
+              <Eye className="w-5 h-5 text-emerald-400" />
+              <span>{t("visitsModalTitle")}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-purple-950/50 border border-purple-700/40 text-center">
+                <span className="text-[10px] uppercase tracking-wider text-purple-300/80 block font-gothic">
+                  {t("totalRealVisits")}
+                </span>
+                <span className="text-2xl font-cinzel font-bold text-purple-100 mt-1 block">
+                  {formattedVisits}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-purple-950/50 border border-purple-700/40 text-center">
+                <span className="text-[10px] uppercase tracking-wider text-purple-300/80 block font-gothic">
+                  {t("visitsToday")}
+                </span>
+                <span className="text-2xl font-cinzel font-bold text-amber-300 mt-1 block">
+                  {(visitsStats?.todayVisits ?? 0).toLocaleString(locale)}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-purple-950/50 border border-purple-700/40 text-center">
+                <span className="text-[10px] uppercase tracking-wider text-purple-300/80 block font-gothic">
+                  {t("channeledConsultations")}
+                </span>
+                <span className="text-2xl font-cinzel font-bold text-indigo-200 mt-1 block">
+                  {(visitsStats?.totalConsultations ?? 0).toLocaleString(locale)}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-purple-950/50 border border-purple-700/40 text-center">
+                <span className="text-[10px] uppercase tracking-wider text-purple-300/80 block font-gothic">
+                  {t("portalOfficialRecord")}
+                </span>
+                <span className="text-2xl font-cinzel font-bold text-emerald-300 mt-1 block">
+                  {(visitsStats?.uniqueVisitorsCount ?? 0).toLocaleString(locale)}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-purple-200/80 leading-relaxed font-gothic">
+              {t("portalRecordDesc")}
+            </p>
+
+            {isCreatorMode && (
+              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200 font-gothic space-y-2">
+                <div className="flex items-center space-x-2 font-semibold">
+                  <Shield className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{t("creatorModeActive")}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleCreatorMode}
+                  className="w-full py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-100 font-cinzel text-[11px] font-semibold transition cursor-pointer"
+                >
+                  {t("toggleCreatorModeBtn")}
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowVisitsModal(false)}
+              className="w-full py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-cinzel font-semibold text-xs rounded-xl transition cursor-pointer"
+            >
+              {t("closeRecord")}
             </button>
           </div>
         </div>

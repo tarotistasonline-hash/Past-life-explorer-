@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { BoardMode, PastLifeDetails, PastLifeRevelation, SpiritResponse, VisitsStats } from "./types";
 import { OuijaBoard } from "./components/OuijaBoard";
 import { SpiritOracleForm } from "./components/SpiritOracleForm";
@@ -13,8 +13,27 @@ import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
 import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Coffee, Globe } from "lucide-react";
 import { audio } from "./lib/audio";
-import { isAdminSession, getAdminHeaders } from "./lib/adminTracking";
-import { getDonationLink } from "./lib/donationLink";
+import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
+import {
+  useMonetizationConfig,
+  getEffectiveMpUrl,
+  getEffectiveKofiUrl,
+  canPerformConsultation,
+  getRemainingFreeConsultations,
+  incrementFreeConsultationsUsed,
+  isConsultationPassUnlocked,
+  PendingConsultation,
+  savePendingConsultation,
+  getPendingConsultation,
+  clearPendingConsultation,
+  claimPendingConsultation,
+  markConsultationPassUnlocked,
+  isPaywallModalActiveInAnotherTab,
+  getOrCreateVisitorId,
+} from "./lib/monetization";
+import { ConsultationPaywallModal } from "./components/ConsultationPaywallModal";
+import { doc, onSnapshot, runTransaction } from "firebase/firestore";
+import { db, handleFirestoreError, OperationType } from "./lib/firebase";
 
 const CACHE_VISITS_KEY = "ouija_real_visits_clean";
 
@@ -65,13 +84,32 @@ export default function App() {
   const [visitsStats, setVisitsStats] = useState<VisitsStats>(getInitialVisitsStats);
   const [prefilledOuijaQuestion, setPrefilledOuijaQuestion] = useState("");
   const [showGrimorioModal, setShowGrimorioModal] = useState(false);
-  const [coffeeLink, setCoffeeLink] = useState<string>(getDonationLink);
+  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [pendingConsultation, setPendingConsultation] = useState<PendingConsultation | null>(
+    () => getPendingConsultation()
+  );
+  const [paymentSuccessBanner, setPaymentSuccessBanner] = useState<string>("");
+  const [allowanceTick, setAllowanceTick] = useState(0);
+  const monetizationCfg = useMonetizationConfig();
+  const footerMpUrl = getEffectiveMpUrl(monetizationCfg, "tip");
+  const footerKofiUrl = getEffectiveKofiUrl(monetizationCfg);
 
   useEffect(() => {
-    const handleUpdate = () => setCoffeeLink(getDonationLink());
-    window.addEventListener("ouija_coffee_link_updated", handleUpdate);
-    return () => window.removeEventListener("ouija_coffee_link_updated", handleUpdate);
+    const bump = () => setAllowanceTick((v) => v + 1);
+    window.addEventListener("ouija_consultation_allowance_changed", bump);
+    window.addEventListener("ouija-creator-mode-change", bump);
+    window.addEventListener("ouija-admin-auth-change", bump);
+    return () => {
+      window.removeEventListener("ouija_consultation_allowance_changed", bump);
+      window.removeEventListener("ouija-creator-mode-change", bump);
+      window.removeEventListener("ouija-admin-auth-change", bump);
+    };
   }, []);
+
+  void allowanceTick;
+  const isCreatorOrAdmin = isAdminSession() || isAuthorizedAdmin();
+  const isPassUnlocked = isConsultationPassUnlocked(monetizationCfg);
+  const remainingFree = getRemainingFreeConsultations(monetizationCfg);
 
   // Spoken welcome narration and ambient sound directly on initial visit
   useEffect(() => {
@@ -103,20 +141,22 @@ export default function App() {
 
   const locale = language === "en" ? "en-US" : language === "pt" ? "pt-BR" : language === "fr" ? "fr-FR" : language === "it" ? "it-IT" : language === "de" ? "de-DE" : "es-AR";
 
-  // Exact real visit updater from server with monotonic protection
+  const visitRegisteredRef = useRef(false);
+
+  // Authoritative real visit updater from Firestore / server
   const mergeVisitsStats = useCallback((incoming?: Partial<VisitsStats> | null) => {
     if (!incoming) return;
     setVisitsStats((prev) => {
-      const incomingTotal = typeof incoming.totalVisits === "number" ? incoming.totalVisits : 0;
-      const incomingToday = typeof incoming.todayVisits === "number" ? incoming.todayVisits : 0;
-      const incomingConsultations = typeof incoming.totalConsultations === "number" ? incoming.totalConsultations : 0;
-      const incomingUniques = typeof incoming.uniqueVisitorsCount === "number" ? incoming.uniqueVisitorsCount : 0;
+      const incomingTotal = typeof incoming.totalVisits === "number" ? incoming.totalVisits : prev.totalVisits;
+      const incomingToday = typeof incoming.todayVisits === "number" ? incoming.todayVisits : prev.todayVisits;
+      const incomingConsultations = typeof incoming.totalConsultations === "number" ? incoming.totalConsultations : prev.totalConsultations;
+      const incomingUniques = typeof incoming.uniqueVisitorsCount === "number" ? incoming.uniqueVisitorsCount : prev.uniqueVisitorsCount;
 
       const next: VisitsStats = {
-        totalVisits: Math.max(prev.totalVisits, incomingTotal),
-        todayVisits: Math.max(prev.todayVisits, incomingToday),
-        totalConsultations: Math.max(prev.totalConsultations, incomingConsultations),
-        uniqueVisitorsCount: Math.max(prev.uniqueVisitorsCount, incomingUniques),
+        totalVisits: incomingTotal > 0 ? incomingTotal : prev.totalVisits,
+        todayVisits: incomingToday,
+        totalConsultations: incomingConsultations > 0 ? incomingConsultations : prev.totalConsultations,
+        uniqueVisitorsCount: incomingUniques > 0 ? incomingUniques : prev.uniqueVisitorsCount,
         lastUpdated: incoming.lastUpdated || new Date().toISOString(),
       };
       try {
@@ -128,10 +168,10 @@ export default function App() {
     });
   }, []);
 
-  // Fetch real statistics with monotonic hints
+  // Fetch real statistics without HTTP cache
   const fetchVisitsStats = useCallback(async () => {
     try {
-      const res = await fetch("/api/visits");
+      const res = await fetch("/api/visits", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         mergeVisitsStats(data);
@@ -141,24 +181,66 @@ export default function App() {
     }
   }, [mergeVisitsStats]);
 
+  // Real-time Firestore listener for live portal metrics across all users and devices
   useEffect(() => {
+    const metricsRef = doc(db, "metrics", "global");
+    const getLocalDateKey = () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+
+    const unsubscribe = onSnapshot(
+      metricsRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          const todayKey = getLocalDateKey();
+          mergeVisitsStats({
+            totalVisits: Number(data.totalVisits) || 0,
+            todayVisits: data.todayKey === todayKey ? Number(data.todayVisits) || 0 : 0,
+            totalConsultations: Number(data.totalConsultations) || 0,
+            uniqueVisitorsCount: Number(data.uniqueVisitorsCount) || 0,
+            lastUpdated: typeof data.lastUpdated === "string" ? data.lastUpdated : new Date().toISOString(),
+          });
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, "metrics/global");
+      }
+    );
+
+    return () => unsubscribe();
+  }, [mergeVisitsStats]);
+
+  useEffect(() => {
+    if (visitRegisteredRef.current) return;
+    visitRegisteredRef.current = true;
+
     const registerVisit = async () => {
+      let visitorId = "vis_anon_" + Date.now();
       try {
-        let visitorId = localStorage.getItem("ouija_visitor_id");
-        if (!visitorId) {
+        const storedId = localStorage.getItem("ouija_visitor_id");
+        if (storedId && /^[a-zA-Z0-9_\-]{4,128}$/.test(storedId)) {
+          visitorId = storedId;
+        } else {
           visitorId = "vis_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
           localStorage.setItem("ouija_visitor_id", visitorId);
         }
+      } catch {
+        // ignore storage restrictions
+      }
 
+      const isAdmin = isAdminSession();
+
+      try {
         const isNewSession = !sessionStorage.getItem("ouija_session_logged");
         if (isNewSession) {
           sessionStorage.setItem("ouija_session_logged", "true");
         }
 
-        const initialStats = getInitialVisitsStats();
-        const isAdmin = isAdminSession();
         const res = await fetch("/api/visits/hit", {
           method: "POST",
+          cache: "no-store",
           headers: {
             "Content-Type": "application/json",
             ...getAdminHeaders(),
@@ -167,29 +249,59 @@ export default function App() {
             visitorId,
             isNewSession,
             isAdmin,
-            clientKnownTotal: initialStats.totalVisits,
-            clientKnownConsultations: initialStats.totalConsultations,
           }),
         });
 
         if (res.ok) {
           const stats = await res.json();
           mergeVisitsStats(stats);
-        } else {
-          fetchVisitsStats();
+          return;
         }
       } catch (e) {
-        console.warn("Error registering visit:", e);
+        console.warn("Server visit hit failed, attempting direct Firestore fallback:", e);
+      }
+
+      // Direct Firestore transaction fallback if backend endpoint was unreachable
+      if (!isAdmin) {
+        try {
+          const d = new Date();
+          const todayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const nowIso = d.toISOString();
+          const metricsRef = doc(db, "metrics", "global");
+          const visitorRef = doc(db, "visitors", visitorId);
+
+          await runTransaction(db, async (tx) => {
+            const mSnap = await tx.get(metricsRef);
+            const vSnap = await tx.get(visitorRef);
+            if (!mSnap.exists()) return;
+            const current = mSnap.data();
+            const isNewUnique = !vSnap.exists();
+            if (isNewUnique) {
+              tx.set(visitorRef, { visitorId, firstSeenAt: nowIso });
+            }
+            tx.update(metricsRef, {
+              totalVisits: (Number(current.totalVisits) || 0) + 1,
+              todayVisits: current.todayKey === todayKey ? (Number(current.todayVisits) || 0) + 1 : 1,
+              todayKey,
+              uniqueVisitorsCount: (Number(current.uniqueVisitorsCount) || 0) + (isNewUnique ? 1 : 0),
+              lastUpdated: nowIso,
+            });
+          });
+        } catch (fsErr) {
+          console.warn("Direct Firestore fallback error:", fsErr);
+          fetchVisitsStats();
+        }
+      } else {
         fetchVisitsStats();
       }
     };
 
     registerVisit();
 
-    // Regular dynamic polling for live visitor updates (every 8 seconds)
+    // Backup polling for environments where real-time sockets are throttled
     const visitsInterval = setInterval(() => {
       fetchVisitsStats();
-    }, 8000);
+    }, 15000);
 
     return () => clearInterval(visitsInterval);
   }, [fetchVisitsStats, mergeVisitsStats]);
@@ -246,100 +358,291 @@ export default function App() {
     }
   };
 
-  // Past Life Channeling API call
+  // Execute Past Life Channeling API call
+  const executePastLifeConsult = useCallback(
+    async (data: {
+      name: string;
+      birthYear: string;
+      focusQuery: string;
+      feeling: string;
+    }) => {
+      const adminBypass = isAdminSession() || isAuthorizedAdmin();
+      audio.stopSpeech();
+      setActiveMainSection("OUIJA");
+      setIsLoading(true);
+      setErrorMsg("");
+      setSeekerName(data.name || "Buscador");
+      setCurrentSpiritResponse(null);
+
+      try {
+        const res = await fetch("/api/ouija/past-life", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAdminHeaders(),
+          },
+          body: JSON.stringify({ ...data, lang: language, isAdmin: isAdminSession() }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Error en la conexión con los Registros Akáshicos");
+        }
+
+        const json = await res.json();
+        setCurrentPastLife(json.pastLifeDetails);
+        setSpelledWord(json.spelledWord || "VIDA PASADA");
+        setMode("SPELLING");
+        if (!adminBypass && !isConsultationPassUnlocked(monetizationCfg)) {
+          incrementFreeConsultationsUsed();
+        }
+        fetchVisitsStats();
+      } catch (err: unknown) {
+        console.error(err);
+        setErrorMsg(t("errorAkashicConnection"));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [fetchVisitsStats, language, monetizationCfg, t]
+  );
+
+  // Execute Spirit Oracle Question API call
+  const executeGeneralConsult = useCallback(
+    async (question: string, name: string) => {
+      const adminBypass = isAdminSession() || isAuthorizedAdmin();
+      audio.stopSpeech();
+      setActiveMainSection("OUIJA");
+      setIsLoading(true);
+      setErrorMsg("");
+      setSeekerName(name);
+      setCurrentPastLife(null);
+
+      try {
+        const res = await fetch("/api/ouija/spirit-question", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAdminHeaders(),
+          },
+          body: JSON.stringify({ question, seekerName: name, lang: language, isAdmin: isAdminSession() }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Error en la respuesta del oráculo");
+        }
+
+        const rawJson: any = await res.json();
+        const spelledClean =
+          String(rawJson.spelledWord || rawJson.spelled || "SI")
+            .replace(/\bundefined\b/gi, "")
+            .trim() || "SI";
+
+        const defaultMsg =
+          language === "en"
+            ? "The portal opens. The spirit confirms peace and clarity along your journey."
+            : "El portal de ultratumba se abre. El espíritu confirma serenidad y claridad en tu camino.";
+
+        const messageClean =
+          String(rawJson.spiritMessage || rawJson.spirit || defaultMsg)
+            .replace(/\bundefined\b/gi, "")
+            .trim() || defaultMsg;
+
+        const normalized: SpiritResponse = {
+          spelledWord: spelledClean,
+          answerType: (rawJson.answerType || rawJson.type || "SPELLOUT") as "YES" | "NO" | "SPELLOUT",
+          spiritMessage: messageClean,
+          spiritName:
+            String(
+              rawJson.spiritName ||
+                rawJson.name ||
+                (language === "en" ? "Akashic Guardian" : "Guardián Akáshico")
+            )
+              .replace(/\bundefined\b/gi, "")
+              .trim() || "Guardián Akáshico",
+        };
+
+        setCurrentSpiritResponse(normalized);
+        setSpelledWord(normalized.spelledWord);
+        setMode("SPELLING");
+        if (!adminBypass && !isConsultationPassUnlocked(monetizationCfg)) {
+          incrementFreeConsultationsUsed();
+        }
+        fetchVisitsStats();
+      } catch (err: unknown) {
+        console.error(err);
+        setErrorMsg(t("errorOracleConnection"));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [fetchVisitsStats, language, monetizationCfg, t]
+  );
+
+  // Immediately execute any pending past-life reading or spirit question after payment unlock
+  const runPendingConsultationIfAny = useCallback(() => {
+    const queued = getPendingConsultation() || pendingConsultation;
+    if (!queued) return false;
+    if (!claimPendingConsultation(queued.id)) {
+      setPendingConsultation(null);
+      return false;
+    }
+    setPendingConsultation(null);
+    clearPendingConsultation(queued.id);
+
+    if (queued.type === "past-life") {
+      executePastLifeConsult(queued.data);
+    } else if (queued.type === "spirit-question") {
+      executeGeneralConsult(queued.question, queued.name);
+    }
+    return true;
+  }, [executeGeneralConsult, executePastLifeConsult, pendingConsultation]);
+
+  // Automatic post-payment return handler (Mercado Pago Checkout Pro / Auto-Return URL / Ko-fi Redirect)
+  const paymentReturnHandledRef = useRef(false);
+  useEffect(() => {
+    if (paymentReturnHandledRef.current) return;
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const mpPaymentStatus = params.get("mp_payment") || params.get("collection_status") || params.get("status");
+    const paymentId = params.get("payment_id") || params.get("collection_id");
+    const sessionIdParam = params.get("session_id") || "";
+    const autoToken = params.get("token") || params.get("auto_unlock") || "";
+    const isAutoApprovedFlag = params.get("pago_aprobado") === "1" || params.get("kofi_return") === "1";
+
+    if (!autoToken && !paymentId && mpPaymentStatus !== "success" && mpPaymentStatus !== "approved") {
+      return;
+    }
+
+    paymentReturnHandledRef.current = true;
+
+    const handleReturn = async () => {
+      let approvedProof = "";
+      let approvedSessionId = sessionIdParam;
+
+      if (autoToken || isAutoApprovedFlag) {
+        try {
+          const res = await fetch("/api/payments/verify-return", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              token: autoToken,
+              sessionId: sessionIdParam,
+              visitorId: getOrCreateVisitorId(),
+            }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json?.approved && json?.approvalProof) {
+              approvedProof = json.approvalProof;
+              approvedSessionId = json.sessionId || approvedSessionId;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!approvedProof && paymentId && (mpPaymentStatus === "success" || mpPaymentStatus === "approved" || !mpPaymentStatus)) {
+        try {
+          const res = await fetch("/api/payments/mercadopago/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId, sessionId: sessionIdParam }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json?.approved && json?.approvalProof) {
+              approvedProof = json.approvalProof;
+              approvedSessionId = json.sessionId || approvedSessionId;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // Clean payment params from URL
+      try {
+        window.history.replaceState({}, "", window.location.pathname);
+      } catch {
+        // ignore
+      }
+
+      if (approvedProof) {
+        const otherTabActive = isPaywallModalActiveInAnotherTab();
+        markConsultationPassUnlocked(approvedProof, approvedSessionId);
+        setAllowanceTick((v) => v + 1);
+        setIsPaywallOpen(false);
+
+        if (otherTabActive) {
+          setPaymentSuccessBanner(
+            language === "en"
+              ? "Payment verified! Your consultation unlocked automatically in your main tab."
+              : "¡Pago confirmado! Tu lectura solicitada ya se desbloqueó y comenzó automáticamente en la ventana principal."
+          );
+          setTimeout(() => setPaymentSuccessBanner(""), 8000);
+        } else {
+          const ran = runPendingConsultationIfAny();
+          if (!ran) {
+            setPaymentSuccessBanner(
+              language === "en"
+                ? "Access unlocked automatically! You now have unlimited past-life readings and questions."
+                : "¡Acceso desbloqueado automáticamente! Ya puedes realizar lecturas y preguntas ilimitadas."
+            );
+            setTimeout(() => setPaymentSuccessBanner(""), 7000);
+          }
+        }
+      }
+    };
+
+    handleReturn();
+  }, [language, runPendingConsultationIfAny]);
+
+  // Past Life Channeling trigger (queues & prompts payment when free limit reached)
   const handlePastLifeConsult = async (data: {
     name: string;
     birthYear: string;
     focusQuery: string;
     feeling: string;
   }) => {
-    // Instantly terminate any previous ambient or welcome voice
-    audio.stopSpeech();
-    setIsLoading(true);
-    setErrorMsg("");
-    setSeekerName(data.name || "Buscador");
-    setCurrentSpiritResponse(null);
-
-    try {
-      const res = await fetch("/api/ouija/past-life", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAdminHeaders(),
-        },
-        body: JSON.stringify({ ...data, lang: language, isAdmin: isAdminSession() }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Error en la conexión con los Registros Akáshicos");
-      }
-
-      const json = await res.json();
-      setCurrentPastLife(json.pastLifeDetails);
-      setSpelledWord(json.spelledWord || "VIDA PASADA");
-      setMode("SPELLING");
-      fetchVisitsStats();
-    } catch (err: unknown) {
-      console.error(err);
-      setErrorMsg(t("errorAkashicConnection"));
-    } finally {
-      setIsLoading(false);
+    const adminBypass = isAdminSession() || isAuthorizedAdmin();
+    if (!canPerformConsultation(monetizationCfg, adminBypass)) {
+      const queued: PendingConsultation = {
+        id: `pend_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        type: "past-life",
+        data,
+        createdAt: Date.now(),
+      };
+      savePendingConsultation(queued);
+      setPendingConsultation(queued);
+      audio.stopSpeech();
+      setIsPaywallOpen(true);
+      return;
     }
+
+    await executePastLifeConsult(data);
   };
 
-  // Free Spirit Oracle API Call
+  // Spirit Oracle Question trigger (queues & prompts payment when free limit reached)
   const handleGeneralConsult = async (question: string, name: string) => {
-    // Instantly terminate any previous ambient or welcome voice
-    audio.stopSpeech();
-    setIsLoading(true);
-    setErrorMsg("");
-    setSeekerName(name);
-    setCurrentPastLife(null);
-
-    try {
-      const res = await fetch("/api/ouija/spirit-question", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAdminHeaders(),
-        },
-        body: JSON.stringify({ question, seekerName: name, lang: language, isAdmin: isAdminSession() }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Error en la respuesta del oráculo");
-      }
-
-      const rawJson: any = await res.json();
-      const spelledClean = String(rawJson.spelledWord || rawJson.spelled || "SI")
-        .replace(/\bundefined\b/gi, "")
-        .trim() || "SI";
-
-      const defaultMsg = language === "en"
-        ? "The portal opens. The spirit confirms peace and clarity along your journey."
-        : "El portal de ultratumba se abre. El espíritu confirma serenidad y claridad en tu camino.";
-
-      const messageClean = String(rawJson.spiritMessage || rawJson.spirit || defaultMsg)
-        .replace(/\bundefined\b/gi, "")
-        .trim() || defaultMsg;
-
-      const normalized: SpiritResponse = {
-        spelledWord: spelledClean,
-        answerType: (rawJson.answerType || rawJson.type || "SPELLOUT") as "YES" | "NO" | "SPELLOUT",
-        spiritMessage: messageClean,
-        spiritName: String(rawJson.spiritName || rawJson.name || (language === "en" ? "Akashic Guardian" : "Guardián Akáshico")).replace(/\bundefined\b/gi, "").trim() || "Guardián Akáshico",
+    const adminBypass = isAdminSession() || isAuthorizedAdmin();
+    if (!canPerformConsultation(monetizationCfg, adminBypass)) {
+      const queued: PendingConsultation = {
+        id: `pend_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        type: "spirit-question",
+        question,
+        name,
+        createdAt: Date.now(),
       };
-
-      setCurrentSpiritResponse(normalized);
-      setSpelledWord(normalized.spelledWord);
-      setMode("SPELLING");
-      fetchVisitsStats();
-    } catch (err: unknown) {
-      console.error(err);
-      setErrorMsg(t("errorOracleConnection"));
-    } finally {
-      setIsLoading(false);
+      savePendingConsultation(queued);
+      setPendingConsultation(queued);
+      audio.stopSpeech();
+      setIsPaywallOpen(true);
+      return;
     }
+
+    await executeGeneralConsult(question, name);
   };
 
   const handleSpellingComplete = () => {
@@ -547,6 +850,12 @@ export default function App() {
               onGeneralConsult={handleGeneralConsult}
               isLoading={isLoading}
               externalPreFillQuery={prefilledOuijaQuestion}
+              isPaywallEnabled={monetizationCfg.paywallEnabled}
+              freeLimit={monetizationCfg.freeConsultationsLimit}
+              remainingFree={remainingFree}
+              isPassUnlocked={isPassUnlocked}
+              isCreatorUnlimited={isCreatorOrAdmin}
+              onOpenPaywall={() => setIsPaywallOpen(true)}
             />
           </div>
         )}
@@ -592,8 +901,28 @@ export default function App() {
         />
       )}
 
-      {/* Section: Mystic Coffee Offering / Invitación a Cafecito */}
-      <MysticCoffeeOffer />
+      {/* Auto-unlock confirmation banner */}
+      {paymentSuccessBanner && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] px-4 py-3 rounded-2xl bg-emerald-950/95 border border-emerald-400/60 text-emerald-100 text-xs font-cinzel text-center shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-fade-in">
+          {paymentSuccessBanner}
+        </div>
+      )}
+
+      {/* Consultation Limit & Automatic Unlock Modal (Mercado Pago + Ko-fi) */}
+      <ConsultationPaywallModal
+        isOpen={isPaywallOpen}
+        onClose={() => setIsPaywallOpen(false)}
+        pendingConsultation={pendingConsultation}
+        onUnlocked={() => {
+          setAllowanceTick((v) => v + 1);
+          runPendingConsultationIfAny();
+        }}
+      />
+
+      {/* Section: Mystic Coffee Offering / Invitación a Cafecito + Ko-fi */}
+      <MysticCoffeeOffer
+        onOpenPaywall={() => setIsPaywallOpen(true)}
+      />
 
       {/* Footer with Real Visitor Counter */}
       <footer className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between py-4 text-[11px] font-gothic text-purple-400/70 z-20 border-t border-purple-900/30 mt-4 gap-3">
@@ -601,9 +930,22 @@ export default function App() {
           <p>{t("footerTitle")}</p>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {footerKofiUrl && (
+            <a
+              href={footerKofiUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1 text-rose-300 hover:text-rose-200 transition"
+              title="Ko-fi"
+            >
+              <span>☕</span>
+              <span>Ko-fi</span>
+            </a>
+          )}
+
           <a
-            href={coffeeLink}
+            href={footerMpUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center space-x-1 text-amber-400 hover:text-amber-300 transition"

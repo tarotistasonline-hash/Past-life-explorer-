@@ -1,4 +1,4 @@
-import { DailyArcana, SupportedLanguage } from "../types";
+import type { DailyArcana, SupportedLanguage } from "../types.ts";
 
 export interface ArcanaTranslation {
   name: string;

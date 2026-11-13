@@ -1,5 +1,7 @@
+import { DEFAULT_MP_LINK } from "./monetization";
+
 const STORAGE_KEY = "ouija_coffee_link";
-export const DEFAULT_COFFEE_LINK = "https://mpago.la/2cv7Gii";
+export const DEFAULT_COFFEE_LINK = DEFAULT_MP_LINK;
 
 export function getDonationLink(): string {
   if (typeof window !== "undefined") {

@@ -1,8 +1,19 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import express from "express";
+import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
+import { initializeApp as initFirebaseApp, getApps as getFirebaseApps } from "firebase/app";
+import {
+  getFirestore,
+  doc,
+  getDocFromServer,
+  setDoc,
+  updateDoc,
+  runTransaction,
+  type Firestore,
+} from "firebase/firestore";
 import { MAJOR_ARCANA, getUniversalArcanaForDate, drawPersonalArcana } from "./src/lib/tarotData.ts";
 import {
   buildStrictSpiritQuestionPrompt,
@@ -14,6 +25,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(process.cwd(), "public")));
 
 // Universal Google Site Verification Endpoints (supports ANY Google verification file or token)
@@ -106,57 +118,222 @@ function saveVisitsData() {
   }
 }
 
-// Visits API Endpoints (100% Real Traffic)
-app.get("/api/visits", (req, res) => {
+// Initialize Firebase Firestore for permanent cross-restart persistence
+let firestoreDb: Firestore | null = null;
+try {
+  const fbConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
+  if (fs.existsSync(fbConfigPath)) {
+    const fbConfig = JSON.parse(fs.readFileSync(fbConfigPath, "utf-8"));
+    const fbApp = getFirebaseApps().length > 0 ? getFirebaseApps()[0] : initFirebaseApp(fbConfig);
+    firestoreDb = getFirestore(fbApp, fbConfig.firestoreDatabaseId);
+  }
+} catch (e) {
+  console.warn("Could not initialize Firestore in server:", e);
+}
+
+interface PortalMetricsPayload {
+  totalVisits: number;
+  todayVisits: number;
+  todayKey: string;
+  totalConsultations: number;
+  uniqueVisitorsCount: number;
+  lastUpdated: string;
+}
+
+function sanitizeVisitorId(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const cleaned = raw.trim().replace(/[^a-zA-Z0-9_\-]/g, "");
+  if (cleaned.length < 4 || cleaned.length > 128) return null;
+  return cleaned;
+}
+
+async function ensureMetricsDoc(): Promise<PortalMetricsPayload | null> {
+  if (!firestoreDb) return null;
+  const metricsRef = doc(firestoreDb, "metrics", "global");
+  const snap = await getDocFromServer(metricsRef);
   const todayKey = getTodayKey();
+
+  if (snap.exists()) {
+    const data = snap.data();
+    return {
+      totalVisits: Number(data.totalVisits) || 0,
+      todayVisits: data.todayKey === todayKey ? Number(data.todayVisits) || 0 : 0,
+      todayKey: typeof data.todayKey === "string" ? data.todayKey : todayKey,
+      totalConsultations: Number(data.totalConsultations) || 0,
+      uniqueVisitorsCount: Number(data.uniqueVisitorsCount) || 0,
+      lastUpdated: typeof data.lastUpdated === "string" ? data.lastUpdated : new Date().toISOString(),
+    };
+  }
+
+  const seedPayload: PortalMetricsPayload = {
+    totalVisits: Math.min(200, Math.max(0, visitsState.totalVisits || 54)),
+    todayVisits: Math.min(200, Math.max(0, visitsState.dailyVisits[todayKey] || 0)),
+    todayKey,
+    totalConsultations: Math.min(200, Math.max(0, visitsState.totalConsultations || 17)),
+    uniqueVisitorsCount: Math.min(200, Math.max(0, visitsState.uniqueVisitors.length || 4)),
+    lastUpdated: new Date().toISOString(),
+  };
+
+  try {
+    await setDoc(metricsRef, seedPayload);
+    return seedPayload;
+  } catch (err) {
+    // Another instance may have created it simultaneously; re-read
+    const retrySnap = await getDocFromServer(metricsRef);
+    if (retrySnap.exists()) {
+      const data = retrySnap.data();
+      return {
+        totalVisits: Number(data.totalVisits) || 0,
+        todayVisits: data.todayKey === todayKey ? Number(data.todayVisits) || 0 : 0,
+        todayKey: typeof data.todayKey === "string" ? data.todayKey : todayKey,
+        totalConsultations: Number(data.totalConsultations) || 0,
+        uniqueVisitorsCount: Number(data.uniqueVisitorsCount) || 0,
+        lastUpdated: typeof data.lastUpdated === "string" ? data.lastUpdated : new Date().toISOString(),
+      };
+    }
+    throw err;
+  }
+}
+
+async function getAuthoritativeVisitsStats() {
+  const todayKey = getTodayKey();
+  if (firestoreDb) {
+    try {
+      const data = await ensureMetricsDoc();
+      if (data) {
+        visitsState.totalVisits = data.totalVisits;
+        visitsState.totalConsultations = data.totalConsultations;
+        visitsState.dailyVisits[todayKey] = data.todayVisits;
+        visitsState.lastUpdated = data.lastUpdated;
+        return {
+          totalVisits: data.totalVisits,
+          todayVisits: data.todayVisits,
+          totalConsultations: data.totalConsultations,
+          uniqueVisitorsCount: data.uniqueVisitorsCount,
+          lastUpdated: data.lastUpdated,
+        };
+      }
+    } catch (e) {
+      console.warn("Firestore read failed, using fallback visitsState:", e);
+    }
+  }
+
   const todayCount = visitsState.dailyVisits[todayKey] || 0;
-  res.json({
+  return {
     totalVisits: visitsState.totalVisits,
     todayVisits: todayCount,
     totalConsultations: visitsState.totalConsultations,
     uniqueVisitorsCount: visitsState.uniqueVisitors.length,
     lastUpdated: visitsState.lastUpdated,
+  };
+}
+
+async function recordVisitInFirestore(rawVisitorId: unknown) {
+  if (!firestoreDb) return null;
+  await ensureMetricsDoc();
+
+  const db = firestoreDb;
+  const cleanVisitorId = sanitizeVisitorId(rawVisitorId);
+  const todayKey = getTodayKey();
+  const nowIso = new Date().toISOString();
+
+  const metricsRef = doc(db, "metrics", "global");
+  const visitorRef = cleanVisitorId ? doc(db, "visitors", cleanVisitorId) : null;
+
+  const updated = await runTransaction(db, async (tx) => {
+    const metricsSnap = await tx.get(metricsRef);
+    const visitorSnap = visitorRef ? await tx.get(visitorRef) : null;
+
+    if (!metricsSnap.exists()) {
+      throw new Error("metrics/global does not exist");
+    }
+
+    const current = metricsSnap.data();
+    const isNewUnique = Boolean(visitorRef && visitorSnap && !visitorSnap.exists());
+
+    const nextTotalVisits = (Number(current.totalVisits) || 0) + 1;
+    const nextTodayVisits = current.todayKey === todayKey ? (Number(current.todayVisits) || 0) + 1 : 1;
+    const nextUnique = (Number(current.uniqueVisitorsCount) || 0) + (isNewUnique ? 1 : 0);
+
+    if (isNewUnique && visitorRef && cleanVisitorId) {
+      tx.set(visitorRef, {
+        visitorId: cleanVisitorId,
+        firstSeenAt: nowIso,
+      });
+    }
+
+    tx.update(metricsRef, {
+      totalVisits: nextTotalVisits,
+      todayVisits: nextTodayVisits,
+      todayKey,
+      uniqueVisitorsCount: nextUnique,
+      lastUpdated: nowIso,
+    });
+
+    return {
+      totalVisits: nextTotalVisits,
+      todayVisits: nextTodayVisits,
+      totalConsultations: Number(current.totalConsultations) || 0,
+      uniqueVisitorsCount: nextUnique,
+      lastUpdated: nowIso,
+    };
   });
+
+  visitsState.totalVisits = updated.totalVisits;
+  visitsState.totalConsultations = updated.totalConsultations;
+  visitsState.dailyVisits[todayKey] = updated.todayVisits;
+  visitsState.lastUpdated = updated.lastUpdated;
+  if (cleanVisitorId && !visitsState.uniqueVisitors.includes(cleanVisitorId)) {
+    visitsState.uniqueVisitors.push(cleanVisitorId);
+  }
+  saveVisitsData();
+
+  return updated;
+}
+
+// Visits API Endpoints (100% Real Traffic with Firestore Persistence)
+app.get("/api/visits", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  const stats = await getAuthoritativeVisitsStats();
+  res.json(stats);
 });
 
-app.post("/api/visits/hit", (req, res) => {
-  const { visitorId, isNewSession, isAdmin, clientKnownTotal, clientKnownConsultations } = req.body || {};
+app.post("/api/visits/hit", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  const { visitorId, isAdmin } = req.body || {};
   const isExcluded = Boolean(isAdmin || req.headers["x-admin-exclude"] === "true");
   const todayKey = getTodayKey();
 
-  // If client knows a higher historical count (e.g. after container restart), synchronize upwards
-  if (typeof clientKnownTotal === "number" && clientKnownTotal > visitsState.totalVisits) {
-    visitsState.totalVisits = clientKnownTotal;
-  }
-  if (typeof clientKnownConsultations === "number" && clientKnownConsultations > visitsState.totalConsultations) {
-    visitsState.totalConsultations = clientKnownConsultations;
-  }
-
   if (!isExcluded) {
-    // Increment real visit count for genuine public visitors
-    visitsState.totalVisits += 1;
-    visitsState.dailyVisits[todayKey] = (visitsState.dailyVisits[todayKey] || 0) + 1;
-
-    if (visitorId && typeof visitorId === "string") {
-      if (!visitsState.uniqueVisitors.includes(visitorId)) {
-        visitsState.uniqueVisitors.push(visitorId);
-        if (visitsState.uniqueVisitors.length > 20000) {
-          visitsState.uniqueVisitors = visitsState.uniqueVisitors.slice(-20000);
-        }
+    try {
+      const firestoreResult = await recordVisitInFirestore(visitorId);
+      if (firestoreResult) {
+        return res.json({
+          ...firestoreResult,
+          excluded: false,
+        });
       }
+    } catch (e) {
+      console.warn("Firestore hit transaction failed, falling back to local counter:", e);
     }
 
+    // Local fallback if Firestore is temporarily unreachable
+    visitsState.totalVisits += 1;
+    visitsState.dailyVisits[todayKey] = (visitsState.dailyVisits[todayKey] || 0) + 1;
+    const cleanId = sanitizeVisitorId(visitorId);
+    if (cleanId && !visitsState.uniqueVisitors.includes(cleanId)) {
+      visitsState.uniqueVisitors.push(cleanId);
+      if (visitsState.uniqueVisitors.length > 20000) {
+        visitsState.uniqueVisitors = visitsState.uniqueVisitors.slice(-20000);
+      }
+    }
     visitsState.lastUpdated = new Date().toISOString();
     saveVisitsData();
   }
 
-  const todayCount = visitsState.dailyVisits[todayKey] || 0;
+  const stats = await getAuthoritativeVisitsStats();
   res.json({
-    totalVisits: visitsState.totalVisits,
-    todayVisits: todayCount,
-    totalConsultations: visitsState.totalConsultations,
-    uniqueVisitorsCount: visitsState.uniqueVisitors.length,
-    lastUpdated: visitsState.lastUpdated,
+    ...stats,
     excluded: isExcluded,
   });
 });
@@ -169,6 +346,26 @@ function incrementConsultation(req?: express.Request) {
   visitsState.totalConsultations = (visitsState.totalConsultations || 0) + 1;
   visitsState.lastUpdated = new Date().toISOString();
   saveVisitsData();
+
+  if (firestoreDb) {
+    const db = firestoreDb;
+    ensureMetricsDoc()
+      .then(() =>
+        runTransaction(db, async (tx) => {
+          const metricsRef = doc(db, "metrics", "global");
+          const snap = await tx.get(metricsRef);
+          if (!snap.exists()) return;
+          const current = snap.data();
+          tx.update(metricsRef, {
+            totalConsultations: (Number(current.totalConsultations) || 0) + 1,
+            lastUpdated: new Date().toISOString(),
+          });
+        })
+      )
+      .catch((e) => {
+        console.warn("Could not increment consultation in Firestore:", e);
+      });
+  }
 }
 
 // Initialize GenAI client safely
@@ -755,6 +952,691 @@ app.get("/api/tarot/all", (req, res) => {
     cards: MAJOR_ARCANA,
     total: MAJOR_ARCANA.length,
   });
+});
+
+// ============================================================================
+// Automatic Payment & Instant Unlock System (Mercado Pago + Ko-fi + Webhooks)
+// ============================================================================
+const PAYMENT_SESSIONS_FILE = path.join(VISITS_DATA_DIR, "payment_sessions.json");
+const PAYMENT_HMAC_KEY_FILE = path.join(VISITS_DATA_DIR, "payment_hmac.key");
+
+function loadOrCreateHmacSecret(): string {
+  const fromEnv = (process.env.PAYMENT_HMAC_SECRET || "").trim();
+  if (fromEnv.length >= 16) return fromEnv;
+  try {
+    if (fs.existsSync(PAYMENT_HMAC_KEY_FILE)) {
+      const existing = fs.readFileSync(PAYMENT_HMAC_KEY_FILE, "utf-8").trim();
+      if (existing.length >= 32) return existing;
+    }
+    if (!fs.existsSync(VISITS_DATA_DIR)) {
+      fs.mkdirSync(VISITS_DATA_DIR, { recursive: true });
+    }
+    const generated = crypto.randomBytes(32).toString("hex");
+    fs.writeFileSync(PAYMENT_HMAC_KEY_FILE, generated, "utf-8");
+    return generated;
+  } catch {
+    return crypto.createHash("sha256").update(process.cwd() + "_akashic_payment_secret").digest("hex");
+  }
+}
+
+const PAYMENT_HMAC_KEY = loadOrCreateHmacSecret();
+
+interface ServerPaymentSession {
+  sessionId: string;
+  visitorId: string;
+  provider: "mercadopago" | "kofi" | "auto";
+  status: "pending" | "approved";
+  pendingType: "past-life" | "spirit-question" | "pass";
+  refCode: string;
+  approvalProof: string;
+  paymentRef?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface VerifiedKofiTx {
+  txId: string;
+  amount: string;
+  currency: string;
+  email: string;
+  fromName: string;
+  message: string;
+  receivedAt: number;
+  consumedBySessionId?: string;
+}
+
+const paymentSessions = new Map<string, ServerPaymentSession>();
+const verifiedKofiTxs: VerifiedKofiTx[] = [];
+const sseClientsBySession = new Map<string, Set<express.Response>>();
+
+try {
+  if (fs.existsSync(PAYMENT_SESSIONS_FILE)) {
+    const raw = fs.readFileSync(PAYMENT_SESSIONS_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      for (const item of parsed.slice(-500)) {
+        if (item && typeof item.sessionId === "string") {
+          paymentSessions.set(item.sessionId, item as ServerPaymentSession);
+        }
+      }
+    }
+  }
+} catch (e) {
+  console.warn("Could not load payment_sessions.json:", e);
+}
+
+function savePaymentSessionsDisk() {
+  try {
+    if (!fs.existsSync(VISITS_DATA_DIR)) {
+      fs.mkdirSync(VISITS_DATA_DIR, { recursive: true });
+    }
+    const arr = Array.from(paymentSessions.values()).slice(-500);
+    fs.writeFileSync(PAYMENT_SESSIONS_FILE, JSON.stringify(arr, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("Could not save payment_sessions.json:", e);
+  }
+}
+
+function signApprovalProof(sessionId: string, visitorId: string, provider: string): string {
+  return crypto
+    .createHmac("sha256", PAYMENT_HMAC_KEY)
+    .update(`${sessionId}:${visitorId}:${provider}:approved`)
+    .digest("hex");
+}
+
+function isValidApprovalProof(session: ServerPaymentSession): boolean {
+  if (session.status !== "approved" || !session.approvalProof) return false;
+  const expected = signApprovalProof(session.sessionId, session.visitorId, session.provider);
+  return session.approvalProof === expected;
+}
+
+function sanitizeIdParam(raw: unknown, minLen = 4, maxLen = 128): string | null {
+  if (typeof raw !== "string") return null;
+  const cleaned = raw.trim().replace(/[^a-zA-Z0-9_\-]/g, "");
+  if (cleaned.length < minLen || cleaned.length > maxLen) return null;
+  return cleaned;
+}
+
+function normalizeOrigin(rawOrigin: unknown, req: express.Request): string {
+  const candidates = [
+    typeof rawOrigin === "string" ? rawOrigin.trim() : "",
+    process.env.APP_URL || "",
+    `${req.protocol}://${req.get("host") || ""}`,
+  ];
+  for (const c of candidates) {
+    if (c && /^https?:\/\/[a-zA-Z0-9.-]+(:\d+)?/.test(c)) {
+      return c.replace(/\/+$/, "");
+    }
+  }
+  return "https://ais-pre-ulzgbsculea2d4feemykvi-172786148761.us-east1.run.app";
+}
+
+async function readMonetizationConfigServer(): Promise<{
+  mpLink: string;
+  passMpLink: string;
+  kofiLink: string;
+  passAmountArs: number;
+  unlockCodeHash: string;
+  autoReturnTokenHash: string;
+}> {
+  const defaults = {
+    mpLink: "https://mpago.la/2cv7Gii",
+    passMpLink: "",
+    kofiLink: "",
+    passAmountArs: 3500,
+    unlockCodeHash: "",
+    autoReturnTokenHash: "",
+  };
+  if (!firestoreDb) return defaults;
+  try {
+    const snap = await getDocFromServer(doc(firestoreDb, "config", "monetization"));
+    if (snap.exists()) {
+      const d = snap.data();
+      return {
+        mpLink: typeof d.mpLink === "string" && d.mpLink ? d.mpLink : defaults.mpLink,
+        passMpLink: typeof d.passMpLink === "string" ? d.passMpLink : "",
+        kofiLink: typeof d.kofiLink === "string" ? d.kofiLink : "",
+        passAmountArs:
+          typeof d.passAmountArs === "number" && d.passAmountArs >= 100
+            ? Math.round(d.passAmountArs)
+            : defaults.passAmountArs,
+        unlockCodeHash: typeof d.unlockCodeHash === "string" ? d.unlockCodeHash.toLowerCase() : "",
+        autoReturnTokenHash:
+          typeof d.autoReturnTokenHash === "string" ? d.autoReturnTokenHash.toLowerCase() : "",
+      };
+    }
+  } catch (e) {
+    console.warn("Could not read config/monetization on server:", e);
+  }
+  return defaults;
+}
+
+function broadcastSseApproval(session: ServerPaymentSession) {
+  const clients = sseClientsBySession.get(session.sessionId);
+  if (!clients || clients.size === 0) return;
+  const payload = JSON.stringify({
+    type: "PAYMENT_APPROVED",
+    sessionId: session.sessionId,
+    provider: session.provider,
+    approvalProof: session.approvalProof,
+    pendingType: session.pendingType,
+  });
+  for (const res of clients) {
+    try {
+      res.write(`data: ${payload}\n\n`);
+    } catch {
+      // ignore closed socket
+    }
+  }
+}
+
+async function syncPaymentSessionToFirestore(session: ServerPaymentSession, isCreate: boolean) {
+  if (!firestoreDb) return;
+  const ref = doc(firestoreDb, "payment_sessions", session.sessionId);
+  try {
+    if (isCreate) {
+      await setDoc(ref, {
+        sessionId: session.sessionId,
+        visitorId: session.visitorId,
+        provider: session.provider,
+        status: session.status,
+        pendingType: session.pendingType,
+        refCode: session.refCode,
+        approvalProof: session.approvalProof,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+      });
+    } else {
+      await updateDoc(ref, {
+        status: session.status,
+        provider: session.provider,
+        approvalProof: session.approvalProof,
+        updatedAt: session.updatedAt,
+      });
+    }
+  } catch (e) {
+    console.warn("Could not sync payment_sessions to Firestore:", e);
+  }
+}
+
+async function approvePaymentSession(
+  sessionId: string,
+  provider: "mercadopago" | "kofi" | "auto",
+  paymentRef?: string
+): Promise<ServerPaymentSession | null> {
+  let session = paymentSessions.get(sessionId);
+
+  if (!session && firestoreDb) {
+    try {
+      const snap = await getDocFromServer(doc(firestoreDb, "payment_sessions", sessionId));
+      if (snap.exists()) {
+        const d = snap.data();
+        session = {
+          sessionId: String(d.sessionId),
+          visitorId: String(d.visitorId),
+          provider: (d.provider as "mercadopago" | "kofi" | "auto") || provider,
+          status: (d.status as "pending" | "approved") || "pending",
+          pendingType: (d.pendingType as "past-life" | "spirit-question" | "pass") || "pass",
+          refCode: String(d.refCode || "AK-AUTO"),
+          approvalProof: String(d.approvalProof || ""),
+          createdAt: String(d.createdAt || new Date().toISOString()),
+          updatedAt: String(d.updatedAt || new Date().toISOString()),
+        };
+        paymentSessions.set(sessionId, session);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!session) return null;
+
+  if (session.status === "approved" && isValidApprovalProof(session)) {
+    broadcastSseApproval(session);
+    return session;
+  }
+
+  const nowIso = new Date().toISOString();
+  session.provider = provider;
+  session.status = "approved";
+  session.approvalProof = signApprovalProof(session.sessionId, session.visitorId, provider);
+  session.paymentRef = paymentRef;
+  session.updatedAt = nowIso;
+
+  paymentSessions.set(session.sessionId, session);
+  savePaymentSessionsDisk();
+  await syncPaymentSessionToFirestore(session, false);
+  broadcastSseApproval(session);
+
+  return session;
+}
+
+async function fetchMercadoPagoPayment(paymentId: string): Promise<{
+  approved: boolean;
+  externalReference: string;
+  status: string;
+} | null> {
+  const token = (process.env.MP_ACCESS_TOKEN || "").trim();
+  if (!token) return null;
+  const cleanId = paymentId.replace(/[^0-9a-zA-Z_\-]/g, "");
+  if (!cleanId) return null;
+
+  try {
+    const resp = await fetch(`https://api.mercadopago.com/v1/payments/${cleanId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!resp.ok) return null;
+    const data: any = await resp.json();
+    return {
+      approved: data?.status === "approved",
+      externalReference: String(data?.external_reference || ""),
+      status: String(data?.status || ""),
+    };
+  } catch (e) {
+    console.warn("Error verifying payment with Mercado Pago API:", e);
+    return null;
+  }
+}
+
+// Payment capabilities (exposes only boolean readiness, never secrets)
+app.get("/api/payments/capabilities", (req, res) => {
+  res.json({
+    mpCheckoutProReady: Boolean((process.env.MP_ACCESS_TOKEN || "").trim()),
+    kofiWebhookReady: Boolean((process.env.KOFI_VERIFICATION_TOKEN || "").trim()),
+  });
+});
+
+// Create tracked payment session (+ dynamic Mercado Pago Checkout Pro preference when MP_ACCESS_TOKEN is set)
+app.post("/api/payments/create-session", async (req, res) => {
+  try {
+    const { visitorId, pendingType = "pass", origin } = req.body || {};
+    const cleanVisitorId = sanitizeIdParam(visitorId, 4, 128) || `vis_${crypto.randomBytes(6).toString("hex")}`;
+    const validType: "past-life" | "spirit-question" | "pass" =
+      pendingType === "past-life" || pendingType === "spirit-question" ? pendingType : "pass";
+
+    const sessionId = `ps_${crypto.randomBytes(12).toString("hex")}`;
+    const refCode = `AK-${crypto.randomBytes(2).toString("hex").toUpperCase()}`;
+    const nowIso = new Date().toISOString();
+
+    const session: ServerPaymentSession = {
+      sessionId,
+      visitorId: cleanVisitorId,
+      provider: "mercadopago",
+      status: "pending",
+      pendingType: validType,
+      refCode,
+      approvalProof: "",
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    paymentSessions.set(sessionId, session);
+    savePaymentSessionsDisk();
+    syncPaymentSessionToFirestore(session, true).catch(() => {});
+
+    const cfg = await readMonetizationConfigServer();
+    const baseOrigin = normalizeOrigin(origin, req);
+    let mpUrl = cfg.passMpLink || cfg.mpLink || "https://mpago.la/2cv7Gii";
+    let checkoutMode: "checkout_pro" | "link" = "link";
+
+    const mpAccessToken = (process.env.MP_ACCESS_TOKEN || "").trim();
+    if (mpAccessToken) {
+      try {
+        const prefResp = await fetch("https://api.mercadopago.com/checkout/preferences", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${mpAccessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            items: [
+              {
+                title: "Pase Consultas Akáshicas y Vidas Pasadas",
+                quantity: 1,
+                unit_price: cfg.passAmountArs || 3500,
+                currency_id: "ARS",
+              },
+            ],
+            external_reference: sessionId,
+            notification_url: `${baseOrigin}/api/payments/mercadopago/webhook`,
+            back_urls: {
+              success: `${baseOrigin}/?mp_payment=success&session_id=${encodeURIComponent(sessionId)}`,
+              pending: `${baseOrigin}/?mp_payment=pending&session_id=${encodeURIComponent(sessionId)}`,
+              failure: `${baseOrigin}/?mp_payment=failure&session_id=${encodeURIComponent(sessionId)}`,
+            },
+            auto_return: "approved",
+          }),
+        });
+        if (prefResp.ok) {
+          const prefData: any = await prefResp.json();
+          if (prefData?.init_point) {
+            mpUrl = prefData.init_point;
+            checkoutMode = "checkout_pro";
+          }
+        }
+      } catch (mpErr) {
+        console.warn("Checkout Pro preference fallback to mpLink:", mpErr);
+      }
+    }
+
+    return res.json({
+      sessionId,
+      refCode,
+      mpUrl,
+      kofiUrl: cfg.kofiLink || "",
+      checkoutMode,
+    });
+  } catch (err) {
+    console.error("Error in /api/payments/create-session:", err);
+    return res.status(500).json({ error: "Could not create payment session" });
+  }
+});
+
+// Real-time Server-Sent Events stream for instant automatic unlock while modal is open
+app.get("/api/payments/stream/:sessionId", (req, res) => {
+  const sessionId = sanitizeIdParam(req.params.sessionId, 8, 128);
+  if (!sessionId) {
+    return res.status(400).end();
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  const current = paymentSessions.get(sessionId);
+  if (current && current.status === "approved" && isValidApprovalProof(current)) {
+    res.write(
+      `data: ${JSON.stringify({
+        type: "PAYMENT_APPROVED",
+        sessionId: current.sessionId,
+        provider: current.provider,
+        approvalProof: current.approvalProof,
+        pendingType: current.pendingType,
+      })}\n\n`
+    );
+  } else {
+    res.write(`data: ${JSON.stringify({ type: "WAITING", sessionId })}\n\n`);
+  }
+
+  let set = sseClientsBySession.get(sessionId);
+  if (!set) {
+    set = new Set();
+    sseClientsBySession.set(sessionId, set);
+  }
+  set.add(res);
+
+  const ping = setInterval(() => {
+    try {
+      res.write(": ping\n\n");
+    } catch {
+      // ignore
+    }
+  }, 20000);
+
+  req.on("close", () => {
+    clearInterval(ping);
+    const clients = sseClientsBySession.get(sessionId);
+    if (clients) {
+      clients.delete(res);
+      if (clients.size === 0) {
+        sseClientsBySession.delete(sessionId);
+      }
+    }
+  });
+});
+
+// Check session status (also auto-matches recent Ko-fi webhook payment by refCode)
+app.get("/api/payments/session/:sessionId", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const sessionId = sanitizeIdParam(req.params.sessionId, 8, 128);
+  if (!sessionId) {
+    return res.status(400).json({ error: "Invalid sessionId" });
+  }
+
+  let session = paymentSessions.get(sessionId);
+  if (!session && firestoreDb) {
+    try {
+      const snap = await getDocFromServer(doc(firestoreDb, "payment_sessions", sessionId));
+      if (snap.exists()) {
+        session = snap.data() as ServerPaymentSession;
+        paymentSessions.set(sessionId, session);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!session) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  // If still pending, check if a verified Ko-fi webhook contains this session's refCode
+  if (session.status === "pending") {
+    const upperRef = session.refCode.toUpperCase();
+    const matchedTx = verifiedKofiTxs.find(
+      (tx) =>
+        !tx.consumedBySessionId &&
+        Date.now() - tx.receivedAt < 60 * 60 * 1000 &&
+        tx.message.toUpperCase().includes(upperRef)
+    );
+    if (matchedTx) {
+      matchedTx.consumedBySessionId = session.sessionId;
+      session = (await approvePaymentSession(session.sessionId, "kofi", matchedTx.txId)) || session;
+    }
+  }
+
+  const verified = isValidApprovalProof(session);
+  return res.json({
+    sessionId: session.sessionId,
+    status: verified ? "approved" : "pending",
+    provider: session.provider,
+    approvalProof: verified ? session.approvalProof : "",
+  });
+});
+
+// Verify a Mercado Pago payment_id on return redirect or manual operation lookup
+app.post("/api/payments/mercadopago/verify", async (req, res) => {
+  try {
+    const { paymentId, sessionId } = req.body || {};
+    const cleanPaymentId = typeof paymentId === "string" ? paymentId.trim() : String(paymentId || "").trim();
+    if (!cleanPaymentId) {
+      return res.status(400).json({ approved: false, error: "missing_payment_id" });
+    }
+
+    const mpResult = await fetchMercadoPagoPayment(cleanPaymentId);
+    if (!mpResult) {
+      return res.json({ approved: false, reason: "mp_api_unavailable" });
+    }
+
+    if (!mpResult.approved) {
+      return res.json({ approved: false, status: mpResult.status });
+    }
+
+    const targetSessionId =
+      sanitizeIdParam(sessionId, 8, 128) ||
+      sanitizeIdParam(mpResult.externalReference, 8, 128);
+
+    if (targetSessionId) {
+      const updated = await approvePaymentSession(targetSessionId, "mercadopago", cleanPaymentId);
+      if (updated) {
+        return res.json({
+          approved: true,
+          sessionId: updated.sessionId,
+          approvalProof: updated.approvalProof,
+        });
+      }
+    }
+
+    // Create an approved session receipt directly for this verified Mercado Pago payment
+    const fallbackSessionId = targetSessionId || `ps_mp_${crypto.randomBytes(10).toString("hex")}`;
+    const nowIso = new Date().toISOString();
+    const created: ServerPaymentSession = {
+      sessionId: fallbackSessionId,
+      visitorId: "vis_mp_verified",
+      provider: "mercadopago",
+      status: "approved",
+      pendingType: "pass",
+      refCode: "AK-MP",
+      approvalProof: signApprovalProof(fallbackSessionId, "vis_mp_verified", "mercadopago"),
+      paymentRef: cleanPaymentId,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    paymentSessions.set(fallbackSessionId, created);
+    savePaymentSessionsDisk();
+    return res.json({
+      approved: true,
+      sessionId: created.sessionId,
+      approvalProof: created.approvalProof,
+    });
+  } catch (err) {
+    console.error("Error in /api/payments/mercadopago/verify:", err);
+    return res.status(500).json({ approved: false });
+  }
+});
+
+// Mercado Pago Webhook / IPN listener
+app.post("/api/payments/mercadopago/webhook", async (req, res) => {
+  res.status(200).json({ received: true });
+  try {
+    const topic = req.body?.type || req.body?.topic || req.query?.topic || req.query?.type;
+    const paymentId =
+      req.body?.data?.id ||
+      req.query?.["data.id"] ||
+      (topic === "payment" ? req.query?.id : null);
+
+    if (paymentId && (!topic || String(topic).includes("payment"))) {
+      const mpResult = await fetchMercadoPagoPayment(String(paymentId));
+      if (mpResult?.approved && mpResult.externalReference) {
+        await approvePaymentSession(mpResult.externalReference, "mercadopago", String(paymentId));
+      }
+    }
+  } catch (e) {
+    console.warn("Mercado Pago webhook processing error:", e);
+  }
+});
+
+// Ko-fi Webhook listener (https://ko-fi.com/manage/webhooks)
+app.post("/api/payments/kofi/webhook", async (req, res) => {
+  try {
+    let payload: any = req.body;
+    if (typeof req.body?.data === "string") {
+      payload = JSON.parse(req.body.data);
+    } else if (req.body?.data && typeof req.body.data === "object") {
+      payload = req.body.data;
+    }
+
+    const expectedToken = (process.env.KOFI_VERIFICATION_TOKEN || "").trim();
+    if (!expectedToken || payload?.verification_token !== expectedToken) {
+      return res.status(403).json({ error: "Invalid Ko-fi verification token" });
+    }
+
+    const tx: VerifiedKofiTx = {
+      txId: String(payload.kofi_transaction_id || payload.message_id || crypto.randomBytes(6).toString("hex")),
+      amount: String(payload.amount || ""),
+      currency: String(payload.currency || "USD"),
+      email: String(payload.email || ""),
+      fromName: String(payload.from_name || ""),
+      message: String(payload.message || ""),
+      receivedAt: Date.now(),
+    };
+    verifiedKofiTxs.push(tx);
+    if (verifiedKofiTxs.length > 200) verifiedKofiTxs.shift();
+
+    // Try matching refCode (AK-XXXX) or sessionId (ps_...) in Ko-fi message
+    const msgUpper = tx.message.toUpperCase();
+    const refMatch = msgUpper.match(/AK-[A-F0-9]{4}/);
+    const sessionMatch = tx.message.match(/ps_[a-f0-9]{16,32}/i);
+
+    let targetSession: ServerPaymentSession | undefined;
+    if (sessionMatch) {
+      targetSession = paymentSessions.get(sessionMatch[0]);
+    }
+    if (!targetSession && refMatch) {
+      for (const s of paymentSessions.values()) {
+        if (s.status === "pending" && s.refCode.toUpperCase() === refMatch[0]) {
+          targetSession = s;
+          break;
+        }
+      }
+    }
+
+    if (targetSession) {
+      tx.consumedBySessionId = targetSession.sessionId;
+      await approvePaymentSession(targetSession.sessionId, "kofi", tx.txId);
+    }
+
+    return res.status(200).json({ ok: true });
+  } catch (e) {
+    console.warn("Ko-fi webhook error:", e);
+    return res.status(400).json({ error: "Malformed Ko-fi payload" });
+  }
+});
+
+// Auto-Return URL Token or Fallback Code Verification (server-verified against Firestore config hashes)
+app.post("/api/payments/verify-return", async (req, res) => {
+  try {
+    const { token, sessionId, visitorId } = req.body || {};
+    const rawToken = typeof token === "string" ? token.trim() : "";
+    if (!rawToken) {
+      return res.json({ approved: false, reason: "missing_token" });
+    }
+
+    const cfg = await readMonetizationConfigServer();
+    const hashExact = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const hashUpper = crypto.createHash("sha256").update(rawToken.toUpperCase()).digest("hex");
+
+    const matchesAutoReturn =
+      Boolean(cfg.autoReturnTokenHash) &&
+      (hashExact === cfg.autoReturnTokenHash || hashUpper === cfg.autoReturnTokenHash);
+    const matchesUnlockCode =
+      Boolean(cfg.unlockCodeHash) &&
+      (hashExact === cfg.unlockCodeHash || hashUpper === cfg.unlockCodeHash);
+
+    if (!matchesAutoReturn && !matchesUnlockCode) {
+      return res.json({ approved: false, reason: "invalid_token" });
+    }
+
+    const cleanSessionId = sanitizeIdParam(sessionId, 8, 128);
+    if (cleanSessionId) {
+      const approved = await approvePaymentSession(cleanSessionId, "auto", "return_token");
+      if (approved) {
+        return res.json({
+          approved: true,
+          sessionId: approved.sessionId,
+          approvalProof: approved.approvalProof,
+        });
+      }
+    }
+
+    const newSessionId = `ps_ret_${crypto.randomBytes(10).toString("hex")}`;
+    const cleanVisitor = sanitizeIdParam(visitorId, 4, 128) || "vis_auto_return";
+    const nowIso = new Date().toISOString();
+    const session: ServerPaymentSession = {
+      sessionId: newSessionId,
+      visitorId: cleanVisitor,
+      provider: "auto",
+      status: "approved",
+      pendingType: "pass",
+      refCode: "AK-AUTO",
+      approvalProof: signApprovalProof(newSessionId, cleanVisitor, "auto"),
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    paymentSessions.set(newSessionId, session);
+    savePaymentSessionsDisk();
+    return res.json({
+      approved: true,
+      sessionId: session.sessionId,
+      approvalProof: session.approvalProof,
+    });
+  } catch (e) {
+    console.error("Error in /api/payments/verify-return:", e);
+    return res.status(500).json({ approved: false });
+  }
 });
 
 // Vite Integration

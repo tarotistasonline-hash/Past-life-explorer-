@@ -1,0 +1,302 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email == 'tarotistasonline@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isValidHttpsOrEmpty(val, maxLen) {
+      return val is string
+        && val.size() <= maxLen
+        && (val == '' || val.matches('^https://.*'));
+    }
+
+    function isValidMetrics(data) {
+      return data.keys().hasAll([
+        'totalVisits',
+        'todayVisits',
+        'todayKey',
+        'totalConsultations',
+        'uniqueVisitorsCount',
+        'lastUpdated'
+      ])
+      && data.keys().hasOnly([
+        'totalVisits',
+        'todayVisits',
+        'todayKey',
+        'totalConsultations',
+        'uniqueVisitorsCount',
+        'lastUpdated'
+      ])
+      && data.totalVisits is int && data.totalVisits >= 0
+      && data.todayVisits is int && data.todayVisits >= 0
+      && data.todayKey is string && data.todayKey.size() == 10 && data.todayKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+      && data.totalConsultations is int && data.totalConsultations >= 0
+      && data.uniqueVisitorsCount is int && data.uniqueVisitorsCount >= 0
+      && data.lastUpdated is string && data.lastUpdated.size() >= 10 && data.lastUpdated.size() <= 64;
+    }
+
+    function isValidUniqueVisitor(data, visitorId) {
+      return data.keys().hasAll(['visitorId', 'firstSeenAt'])
+        && data.keys().hasOnly(['visitorId', 'firstSeenAt'])
+        && data.visitorId is string
+        && data.visitorId == visitorId
+        && data.visitorId.size() >= 4
+        && data.visitorId.size() <= 128
+        && data.visitorId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.firstSeenAt is string
+        && data.firstSeenAt.size() >= 10
+        && data.firstSeenAt.size() <= 64;
+    }
+
+    function isValidMonetizationConfig(data) {
+      return data.keys().hasAll([
+        'mpLink',
+        'kofiLink',
+        'paywallEnabled',
+        'freeConsultationsLimit',
+        'passPriceUsd',
+        'passPriceArs',
+        'passAmountArs',
+        'passMpLink',
+        'unlockCodeHash',
+        'autoReturnTokenHash',
+        'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'mpLink',
+        'kofiLink',
+        'paywallEnabled',
+        'freeConsultationsLimit',
+        'passPriceUsd',
+        'passPriceArs',
+        'passAmountArs',
+        'passMpLink',
+        'unlockCodeHash',
+        'autoReturnTokenHash',
+        'updatedAt'
+      ])
+      && isValidHttpsOrEmpty(data.mpLink, 300)
+      && isValidHttpsOrEmpty(data.kofiLink, 300)
+      && data.paywallEnabled is bool
+      && data.freeConsultationsLimit is int
+      && data.freeConsultationsLimit >= 1
+      && data.freeConsultationsLimit <= 10
+      && data.passPriceUsd is string && data.passPriceUsd.size() <= 32
+      && data.passPriceArs is string && data.passPriceArs.size() <= 32
+      && data.passAmountArs is int
+      && data.passAmountArs >= 100
+      && data.passAmountArs <= 10000000
+      && isValidHttpsOrEmpty(data.passMpLink, 300)
+      && data.unlockCodeHash is string
+      && data.unlockCodeHash.size() <= 64
+      && (data.unlockCodeHash == '' || data.unlockCodeHash.matches('^[a-f0-9]{64}$'))
+      && data.autoReturnTokenHash is string
+      && data.autoReturnTokenHash.size() <= 64
+      && (data.autoReturnTokenHash == '' || data.autoReturnTokenHash.matches('^[a-f0-9]{64}$'))
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidPaymentSession(data) {
+      return data.keys().hasAll([
+        'sessionId',
+        'visitorId',
+        'provider',
+        'status',
+        'pendingType',
+        'refCode',
+        'approvalProof',
+        'createdAt',
+        'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'sessionId',
+        'visitorId',
+        'provider',
+        'status',
+        'pendingType',
+        'refCode',
+        'approvalProof',
+        'createdAt',
+        'updatedAt'
+      ])
+      && isValidId(data.sessionId)
+      && data.sessionId.size() >= 8
+      && isValidId(data.visitorId)
+      && data.visitorId.size() >= 4
+      && data.provider is string
+      && data.provider.size() <= 32
+      && data.provider in ['mercadopago', 'kofi', 'auto']
+      && data.status is string
+      && data.status.size() <= 16
+      && data.status in ['pending', 'approved']
+      && data.pendingType is string
+      && data.pendingType.size() <= 32
+      && data.pendingType in ['past-life', 'spirit-question', 'pass']
+      && data.refCode is string
+      && data.refCode.size() >= 4
+      && data.refCode.size() <= 32
+      && data.refCode.matches('^[a-zA-Z0-9_\\-]+$')
+      && data.approvalProof is string
+      && data.approvalProof.size() <= 64
+      && (data.approvalProof == '' || data.approvalProof.matches('^[a-f0-9]{64}$'))
+      && data.createdAt is string
+      && data.createdAt.size() >= 10
+      && data.createdAt.size() <= 64
+      && data.updatedAt is string
+      && data.updatedAt.size() >= 10
+      && data.updatedAt.size() <= 64;
+    }
+
+    // Boot connection check endpoint
+    match /test/connection {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    // Global real-time visitor & consultation counter (strictly monotonic +1 updates only)
+    match /metrics/{metricId} {
+      allow get: if metricId == 'global';
+      allow list: if false;
+      allow create: if metricId == 'global'
+        && !exists(/databases/$(database)/documents/metrics/global)
+        && isValidMetrics(incoming())
+        && incoming().totalVisits >= 0
+        && incoming().totalVisits <= 200
+        && incoming().totalConsultations >= 0
+        && incoming().totalConsultations <= 200
+        && incoming().uniqueVisitorsCount >= 0
+        && incoming().uniqueVisitorsCount <= 200;
+      allow update: if metricId == 'global'
+        && isValidMetrics(incoming())
+        && (
+          // Action 1: Record a single visitor hit (+1 totalVisits, daily rollover or +1 todayVisits, +0/+1 uniqueVisitorsCount)
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'totalVisits',
+              'todayVisits',
+              'todayKey',
+              'uniqueVisitorsCount',
+              'lastUpdated'
+            ])
+            && incoming().totalVisits == existing().totalVisits + 1
+            && (
+              (incoming().todayKey == existing().todayKey && incoming().todayVisits == existing().todayVisits + 1)
+              || (incoming().todayKey != existing().todayKey && incoming().todayVisits == 1)
+            )
+            && (
+              incoming().uniqueVisitorsCount == existing().uniqueVisitorsCount
+              || incoming().uniqueVisitorsCount == existing().uniqueVisitorsCount + 1
+            )
+          )
+          ||
+          // Action 2: Record a single consultation (+1 totalConsultations)
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'totalConsultations',
+              'lastUpdated'
+            ])
+            && incoming().totalConsultations == existing().totalConsultations + 1
+          )
+        );
+      allow delete: if false;
+    }
+
+    // Anonymous unique visitor marker (create-once, no PII, no updates/deletes/listing)
+    match /visitors/{visitorId} {
+      allow get: if isValidId(visitorId);
+      allow list: if false;
+      allow create: if isValidId(visitorId)
+        && visitorId.size() >= 4
+        && !exists(/databases/$(database)/documents/visitors/$(visitorId))
+        && isValidUniqueVisitor(incoming(), visitorId);
+      allow update, delete: if false;
+    }
+
+    // Global monetization & free consultation limit settings (public read, admin-only write)
+    match /config/{configId} {
+      allow get: if configId == 'monetization';
+      allow list: if false;
+      allow create: if isValidId(configId)
+        && configId == 'monetization'
+        && !exists(/databases/$(database)/documents/config/monetization)
+        && isAdmin()
+        && isValidMonetizationConfig(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(configId)
+        && configId == 'monetization'
+        && isAdmin()
+        && isValidMonetizationConfig(incoming())
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'mpLink',
+          'kofiLink',
+          'paywallEnabled',
+          'freeConsultationsLimit',
+          'passPriceUsd',
+          'passPriceArs',
+          'passAmountArs',
+          'passMpLink',
+          'unlockCodeHash',
+          'autoReturnTokenHash',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // Ephemeral real-time payment sessions (single-doc get by unguessable sessionId, terminal lock once approved)
+    match /payment_sessions/{sessionId} {
+      allow get: if isValidId(sessionId) && sessionId.size() >= 8;
+      allow list: if false;
+      allow create: if isValidId(sessionId)
+        && sessionId.size() >= 8
+        && !exists(/databases/$(database)/documents/payment_sessions/$(sessionId))
+        && isValidPaymentSession(incoming())
+        && incoming().sessionId == sessionId
+        && incoming().status == 'pending'
+        && incoming().approvalProof == '';
+      allow update: if isValidId(sessionId)
+        && sessionId.size() >= 8
+        && isValidPaymentSession(incoming())
+        && incoming().sessionId == existing().sessionId
+        && incoming().visitorId == existing().visitorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().pendingType == existing().pendingType
+        && incoming().refCode == existing().refCode
+        && existing().status == 'pending'
+        && incoming().status == 'approved'
+        && incoming().approvalProof.size() == 64
+        && incoming().approvalProof.matches('^[a-f0-9]{64}$')
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'status',
+          'provider',
+          'approvalProof',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+  }
+}

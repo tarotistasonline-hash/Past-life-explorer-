@@ -465,7 +465,7 @@ export const MAJOR_ARCANA: DailyArcana[] = [
   }
 ];
 
-import { ARCANA_TRANSLATIONS } from "./tarotTranslations";
+import { ARCANA_TRANSLATIONS } from "./tarotTranslations.ts";
 
 /**
  * Returns the card localized for the specified language

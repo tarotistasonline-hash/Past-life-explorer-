@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { User, Calendar, MessageSquare, Mic, MicOff, Radio } from "lucide-react";
+import { User, Calendar, MessageSquare, Mic, MicOff, Radio, Lock, Sparkles } from "lucide-react";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
 import { CrystalBallLoader } from "./CrystalBallLoader";
@@ -9,6 +9,12 @@ interface SpiritOracleFormProps {
   onGeneralConsult: (question: string, name: string) => void;
   isLoading: boolean;
   externalPreFillQuery?: string;
+  isPaywallEnabled?: boolean;
+  freeLimit?: number;
+  remainingFree?: number;
+  isPassUnlocked?: boolean;
+  isCreatorUnlimited?: boolean;
+  onOpenPaywall?: () => void;
 }
 
 export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
@@ -16,6 +22,12 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
   onGeneralConsult,
   isLoading,
   externalPreFillQuery,
+  isPaywallEnabled = false,
+  freeLimit = 2,
+  remainingFree = 2,
+  isPassUnlocked = false,
+  isCreatorUnlimited = false,
+  onOpenPaywall,
 }) => {
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<"PAST_LIFE" | "SPIRIT_ORACLE">("PAST_LIFE");
@@ -434,6 +446,83 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
             </button>
           </div>
         </form>
+      )}
+
+      {/* Subtle Free Consultation Allowance Status Bar */}
+      {isPaywallEnabled && !isCreatorUnlimited && (
+        <div className="mt-4 pt-3 border-t border-purple-900/40 flex flex-wrap items-center justify-between gap-2 text-[11px] font-gothic">
+          {isPassUnlocked ? (
+            <span className="text-emerald-300 flex items-center space-x-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>
+                {language === "es"
+                  ? "Pase Akáshico activo: lecturas y preguntas desbloqueadas."
+                  : language === "pt"
+                  ? "Passe Akáshico ativo: leituras e perguntas liberadas."
+                  : language === "fr"
+                  ? "Pass Akashique actif : lectures et questions débloquées."
+                  : language === "it"
+                  ? "Pass Akashico attivo: letture e domande sbloccate."
+                  : language === "de"
+                  ? "Akasha-Pass aktiv: Lesungen und Fragen freigeschaltet."
+                  : "Akashic Pass active: readings & questions unlocked."}
+              </span>
+            </span>
+          ) : remainingFree > 0 ? (
+            <>
+              <span className="text-purple-300/85">
+                {language === "es"
+                  ? `Consultas gratuitas disponibles: ${remainingFree} de ${freeLimit}`
+                  : language === "pt"
+                  ? `Consultas gratuitas disponíveis: ${remainingFree} de ${freeLimit}`
+                  : language === "fr"
+                  ? `Consultations gratuites restantes : ${remainingFree} sur ${freeLimit}`
+                  : language === "it"
+                  ? `Consulti gratuiti disponibili: ${remainingFree} su ${freeLimit}`
+                  : language === "de"
+                  ? `Kostenlose Abfragen übrig: ${remainingFree} von ${freeLimit}`
+                  : `Free consultations remaining: ${remainingFree} of ${freeLimit}`}
+              </span>
+              {onOpenPaywall && (
+                <button
+                  type="button"
+                  onClick={onOpenPaywall}
+                  className="text-amber-300 hover:text-amber-200 underline cursor-pointer font-cinzel text-[10px] uppercase tracking-wider"
+                >
+                  {language === "es" ? "Tengo un código de pase" : "Have a pass code?"}
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="text-amber-300 flex items-center space-x-1.5">
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>
+                  {language === "es"
+                    ? "Has usado tus consultas gratuitas. Activa tu pase para continuar."
+                    : language === "pt"
+                    ? "Você usou suas consultas gratuitas. Ative seu passe para continuar."
+                    : language === "fr"
+                    ? "Consultations gratuites épuisées. Activez votre pass pour continuer."
+                    : language === "it"
+                    ? "Consulti gratuiti esauriti. Attiva il pass per continuare."
+                    : language === "de"
+                    ? "Kostenlose Abfragen aufgebraucht. Schalte den Zugang frei."
+                    : "Free consultations used. Unlock access to continue."}
+                </span>
+              </span>
+              {onOpenPaywall && (
+                <button
+                  type="button"
+                  onClick={onOpenPaywall}
+                  className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer"
+                >
+                  {language === "es" ? "Desbloquear" : "Unlock"}
+                </button>
+              )}
+            </>
+          )}
+        </div>
       )}
     </div>
   );

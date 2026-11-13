@@ -53,7 +53,20 @@ class OuijaAudioEngine {
     }
     return null;
   })();
+  private activeUtterance: SpeechSynthesisUtterance | null = null;
+  private keepAliveInterval: any = null;
   private voiceSettings: VoiceSettings = this.loadVoiceSettings();
+
+  constructor() {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.onvoiceschanged = () => {
+          try { window.speechSynthesis.getVoices(); } catch {}
+        };
+        window.speechSynthesis.getVoices();
+      } catch {}
+    }
+  }
 
   private loadVoiceSettings(): VoiceSettings {
     try {
@@ -852,15 +865,24 @@ class OuijaAudioEngine {
               if (!this.isMuted) {
                 this.startDrone();
               }
-              if (welcomeEl.paused) {
+              // If preloaded audio is already fully buffered in memory (readyState >= 3), play it:
+              if (welcomeEl && welcomeEl.readyState >= 3) {
                 welcomeEl.play().then(() => {
                   this.hasPlayedWelcome = true;
                 }).catch(() => {
-                  this.speakSpiritTextFallback(fallbackText, undefined, () => {
+                  this.speakSpiritTextFallback(fallbackText, () => {
+                    this.hasPlayedWelcome = true;
+                  }, () => {
                     window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
                   }, lang, playbackId);
-                  this.hasPlayedWelcome = true;
                 });
+              } else {
+                // Otherwise speak INSTANTANEOUSLY via native solemn speech (0 ms latency, no network wait)
+                this.speakSpiritTextFallback(fallbackText, () => {
+                  this.hasPlayedWelcome = true;
+                }, () => {
+                  window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+                }, lang, playbackId);
               }
             };
             unlockEvents.forEach((ev) => {
@@ -936,6 +958,10 @@ class OuijaAudioEngine {
 
     const voice = voiceName || this.selectedAiVoice || "Fenrir";
 
+    const timeoutId = setTimeout(() => {
+      try { abortCtrl.abort(); } catch {}
+    }, 2800);
+
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
@@ -947,6 +973,8 @@ class OuijaAudioEngine {
         }),
         signal: abortCtrl.signal,
       });
+
+      clearTimeout(timeoutId);
 
       // Stale check
       if (playbackId !== this.currentPlaybackId) return false;
@@ -1084,9 +1112,8 @@ class OuijaAudioEngine {
     if (callbacks?.onStart) callbacks.onStart();
     if (callbacks?.onSectionChange) callbacks.onSectionChange("MESSAGE", fullNarrationText);
 
-    this.playAiVoice(
+    this.speakSpiritTextFallback(
       fullNarrationText,
-      this.selectedAiVoice || "Fenrir",
       () => {
         if (callbacks?.onStart) callbacks.onStart();
       },
@@ -1120,9 +1147,9 @@ class OuijaAudioEngine {
       ? "The portal opens. The spirit confirms your path."
       : "El portal de ultratumba se abre. El espíritu confirma tu camino.");
 
-    this.playAiVoice(
+    this.stopSpeech();
+    this.speakSpiritTextFallback(
       safeText,
-      this.selectedAiVoice || "Fenrir",
       onStart,
       onEnd,
       targetLang
@@ -1184,30 +1211,52 @@ class OuijaAudioEngine {
       utterance.rate = 0.86;
       utterance.volume = 1.0;
 
+      this.activeUtterance = utterance;
+
+      const finishPlayback = () => {
+        if (this.keepAliveInterval) {
+          clearInterval(this.keepAliveInterval);
+          this.keepAliveInterval = null;
+        }
+        this.activeUtterance = null;
+        if (playbackId === this.currentPlaybackId) {
+          this.stopCavernResonance();
+          window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
+          if (onEnd) onEnd();
+        }
+      };
+
       utterance.onstart = () => {
         if (playbackId !== this.currentPlaybackId) {
           synth.cancel();
           return;
         }
         this.startCavernResonance();
+        window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: true, label: "Voz de Ultratumba" } }));
         if (onStart) onStart();
       };
-      utterance.onend = () => {
-        if (playbackId === this.currentPlaybackId) {
-          this.stopCavernResonance();
-          if (onEnd) onEnd();
+      utterance.onend = finishPlayback;
+      utterance.onerror = finishPlayback;
+
+      if (this.keepAliveInterval) {
+        clearInterval(this.keepAliveInterval);
+        this.keepAliveInterval = null;
+      }
+      this.keepAliveInterval = setInterval(() => {
+        if (synth.speaking) {
+          synth.resume();
+        } else {
+          if (this.keepAliveInterval) {
+            clearInterval(this.keepAliveInterval);
+            this.keepAliveInterval = null;
+          }
         }
-      };
-      utterance.onerror = () => {
-        if (playbackId === this.currentPlaybackId) {
-          this.stopCavernResonance();
-          if (onEnd) onEnd();
-        }
-      };
+      }, 2500);
 
       synth.speak(utterance);
     } catch {
       this.stopCavernResonance();
+      window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
       if (onEnd) onEnd();
     }
   }
@@ -1222,6 +1271,13 @@ class OuijaAudioEngine {
     }
     this.clearAutoplayQueue();
     this.stopCavernResonance();
+
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+      this.keepAliveInterval = null;
+    }
+    this.activeUtterance = null;
+    window.dispatchEvent(new CustomEvent("ouija_voice_state", { detail: { isSpeaking: false } }));
 
     const domWelcome = typeof document !== "undefined"
       ? (document.getElementById("ouija-welcome-audio") as HTMLAudioElement | null)
