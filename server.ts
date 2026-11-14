@@ -42,6 +42,11 @@ app.get(/^\/google([a-zA-Z0-9_-]+)(?:\.html)?$/, (req, res) => {
   res.type("text/html").send(`google-site-verification: ${fullFileName}\n`);
 });
 
+// RealRank Site Verification Endpoints
+app.get(["/realrank-verify-7570c1fd0a0a4f779053", "/realrank-verify.txt"], (_req, res) => {
+  res.type("text/plain").send("realrank-verify-7570c1fd0a0a4f779053\n");
+});
+
 // Robots.txt for Search Engine Crawlers
 app.get("/robots.txt", (req, res) => {
   const robotsPath = path.join(process.cwd(), "public", "robots.txt");
