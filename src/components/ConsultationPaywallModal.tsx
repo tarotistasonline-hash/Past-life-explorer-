@@ -8,6 +8,10 @@ import {
   CheckCircle2,
   Loader2,
   RefreshCw,
+  KeyRound,
+  CreditCard,
+  Heart,
+  Check,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import { SupportedLanguage } from "../types";
@@ -42,7 +46,6 @@ interface PaywallCopy {
   includes1: string;
   includes2: string;
   includes3: string;
-  payStepTitle: string;
   payMp: string;
   waitingAutoTitle: string;
   waitingAutoDesc: string;
@@ -55,129 +58,123 @@ interface PaywallCopy {
 
 const COPY: Record<SupportedLanguage, PaywallCopy> = {
   es: {
-    badge: "Pase de Consultas Akáshicas • Mercado Pago",
-    titleLimitReached: "Has completado tus consultas gratuitas",
-    titleUpgrade: "Desbloquea Lecturas de Vidas Pasadas y Preguntas Ilimitadas",
+    badge: "Pase de Consultas Akáshicas • Sin Límite",
+    titleLimitReached: "Has completado tus 2 consultas gratuitas",
+    titleUpgrade: "Desbloquea Lecturas Ilimitadas",
     subtitle:
-      "Al abonar por Mercado Pago, esta pantalla detectará tu pago y desbloqueará automáticamente la consulta solicitada.",
-    queuedPastLife: "Tu lectura de vida pasada está lista y comenzará automáticamente al confirmarse el pago por Mercado Pago.",
-    queuedQuestion: "Tu pregunta a la Tabla Ouija está lista y se responderá automáticamente al confirmarse el pago por Mercado Pago.",
-    includes1: "Lecturas completas de vidas pasadas con narración de voz y pergamino.",
-    includes2: "Preguntas ilimitadas en la Tabla Ouija sobre tu historia y respuestas.",
-    includes3: "Desbloqueo 100% automático e inmediato al completar el pago en Mercado Pago.",
-    payStepTitle: "",
+      "Disfruta de tus primeras 2 consultas 100% gratis. El pase ilimitado aplica a partir de la 3ª consulta mediante Mercado Pago, Stripe o Ko-fi.",
+    queuedPastLife: "Tu lectura de vida pasada está lista y comenzará automáticamente al confirmarse tu pago.",
+    queuedQuestion: "Tu pregunta a la Tabla Ouija está lista y se responderá automáticamente al confirmarse tu pago.",
+    includes1: "Primeras 2 consultas 100% gratuitas en vidas pasadas y tabla ouija.",
+    includes2: "Lecturas ilimitadas de vidas pasadas y preguntas akáshicas sin restricciones.",
+    includes3: "Desbloqueo inmediato con link de Mercado Pago, Stripe o número de operación.",
     payMp: "Desbloquear con Mercado Pago",
-    waitingAutoTitle: "Esperando confirmación automática de Mercado Pago...",
-    waitingAutoDesc: "No cierres esta ventana: apenas finalices el pago en Mercado Pago se desbloqueará y ejecutará tu lectura.",
+    waitingAutoTitle: "Esperando confirmación automática...",
+    waitingAutoDesc: "No cierres esta ventana: apenas finalices el pago se desbloqueará y ejecutará tu lectura.",
     checkNowBtn: "Comprobar ahora",
     checkingBtn: "Verificando...",
-    notYetApproved: "Aún no recibimos la confirmación del pago de Mercado Pago. Completa el pago en la ventana abierta o espera unos segundos.",
-    successMsg: "¡Pago de Mercado Pago confirmado! Desbloqueando y revelando tu lectura ahora...",
+    notYetApproved: "Aún no recibimos la confirmación. Completa el pago o ingresa tu número de operación abajo.",
+    successMsg: "¡Pago confirmado! Desbloqueando y revelando tu lectura ahora...",
     close: "Volver",
   },
   en: {
-    badge: "Akashic Consultation Pass • Mercado Pago",
-    titleLimitReached: "You have used your free consultations",
-    titleUpgrade: "Unlock Unlimited Past-Life Readings & Questions",
+    badge: "Akashic Consultation Pass • Unlimited",
+    titleLimitReached: "You have used your 2 free consultations",
+    titleUpgrade: "Unlock Unlimited Readings",
     subtitle:
-      "Once you complete your payment via Mercado Pago, your requested reading will unlock and start automatically.",
-    queuedPastLife: "Your past-life reading is queued and will start automatically as soon as Mercado Pago confirms payment.",
-    queuedQuestion: "Your Ouija question is queued and will be answered automatically once Mercado Pago confirms payment.",
-    includes1: "Full past-life readings with voice narration and parchment export.",
-    includes2: "Unlimited follow-up questions on the Interactive Ouija Board.",
-    includes3: "Instant automatic unlock right after completing Mercado Pago checkout.",
-    payStepTitle: "Pay with Mercado Pago to unlock",
+      "Enjoy your first 2 consultations 100% free. Unlimited access applies from the 3rd consultation via Mercado Pago, Stripe, or Ko-fi.",
+    queuedPastLife: "Your past-life reading is queued and will start automatically upon confirmation.",
+    queuedQuestion: "Your Ouija question is queued and will be answered automatically upon confirmation.",
+    includes1: "First 2 consultations 100% free for past lives and Ouija.",
+    includes2: "Unlimited past-life readings and Akashic questions without restrictions.",
+    includes3: "Instant unlock via Mercado Pago, Stripe, or operation number.",
     payMp: "Unlock with Mercado Pago",
-    waitingAutoTitle: "Waiting for Mercado Pago automatic confirmation...",
-    waitingAutoDesc: "Keep this window open: your reading will unlock and begin automatically once paid on Mercado Pago.",
+    waitingAutoTitle: "Waiting for automatic confirmation...",
+    waitingAutoDesc: "Keep this window open: your reading will unlock automatically once paid.",
     checkNowBtn: "Check status now",
     checkingBtn: "Checking...",
-    notYetApproved: "Mercado Pago confirmation has not arrived yet. Please finish checkout in the opened tab.",
-    successMsg: "Mercado Pago payment confirmed! Unlocking and starting your reading now...",
+    notYetApproved: "Confirmation not received yet. Please finish checkout or enter your operation number below.",
+    successMsg: "Payment confirmed! Unlocking and starting your reading now...",
     close: "Back",
   },
   pt: {
-    badge: "Passe de Consultas Akáshicas • Mercado Pago",
-    titleLimitReached: "Você usou suas consultas gratuitas",
-    titleUpgrade: "Desbloqueie Leituras de Vidas Passadas e Perguntas Ilimitadas",
+    badge: "Passe de Consultas Akáshicas • Ilimitado",
+    titleLimitReached: "Você usou suas 2 consultas gratuitas",
+    titleUpgrade: "Desbloqueie Leituras Ilimitadas",
     subtitle:
-      "Ao concluir o pagamento pelo Mercado Pago, sua leitura solicitada será desbloqueada e iniciada automaticamente.",
-    queuedPastLife: "Sua leitura de vida passada está pronta e começará automaticamente após o pagamento pelo Mercado Pago.",
-    queuedQuestion: "Sua pergunta na Tábua Ouija está pronta e será respondida automaticamente após o pagamento pelo Mercado Pago.",
-    includes1: "Leituras completas de vidas passadas com narração e pergaminho.",
-    includes2: "Perguntas ilimitadas na Tábua Ouija sobre suas revelações.",
-    includes3: "Desbloqueio automático imediato ao finalizar o pagamento no Mercado Pago.",
-    payStepTitle: "Pague com Mercado Pago para desbloquear",
+      "Aproveite suas primeiras 2 consultas 100% gratuitas. O passe ilimitado se aplica a partir da 3ª consulta via Mercado Pago, Stripe ou Ko-fi.",
+    queuedPastLife: "Sua leitura de vida passada está pronta e começará automaticamente após a confirmação.",
+    queuedQuestion: "Sua pergunta na Tábua Ouija está pronta e será respondida automaticamente após a confirmação.",
+    includes1: "Primeiras 2 consultas 100% gratuitas em vidas passadas e Ouija.",
+    includes2: "Leituras ilimitadas de vidas passadas e perguntas akáshicas.",
+    includes3: "Desbloqueio instantâneo via Mercado Pago, Stripe ou número de operação.",
     payMp: "Desbloquear com Mercado Pago",
-    waitingAutoTitle: "Aguardando confirmação automática do Mercado Pago...",
-    waitingAutoDesc: "Mantenha esta janela aberta: sua leitura começará automaticamente após pagar no Mercado Pago.",
+    waitingAutoTitle: "Aguardando confirmação automática...",
+    waitingAutoDesc: "Mantenha esta janela aberta: sua leitura começará automaticamente após o pagamento.",
     checkNowBtn: "Verificar agora",
     checkingBtn: "Verificando...",
-    notYetApproved: "Ainda não recebemos a confirmação do Mercado Pago. Conclua o pagamento na aba aberta.",
-    successMsg: "Pagamento confirmado pelo Mercado Pago! Desbloqueando e iniciando sua leitura agora...",
+    notYetApproved: "Confirmação ainda não recebida. Conclua o pagamento ou informe o número de operação abaixo.",
+    successMsg: "Pagamento confirmado! Desbloqueando e iniciando sua leitura agora...",
     close: "Voltar",
   },
   fr: {
-    badge: "Pass Consultations Akashiques • Mercado Pago",
-    titleLimitReached: "Vous avez utilisé vos consultations gratuites",
-    titleUpgrade: "Débloquez les Vies Antérieures et Questions Illimitées",
+    badge: "Pass Consultations Akashiques • Illimité",
+    titleLimitReached: "Vous avez utilisé vos 2 consultations gratuites",
+    titleUpgrade: "Débloquez des Lectures Illimitées",
     subtitle:
-      "Dès que le paiement via Mercado Pago est validé, votre lecture demandée se débloque et démarre automatiquement.",
-    queuedPastLife: "Votre lecture de vie antérieure est prête et démarrera automatiquement après paiement via Mercado Pago.",
-    queuedQuestion: "Votre question Ouija est prête et recevra sa réponse automatiquement après paiement via Mercado Pago.",
-    includes1: "Lectures complètes de vies antérieures avec voix et parchemin.",
-    includes2: "Questions illimitées sur la planche Ouija interactive.",
-    includes3: "Déblocage automatique immédiat après paiement sur Mercado Pago.",
-    payStepTitle: "Réglez avec Mercado Pago pour débloquer",
+      "Profitez de vos 2 premières consultations 100% gratuites. L'accès illimité s'applique à partir de la 3ème consultation via Mercado Pago, Stripe ou Ko-fi.",
+    queuedPastLife: "Votre lecture de vie antérieure est prête et démarrera automatiquement.",
+    queuedQuestion: "Votre question Ouija est prête et recevra sa réponse automatiquement.",
+    includes1: "2 premières consultations 100% gratuites pour vies antérieures et Ouija.",
+    includes2: "Lectures illimitées de vies antérieures et questions akashiques.",
+    includes3: "Déblocage instantané via Mercado Pago, Stripe ou numéro d'opération.",
     payMp: "Débloquer avec Mercado Pago",
-    waitingAutoTitle: "En attente de confirmation Mercado Pago...",
-    waitingAutoDesc: "Gardez cette fenêtre ouverte : votre lecture démarrera automatiquement dès validation sur Mercado Pago.",
+    waitingAutoTitle: "En attente de confirmation...",
+    waitingAutoDesc: "Gardez cette fenêtre ouverte : votre lecture démarrera automatiquement dès validation.",
     checkNowBtn: "Vérifier maintenant",
     checkingBtn: "Vérification...",
-    notYetApproved: "Confirmation Mercado Pago non reçue pour l'instant. Finalisez le paiement dans l'onglet ouvert.",
-    successMsg: "Paiement Mercado Pago confirmé ! Déblocage et lancement de votre lecture...",
+    notYetApproved: "Confirmation non reçue. Finalisez le paiement ou entrez votre numéro d'opération ci-dessous.",
+    successMsg: "Paiement confirmé ! Déblocage et lancement de votre lecture...",
     close: "Retour",
   },
   it: {
-    badge: "Pass Consulti Akashici • Mercado Pago",
-    titleLimitReached: "Hai esaurito i consulti gratuiti",
-    titleUpgrade: "Sblocca Vite Passate e Domande Illimitate",
+    badge: "Pass Consulti Akashici • Illimitati",
+    titleLimitReached: "Hai esaurito i 2 consulti gratuiti",
+    titleUpgrade: "Sblocca Letture Illimitate",
     subtitle:
-      "Al completamento del pagamento con Mercado Pago, la lettura richiesta si sbloccherà e partirà automaticamente.",
-    queuedPastLife: "La tua lettura delle vite passate è pronta e inizierà automaticamente dopo il pagamento su Mercado Pago.",
-    queuedQuestion: "La tua domanda Ouija è pronta e riceverà risposta automaticamente dopo il pagamento su Mercado Pago.",
-    includes1: "Letture complete delle vite passate con voce e pergamena.",
-    includes2: "Domande illimitate sulla Tavola Ouija interattiva.",
-    includes3: "Sblocco automatico immediato dopo il pagamento su Mercado Pago.",
-    payStepTitle: "Paga con Mercado Pago per sbloccare",
+      "Goditi i primi 2 consulti 100% gratuiti. L'accesso illimitato si applica dal 3° consulto tramite Mercado Pago, Stripe o Ko-fi.",
+    queuedPastLife: "La tua lettura delle vite passate è pronta e inizierà automaticamente.",
+    queuedQuestion: "La tua domanda Ouija è pronta e riceverà risposta automaticamente.",
+    includes1: "Primi 2 consulti 100% gratuiti per vite passate e Ouija.",
+    includes2: "Letture illimitate delle vite passate e domande akashiche.",
+    includes3: "Sblocco istantaneo tramite Mercado Pago, Stripe o numero di operazione.",
     payMp: "Sblocca con Mercado Pago",
-    waitingAutoTitle: "In attesa di conferma da Mercado Pago...",
-    waitingAutoDesc: "Tieni aperta questa finestra: la lettura inizierà automaticamente appena confermato da Mercado Pago.",
+    waitingAutoTitle: "In attesa di conferma...",
+    waitingAutoDesc: "Tieni aperta questa finestra: la lettura inizierà automaticamente dopo il pagamento.",
     checkNowBtn: "Verifica ora",
     checkingBtn: "Verifica...",
-    notYetApproved: "Conferma da Mercado Pago non ancora ricevuta. Completa il pagamento nella scheda aperta.",
-    successMsg: "Pagamento Mercado Pago confermato! Sblocco e avvio della tua lettura...",
+    notYetApproved: "Conferma non ancora ricevuta. Completa il pagamento o inserisci il numero di operazione.",
+    successMsg: "Pagamento confermato! Sblocco e avvio della tua lettura...",
     close: "Indietro",
   },
   de: {
-    badge: "Akasha-Beratungspass • Mercado Pago",
-    titleLimitReached: "Deine kostenlosen Abfragen sind aufgebraucht",
-    titleUpgrade: "Unbegrenzte Frühere-Leben-Lesungen & Fragen freischalten",
+    badge: "Akasha-Beratungspass • Unbegrenzt",
+    titleLimitReached: "Du hast deine 2 kostenlosen Abfragen aufgebraucht",
+    titleUpgrade: "Unbegrenzte Lesungen freischalten",
     subtitle:
-      "Sobald die Zahlung per Mercado Pago abgeschlossen ist, wird deine angeforderte Lesung automatisch freigeschaltet.",
-    queuedPastLife: "Deine Lesung über ein früheres Leben steht bereit und startet nach Zahlung per Mercado Pago automatisch.",
-    queuedQuestion: "Deine Ouija-Frage steht bereit und wird nach Zahlung per Mercado Pago automatisch beantwortet.",
-    includes1: "Vollständige Lesungen früherer Leben mit Stimme und Pergament.",
-    includes2: "Unbegrenzte Rückfragen auf dem interaktiven Ouija-Brett.",
-    includes3: "Sofortige automatische Freischaltung nach Zahlung über Mercado Pago.",
-    payStepTitle: "Mit Mercado Pago freischalten",
+      "Genieße deine ersten 2 Abfragen 100% kostenlos. Der unbegrenzte Zugang gilt ab der 3. Abfrage über Mercado Pago, Stripe oder Ko-fi.",
+    queuedPastLife: "Deine Lesung über ein früheres Leben steht bereit und startet automatisch.",
+    queuedQuestion: "Deine Ouija-Frage steht bereit und wird automatisch beantwortet.",
+    includes1: "Erste 2 Abfragen 100% kostenlos für frühere Leben und Ouija.",
+    includes2: "Unbegrenzte Lesungen früherer Leben und Akasha-Fragen.",
+    includes3: "Sofortige Freischaltung über Mercado Pago, Stripe oder Vorgangsnummer.",
     payMp: "Mit Mercado Pago freischalten",
-    waitingAutoTitle: "Warte auf Bestätigung von Mercado Pago...",
-    waitingAutoDesc: "Lass dieses Fenster offen: Deine Lesung startet sofort automatisch nach Zahlung per Mercado Pago.",
+    waitingAutoTitle: "Warte auf Bestätigung...",
+    waitingAutoDesc: "Lass dieses Fenster offen: Deine Lesung startet sofort automatisch nach Zahlung.",
     checkNowBtn: "Jetzt prüfen",
     checkingBtn: "Wird geprüft...",
-    notYetApproved: "Noch keine Bestätigung von Mercado Pago erhalten. Bitte schließe die Zahlung im offenen Tab ab.",
-    successMsg: "Mercado Pago Zahlung bestätigt! Deine Lesung wird jetzt gestartet...",
+    notYetApproved: "Noch keine Bestätigung erhalten. Bitte schließe die Zahlung ab oder gib deine Vorgangsnummer ein.",
+    successMsg: "Zahlung bestätigt! Deine Lesung wird jetzt gestartet...",
     close: "Zurück",
   },
 };
@@ -197,6 +194,11 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [unlockedDone, setUnlockedDone] = useState<boolean>(false);
+
+  // Manual operation number state
+  const [operationNumber, setOperationNumber] = useState<string>("");
+  const [isValidatingOp, setIsValidatingOp] = useState<boolean>(false);
+  const [opFeedback, setOpFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
   const unlockedOnceRef = useRef<boolean>(false);
 
@@ -224,6 +226,8 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
     setUnlockedDone(false);
     setStatusMessage("");
     setAwaitingPayment(false);
+    setOperationNumber("");
+    setOpFeedback(null);
 
     setPaywallModalHeartbeat();
     const hbInterval = setInterval(() => {
@@ -296,6 +300,45 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
     },
     [language, sessionId, triggerUnlockSuccess]
   );
+
+  // Manual operation verification handler
+  const handleValidateOperation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    const cleanOp = operationNumber.trim();
+    if (!cleanOp || cleanOp.length < 3) {
+      setOpFeedback({ type: "err", msg: "Por favor ingresa un número de operación válido." });
+      return;
+    }
+
+    setIsValidatingOp(true);
+    setOpFeedback(null);
+    try {
+      const visitorId = getOrCreateVisitorId();
+      const res = await fetch("/api/payments/verify-operation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operationNumber: cleanOp,
+          sessionId,
+          visitorId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.approved && data?.approvalProof) {
+        setOpFeedback({ type: "ok", msg: "¡Operación validada con éxito! Acceso inmediato concedido." });
+        setTimeout(() => {
+          triggerUnlockSuccess(data.approvalProof, data.sessionId);
+        }, 600);
+      } else {
+        setOpFeedback({ type: "err", msg: "No se pudo validar el número de operación. Inténtalo nuevamente." });
+      }
+    } catch {
+      setOpFeedback({ type: "err", msg: "Error de conexión al validar la operación." });
+    } finally {
+      setIsValidatingOp(false);
+    }
+  };
 
   // Real-time listeners: SSE + BroadcastChannel + focus check + polling
   useEffect(() => {
@@ -414,7 +457,7 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
           </div>
         )}
 
-        {/* Benefits */}
+        {/* Benefits & Clarification */}
         <div className="p-3.5 rounded-2xl bg-purple-950/45 border border-purple-800/50 space-y-2 text-xs font-gothic text-purple-200/90">
           <div className="flex items-start space-x-2">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
@@ -438,14 +481,15 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
           </div>
         ) : (
           <>
-            {/* Direct Mercado Pago Celeste Unlock Button */}
-            <div className="pt-1">
+            {/* Primary Payment Buttons: Mercado Pago, Stripe & Ko-fi */}
+            <div className="space-y-2.5 pt-1">
+              {/* Mercado Pago Button */}
               <a
                 href={mpUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={handlePaymentClick}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3.5 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_24px_rgba(0,158,227,0.45)] border border-sky-300/40 transition cursor-pointer"
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(0,158,227,0.4)] border border-sky-300/30 transition cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>{copy.payMp}</span>
@@ -456,11 +500,77 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
                 )}
                 <ExternalLink className="w-3.5 h-3.5 opacity-90" />
               </a>
+
+              {/* Stripe Button */}
+              <a
+                href="https://buy.stripe.com/test_fZudRa5m20kM6kXfd0gUM00"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handlePaymentClick}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-[#635BFF] hover:bg-[#5851DB] text-white font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(99,91,255,0.35)] border border-indigo-300/30 transition cursor-pointer"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Pagar con Stripe (Tarjeta / USD)</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-90" />
+              </a>
+
+              {/* Ko-fi Button */}
+              <a
+                href="https://ko-fi.com/J3J31XDE6Q"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handlePaymentClick}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-[#29abe0] hover:bg-[#2295c5] text-white font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(41,171,224,0.35)] border border-sky-200/35 transition cursor-pointer"
+              >
+                <Heart className="w-4 h-4 text-pink-200 fill-pink-200" />
+                <span>Apoyar en Ko-fi</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-90" />
+              </a>
             </div>
+
+            {/* Manual Operation Number Validation Field */}
+            <form onSubmit={handleValidateOperation} className="p-3.5 rounded-2xl bg-black/50 border border-amber-500/35 space-y-2.5">
+              <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-amber-300">
+                <KeyRound className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Validación Rápida por Número de Operación / Comprobante</span>
+              </div>
+              <p className="text-[11px] font-gothic text-purple-200/80">
+                Si ya abonaste en Mercado Pago, ingresa tu número de operación o comprobante para obtener acceso inmediato sin esperar:
+              </p>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={operationNumber}
+                  onChange={(e) => setOperationNumber(e.target.value)}
+                  placeholder="Ej. 1234567890 o REF-XYZ"
+                  className="flex-1 px-3 py-2 bg-purple-950/60 border border-purple-700/60 rounded-xl text-purple-100 placeholder-purple-400/40 text-xs font-mono focus:outline-none focus:border-amber-400"
+                />
+                <button
+                  type="submit"
+                  disabled={isValidatingOp}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-neutral-950 font-cinzel font-bold text-xs transition cursor-pointer disabled:opacity-60 shadow flex items-center space-x-1 shrink-0"
+                >
+                  {isValidatingOp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Validar</span>}
+                </button>
+              </div>
+
+              {opFeedback && (
+                <div
+                  className={`text-[11px] font-gothic p-2 rounded-xl border ${
+                    opFeedback.type === "ok"
+                      ? "bg-emerald-950/70 border-emerald-500/50 text-emerald-200"
+                      : "bg-red-950/70 border-red-500/50 text-red-200"
+                  }`}
+                >
+                  {opFeedback.msg}
+                </div>
+              )}
+            </form>
 
             {/* Automatic live detection indicator */}
             {awaitingPayment && (
-              <div className="p-3.5 rounded-2xl bg-indigo-950/50 border border-indigo-400/40 space-y-2">
+              <div className="p-3 rounded-2xl bg-indigo-950/50 border border-indigo-400/40 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-indigo-200">
                     <Loader2 className="w-4 h-4 text-amber-300 animate-spin shrink-0" />

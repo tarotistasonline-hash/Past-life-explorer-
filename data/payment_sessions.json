@@ -9,5 +9,17 @@
     "approvalProof": "",
     "createdAt": "2026-11-13T03:32:20.967Z",
     "updatedAt": "2026-11-13T03:32:20.967Z"
+  },
+  {
+    "sessionId": "ps_op_354a59b21a5c3c042b88",
+    "visitorId": "vis_op_verify",
+    "provider": "mercadopago",
+    "status": "approved",
+    "pendingType": "pass",
+    "refCode": "MP-12345678",
+    "approvalProof": "2f0ba5ec677cbce4c8a09d355c2ef64b426430b2c3b43d355776be54b50b47f5",
+    "paymentRef": "mp_op_123456789",
+    "createdAt": "2026-11-14T00:40:55.061Z",
+    "updatedAt": "2026-11-14T00:40:55.061Z"
   }
 ]

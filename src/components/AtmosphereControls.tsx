@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Music } from "lucide-react";
+import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Music, MessageSquareHeart } from "lucide-react";
 import { audio } from "../lib/audio";
 import { VisitsStats } from "../types";
 import { useLanguage } from "../context/LanguageContext";
@@ -9,6 +9,7 @@ import { isAdminSession, setAdminSession, isAuthorizedAdmin } from "../lib/admin
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { AdminConfigModal } from "./AdminConfigModal";
 import { AdminUnlockModal } from "./AdminUnlockModal";
+import { FeedbackModal } from "./FeedbackModal";
 
 interface AtmosphereControlsProps {
   fogOn: boolean;
@@ -35,6 +36,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [isSpeakingVoice, setIsSpeakingVoice] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   useEffect(() => {
     const handleDroneChange = (e: any) => {
@@ -272,6 +274,16 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             <HelpCircle className="w-4 h-4 text-purple-300" />
             <span className="hidden sm:inline">{t("guideBtn")}</span>
           </button>
+
+          {/* Feedback / Opinions Modal Trigger */}
+          <button
+            onClick={() => setShowFeedbackModal(true)}
+            title="Buzón de Opiniones y Sugerencias"
+            className="p-2 sm:px-3 sm:py-1.5 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-600/50 rounded-xl text-amber-200 font-medium flex items-center space-x-1 transition cursor-pointer"
+          >
+            <MessageSquareHeart className="w-4 h-4 text-amber-300" />
+            <span className="hidden sm:inline">Opiniones</span>
+          </button>
         </div>
       </div>
 
@@ -413,6 +425,12 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
           setShowAdminUnlockModal(false);
           setShowAdminConfigModal(true);
         }}
+      />
+
+      {/* Feedback / Suggestions Mailbox Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
     </>
   );

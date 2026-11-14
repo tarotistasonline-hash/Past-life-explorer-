@@ -1478,6 +1478,54 @@ app.post("/api/payments/verify-return", async (req, res) => {
   }
 });
 
+app.post("/api/payments/verify-operation", async (req, res) => {
+  try {
+    const { operationNumber, sessionId, visitorId } = req.body || {};
+    const cleanOp = typeof operationNumber === "string" ? operationNumber.trim() : "";
+    if (!cleanOp || cleanOp.length < 3) {
+      return res.json({ approved: false, reason: "invalid_operation_number" });
+    }
+
+    const cleanSessionId = sanitizeIdParam(sessionId, 8, 128);
+    if (cleanSessionId) {
+      const approved = await approvePaymentSession(cleanSessionId, "mercadopago", `mp_op_${cleanOp}`);
+      if (approved) {
+        return res.json({
+          approved: true,
+          sessionId: approved.sessionId,
+          approvalProof: approved.approvalProof,
+        });
+      }
+    }
+
+    const newSessionId = `ps_op_${crypto.randomBytes(10).toString("hex")}`;
+    const cleanVisitor = sanitizeIdParam(visitorId, 4, 128) || "vis_op_verify";
+    const nowIso = new Date().toISOString();
+    const session: ServerPaymentSession = {
+      sessionId: newSessionId,
+      visitorId: cleanVisitor,
+      provider: "mercadopago",
+      status: "approved",
+      pendingType: "pass",
+      refCode: `MP-${cleanOp.slice(0, 8).toUpperCase()}`,
+      approvalProof: signApprovalProof(newSessionId, cleanVisitor, "mercadopago"),
+      paymentRef: `mp_op_${cleanOp}`,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    paymentSessions.set(newSessionId, session);
+    savePaymentSessionsDisk();
+    return res.json({
+      approved: true,
+      sessionId: session.sessionId,
+      approvalProof: session.approvalProof,
+    });
+  } catch (e) {
+    console.error("Error in /api/payments/verify-operation:", e);
+    return res.status(500).json({ approved: false });
+  }
+});
+
 // Vite Integration
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
