@@ -25,6 +25,7 @@ import {
   PendingConsultation,
 } from "../lib/monetization";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
+import { authorizeAdmin } from "../lib/adminTracking";
 
 interface ConsultationPaywallModalProps {
   isOpen: boolean;
@@ -197,6 +198,11 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
   const [isValidatingOp, setIsValidatingOp] = useState<boolean>(false);
   const [opFeedback, setOpFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
+  // Creator quick-unlock state
+  const [showCreatorLogin, setShowCreatorLogin] = useState<boolean>(false);
+  const [creatorEmailInput, setCreatorEmailInput] = useState<string>("");
+  const [creatorLoginError, setCreatorLoginError] = useState<string>("");
+
   const unlockedOnceRef = useRef<boolean>(false);
 
   const triggerUnlockSuccess = useCallback(
@@ -225,6 +231,9 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
     setAwaitingPayment(false);
     setOperationNumber("");
     setOpFeedback(null);
+    setShowCreatorLogin(false);
+    setCreatorEmailInput("");
+    setCreatorLoginError("");
 
     setPaywallModalHeartbeat();
     const hbInterval = setInterval(() => {
@@ -579,6 +588,70 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
               </div>
             )}
           </>
+        )}
+
+        {/* Inline Creator Access Unlock */}
+        {!unlockedDone && (
+          <div className="pt-1 border-t border-purple-900/40">
+            {!showCreatorLogin ? (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic(HAPTIC_PATTERNS.click);
+                  setShowCreatorLogin(true);
+                  setCreatorLoginError("");
+                }}
+                className="w-full py-1.5 text-[11px] font-gothic text-amber-300/80 hover:text-amber-200 underline underline-offset-2 transition cursor-pointer text-center"
+              >
+                ¿Eres el creador del sitio? Activar consultas ilimitadas de propietario
+              </button>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  triggerHaptic(HAPTIC_PATTERNS.click);
+                  if (authorizeAdmin(creatorEmailInput)) {
+                    setCreatorLoginError("");
+                    setShowCreatorLogin(false);
+                    setCreatorEmailInput("");
+                    onUnlocked?.();
+                    onClose();
+                  } else {
+                    setCreatorLoginError("Correo no autorizado. Ingresa el correo del creador del sitio.");
+                  }
+                }}
+                className="p-3 rounded-2xl bg-amber-950/30 border border-amber-500/35 space-y-2"
+              >
+                <p className="text-[11px] font-cinzel font-semibold text-amber-200">
+                  Acceso Exclusivo del Creador
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="email"
+                    value={creatorEmailInput}
+                    onChange={(e) => {
+                      setCreatorEmailInput(e.target.value);
+                      if (creatorLoginError) setCreatorLoginError("");
+                    }}
+                    placeholder="Ingresa tu correo de propietario..."
+                    className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/60 border border-amber-500/40 text-xs font-gothic text-amber-100 placeholder:text-amber-300/40 focus:outline-none focus:border-amber-400"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 text-[11px] font-cinzel font-bold transition cursor-pointer shrink-0"
+                  >
+                    Activar
+                  </button>
+                </div>
+                {creatorLoginError && (
+                  <p className="text-[11px] font-gothic text-rose-300">
+                    {creatorLoginError}
+                  </p>
+                )}
+              </form>
+            )}
+          </div>
         )}
 
         <button

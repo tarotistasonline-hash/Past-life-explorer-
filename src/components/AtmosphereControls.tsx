@@ -382,20 +382,53 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
               {t("portalRecordDesc")}
             </p>
 
-            {isCreatorMode && (
+            {(isCreatorMode || isAdminAuthorized) ? (
               <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200 font-gothic space-y-2">
                 <div className="flex items-center space-x-2 font-semibold">
                   <Shield className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>{t("creatorModeActive")}</span>
+                  <span>
+                    {isCreatorMode
+                      ? `${t("creatorModeActive")} • Consultas ilimitadas activas`
+                      : "Acceso de Creador activo • Consultas ilimitadas activas"}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleToggleCreatorMode}
-                  className="w-full py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-100 font-cinzel text-[11px] font-semibold transition cursor-pointer"
-                >
-                  {t("toggleCreatorModeBtn")}
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleToggleCreatorMode}
+                    className="w-full py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-100 font-cinzel text-[11px] font-semibold transition cursor-pointer"
+                  >
+                    {t("toggleCreatorModeBtn")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowVisitsModal(false);
+                      if (isAdminAuthorized) {
+                        setShowAdminConfigModal(true);
+                      } else {
+                        setShowAdminUnlockModal(true);
+                      }
+                    }}
+                    className="w-full py-1.5 px-2 rounded-lg bg-purple-900/70 hover:bg-purple-800 border border-purple-500/50 text-purple-100 font-cinzel text-[11px] font-semibold transition cursor-pointer"
+                  >
+                    Panel del Creador
+                  </button>
+                </div>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic(HAPTIC_PATTERNS.click);
+                  setShowVisitsModal(false);
+                  setShowAdminUnlockModal(true);
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-amber-950/35 hover:bg-amber-900/50 border border-amber-500/35 text-amber-200 text-xs font-cinzel font-semibold flex items-center justify-center space-x-2 transition cursor-pointer"
+              >
+                <Shield className="w-3.5 h-3.5 text-amber-400" />
+                <span>¿Eres el creador? Activar acceso ilimitado</span>
+              </button>
             )}
 
             <button

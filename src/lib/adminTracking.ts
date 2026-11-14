@@ -24,7 +24,9 @@ export function authorizeAdmin(input: string): boolean {
   // STRICT SECURITY: Only the verified owner email can unlock
   if (clean === "tarotistasonline@gmail.com") {
     localStorage.setItem(AUTH_KEY, "true");
+    localStorage.setItem(STORAGE_KEY, "true");
     window.dispatchEvent(new CustomEvent("ouija-admin-auth-change", { detail: { isAuthorized: true } }));
+    window.dispatchEvent(new CustomEvent("ouija-creator-mode-change", { detail: { isAdmin: true } }));
     return true;
   }
   return false;
@@ -33,7 +35,9 @@ export function authorizeAdmin(input: string): boolean {
 export function deauthorizeAdmin(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem(STORAGE_KEY);
   window.dispatchEvent(new CustomEvent("ouija-admin-auth-change", { detail: { isAuthorized: false } }));
+  window.dispatchEvent(new CustomEvent("ouija-creator-mode-change", { detail: { isAdmin: false } }));
 }
 
 export function isAdminSession(): boolean {
@@ -47,6 +51,11 @@ export function isAdminSession(): boolean {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === "true") return true;
     if (saved === "false") return false;
+
+    if (isAuthorizedAdmin()) {
+      localStorage.setItem(STORAGE_KEY, "true");
+      return true;
+    }
 
     // Only exclude if explicitly requested via query parameter
     const search = window.location.search || "";
