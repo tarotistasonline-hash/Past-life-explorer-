@@ -371,10 +371,57 @@ function incrementConsultation(req?: express.Request) {
 }
 
 // Initialize GenAI client safely
+let aiAuthCooldownUntil = 0;
+
+function isInvalidGeminiApiKeyFormat(raw?: string): boolean {
+  const key = (raw || "").trim();
+  if (!key) return true;
+  if (
+    key === "MY_GEMINI_API_KEY" ||
+    key === "YOUR_API_KEY" ||
+    key.includes("MY_GEMINI") ||
+    key.includes("PLACEHOLDER") ||
+    key.length < 16
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function handleGeminiError(context: string, error: any) {
+  const errText = String(error?.message || error || "");
+  const isAuthErr =
+    errText.includes("401") ||
+    errText.includes("403") ||
+    errText.includes("UNAUTHENTICATED") ||
+    errText.includes("PERMISSION_DENIED") ||
+    errText.includes("API key not valid") ||
+    errText.includes("API_KEY_INVALID") ||
+    errText.includes("ACCESS_TOKEN_TYPE_UNSUPPORTED") ||
+    error?.status === 401 ||
+    error?.status === 403 ||
+    error?.code === 401 ||
+    error?.code === 403;
+
+  if (isAuthErr) {
+    if (Date.now() >= aiAuthCooldownUntil) {
+      console.warn(
+        `[${context}] GEMINI_API_KEY is invalid or unsupported. Please verify GEMINI_API_KEY in Settings > Secrets. Using coherent local oracle fallback.`
+      );
+    }
+    aiAuthCooldownUntil = Date.now() + 5 * 60 * 1000;
+    return;
+  }
+
+  console.warn(`[${context}] Gemini fallback activated:`, error?.message || error);
+}
+
 function getAIClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.warn("GEMINI_API_KEY is not set. Will return simulated spirit responses if missing.");
+  if (Date.now() < aiAuthCooldownUntil) {
+    return null;
+  }
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (isInvalidGeminiApiKeyFormat(apiKey)) {
     return null;
   }
   return new GoogleGenAI({
@@ -543,7 +590,7 @@ async function generateAndCacheTTS(
       ttsQuotaCooldownUntil = Date.now() + 10 * 60 * 1000;
       console.log("TTS daily quota reached; falling back to high-quality browser Web Speech engine.");
     } else {
-      console.log("TTS service note: utilizing native voice synthesis fallback.");
+      handleGeminiError("TTS", error);
     }
   }
   return null;
@@ -690,7 +737,6 @@ Respond strictly in JSON format with this structure:
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        temperature: 0.9,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -728,7 +774,7 @@ Respond strictly in JSON format with this structure:
       return res.json(getFallbackPastLife(name, focusQuery, lang));
     }
   } catch (error) {
-    console.error("Error in /api/ouija/past-life:", error);
+    handleGeminiError("/api/ouija/past-life", error);
     return res.json(getFallbackPastLife(req.body?.name, req.body?.focusQuery, req.body?.lang));
   }
 });
@@ -752,7 +798,6 @@ app.post("/api/ouija/spirit-question", async (req, res) => {
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        temperature: 0.75,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -789,7 +834,7 @@ app.post("/api/ouija/spirit-question", async (req, res) => {
       return res.json(getFallbackSpiritAnswer(question, seekerName, lang));
     }
   } catch (error) {
-    console.error("Error in /api/ouija/spirit-question:", error);
+    handleGeminiError("/api/ouija/spirit-question", error);
     return res.json(getFallbackSpiritAnswer(req.body?.question || "", req.body?.seekerName || "Buscador", req.body?.lang || "es"));
   }
 });
@@ -854,7 +899,6 @@ Return strictly a JSON object with:
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        temperature: 0.75,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -886,7 +930,7 @@ Return strictly a JSON object with:
       });
     }
   } catch (err) {
-    console.warn("Could not generate AI tarot enhancement, using coherent fallback:", err);
+    handleGeminiError("/api/tarot/draw", err);
   }
 
   return res.json({
@@ -936,7 +980,6 @@ Return strictly JSON: { "synthesis": "..." }`;
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        temperature: 0.75,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -952,7 +995,7 @@ Return strictly JSON: { "synthesis": "..." }`;
       synthesis: parsed.synthesis || coherentFallback,
     });
   } catch (err) {
-    console.warn("Could not generate 3-card AI synthesis:", err);
+    handleGeminiError("/api/tarot/karmic-spread", err);
     return res.json({
       synthesis: coherentFallback,
     });
