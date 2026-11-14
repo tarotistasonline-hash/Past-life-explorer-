@@ -19,6 +19,8 @@ import {
   buildStrictSpiritQuestionPrompt,
   getCoherentFallbackSpiritAnswer,
   getCoherentPastLifeFallback,
+  getCoherentTarotDrawFallback,
+  getCoherentKarmicSpreadFallback,
 } from "./src/lib/oracleCoherence.ts";
 
 const app = express();
@@ -684,7 +686,7 @@ Respond strictly in JSON format with this structure:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-4-hydrogen",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -746,7 +748,7 @@ app.post("/api/ouija/spirit-question", async (req, res) => {
     const prompt = buildStrictSpiritQuestionPrompt(question, seekerName, targetLangName);
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-4-hydrogen",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -810,16 +812,19 @@ app.get("/api/tarot/daily", (req, res) => {
 app.post("/api/tarot/draw", async (req, res) => {
   incrementConsultation(req);
   const { seekerName, focusQuery, seed, excludeId, lang = "es" } = req.body || {};
+  const cleanQuery = typeof focusQuery === "string" ? focusQuery.trim() : "";
   const baseCard = drawPersonalArcana(seed || `${seekerName || "seeker"}_${Date.now()}_${Math.random()}`, excludeId, lang);
   const targetLangName = getLanguageName(lang);
   const locale = lang === "en" ? "en-US" : lang === "pt" ? "pt-BR" : lang === "fr" ? "fr-FR" : lang === "it" ? "it-IT" : lang === "de" ? "de-DE" : "es-AR";
   const personalReadingPrefix = lang === "en" ? "Personal Reading of" : lang === "pt" ? "Leitura Pessoal de" : lang === "fr" ? "Lecture Personnelle de" : lang === "it" ? "Lettura Personale di" : lang === "de" ? "Persönliche Lesung von" : "Lectura Personal de";
-  const channeledPrefix = lang === "en" ? "Channeled Reading of" : lang === "pt" ? "Leitura Canalizada de" : lang === "fr" ? "Lecture Canalisée de" : lang === "it" ? "Lettura Canalizzata di" : lang === "de" ? "Gechannelte Lesung von" : "Lectura Canalizada de";
+
+  const coherentFallback = getCoherentTarotDrawFallback(baseCard, cleanQuery, seekerName, lang);
+  const fallbackCard = { ...baseCard, ...coherentFallback };
 
   const ai = getAIClient();
   if (!ai) {
     return res.json({
-      arcana: baseCard,
+      arcana: fallbackCard,
       isAiEnhanced: false,
       cosmicDate: new Date().toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
       dayAspect: `${personalReadingPrefix} ${baseCard.name}`,
@@ -827,29 +832,29 @@ app.post("/api/tarot/draw", async (req, res) => {
   }
 
   try {
-    const prompt = `Act as the Oracle of the Akashic Records and Master of Esoteric Marseille Tarot.
+    const prompt = `Act as the Master Oracle of Esoteric Marseille Tarot.
 The seeker "${seekerName || "Seeker"}" has drawn the Major Arcana: "${baseCard.name}" (${baseCard.romanNumber}) / "${baseCard.marseilleTitle || baseCard.englishName}".
 Archetype: ${baseCard.archetype}. Element: ${baseCard.element}. Sign/Planet: ${baseCard.astrologicalSign}.
-${focusQuery ? `CRITICAL REQUIREMENT - DIRECT COHERENCE WITH SEEKER'S INQUIRY:
-The seeker is consulting about: "${focusQuery}".
-You MUST directly address this exact situation, dilemma, or question in the dailyMessage and practicalAdvice through the archetypal wisdom of ${baseCard.name}. Do NOT deflect to generic unrelated platitudes.` : "The seeker seeks guidance and wisdom for their path today."}
+${cleanQuery ? `CRITICAL REQUIREMENT - CONCRETE & COHERENT ANSWER TO SEEKER'S QUESTION:
+The seeker asked specifically: "${cleanQuery}".
+Your response MUST give a clear, concrete, direct, and coherent answer to THAT exact question (whether it's about love, an ex, work, money, health, studies, a decision, or yes/no direction), grounded in the symbolism of ${baseCard.name}.
+Do NOT give vague, generic mysticism that ignores what they asked. Explicitly reference the subject of "${cleanQuery}" and give actionable clarity.` : "The seeker seeks concrete guidance for their path today."}
 Target Language: ${targetLangName}.
 
-Provide a profound, solemn, poetic and transcendental tarot reading in ${targetLangName} that specifically and coherently addresses their situation.
 Return strictly a JSON object with:
 {
-  "dailyMessage": "Inspiring and revealing message in ${targetLangName} directly addressing their situation (2-3 sentences)",
-  "practicalAdvice": "Practical, actionable guidance for their situation in ${targetLangName}",
-  "dailyAffirmation": "Powerful first-person affirmation in ${targetLangName}",
-  "meditationQuestion": "Deep self-inquiry reflection question in ${targetLangName}"
+  "dailyMessage": "Direct, concrete, coherent answer in ${targetLangName} addressing '${cleanQuery || "today's path"}' through ${baseCard.name} (2-3 clear sentences)",
+  "practicalAdvice": "Concrete actionable step for their exact situation in ${targetLangName}",
+  "dailyAffirmation": "Grounded first-person affirmation in ${targetLangName}",
+  "meditationQuestion": "Focused reflection question tied to their inquiry in ${targetLangName}"
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-4-hydrogen",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        temperature: 0.85,
+        temperature: 0.75,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -868,27 +873,27 @@ Return strictly a JSON object with:
       const parsed = JSON.parse(jsonText);
       const enhancedCard = {
         ...baseCard,
-        dailyMessage: parsed.dailyMessage || baseCard.dailyMessage,
-        practicalAdvice: parsed.practicalAdvice || baseCard.practicalAdvice,
-        dailyAffirmation: parsed.dailyAffirmation || baseCard.dailyAffirmation,
-        meditationQuestion: parsed.meditationQuestion || baseCard.meditationQuestion,
+        dailyMessage: parsed.dailyMessage || fallbackCard.dailyMessage,
+        practicalAdvice: parsed.practicalAdvice || fallbackCard.practicalAdvice,
+        dailyAffirmation: parsed.dailyAffirmation || fallbackCard.dailyAffirmation,
+        meditationQuestion: parsed.meditationQuestion || fallbackCard.meditationQuestion,
       };
       return res.json({
         arcana: enhancedCard,
         isAiEnhanced: true,
-        cosmicDate: new Date().toLocaleDateString(lang === "en" ? "en-US" : "es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
-        dayAspect: `Lectura Personal Canalizada de ${enhancedCard.name}`,
+        cosmicDate: new Date().toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+        dayAspect: `${personalReadingPrefix} ${enhancedCard.name}`,
       });
     }
   } catch (err) {
-    console.warn("Could not generate AI tarot enhancement, using sacred base arcana:", err);
+    console.warn("Could not generate AI tarot enhancement, using coherent fallback:", err);
   }
 
   return res.json({
-    arcana: baseCard,
+    arcana: fallbackCard,
     isAiEnhanced: false,
-    cosmicDate: new Date().toLocaleDateString(lang === "en" ? "en-US" : "es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
-    dayAspect: `Lectura Personal de ${baseCard.name}`,
+    cosmicDate: new Date().toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+    dayAspect: `${personalReadingPrefix} ${baseCard.name}`,
   });
 });
 
@@ -896,34 +901,42 @@ Return strictly a JSON object with:
 app.post("/api/tarot/karmic-spread", async (req, res) => {
   incrementConsultation(req);
   const { seekerName, queryTopic, cards = [], lang = "es" } = req.body || {};
+  const cleanQuery = typeof queryTopic === "string" ? queryTopic.trim() : "";
   const targetLangName = getLanguageName(lang);
+  const cardTuple: [string, string, string] = [
+    String(cards[0] || "El Mago"),
+    String(cards[1] || "La Fuerza"),
+    String(cards[2] || "El Sol"),
+  ];
+  const coherentFallback = getCoherentKarmicSpreadFallback(cardTuple, cleanQuery, seekerName, lang);
   const ai = getAIClient();
 
   if (!ai || cards.length < 3) {
     return res.json({
-      synthesis: `El hilo del destino revela que tu pasado (${cards[0] || "Pasado"}) forjó los cimientos espirituales de tu alma. Tu prueba presente (${cards[1] || "Presente"}) exige despertar tu maestría interior, mientras que el destino (${cards[2] || "Futuro"}) señala la liberación y triunfo de tu camino.`,
+      synthesis: coherentFallback,
     });
   }
 
   try {
-    const prompt = `Act as the Master Oracle of Esoteric Marseille Tarot and Akashic Reincarnation Chronicles.
-The seeker "${seekerName || "Seeker"}" has invoked a 3-Card Karmic Spread regarding: "${queryTopic || "Soul Purpose and Destiny"}":
-- Card 1 (Past / Soul Roots): ${cards[0]}
-- Card 2 (Present / Current Evolutionary Test): ${cards[1]}
-- Card 3 (Future / Karmic Transcendence): ${cards[2]}
+    const prompt = `Act as the Master Oracle of Esoteric Marseille Tarot.
+The seeker "${seekerName || "Seeker"}" asked this SPECIFIC question in a 3-Card Spread (Past, Present, Future): "${cleanQuery || "Soul Purpose and Destiny"}":
+- Card 1 (Past / Root of this situation): ${cardTuple[0]}
+- Card 2 (Present / Current challenge & decision): ${cardTuple[1]}
+- Card 3 (Future / Concrete outcome & resolution): ${cardTuple[2]}
 Language: ${targetLangName}.
 
-CRITICAL REQUIREMENT - DIRECT COHERENCE WITH QUERY:
-You MUST specifically relate the meaning of these 3 cards to the seeker's inquiry: "${queryTopic || 'Soul Destiny'}".
-Write a profound, cohesive, illuminating synthesis (3-4 sentences in ${targetLangName}) explaining how these three cards answer and guide their specific situation from past roots to present challenge and future outcome.
+CRITICAL REQUIREMENT - CONCRETE & COHERENT RESPONSE TO THE EXACT QUESTION:
+1. Directly answer "${cleanQuery || "Soul Purpose"}" clearly and concretely—do NOT give generic filler that ignores what they asked.
+2. Explain specifically what ${cardTuple[0]} (Past), ${cardTuple[1]} (Present), and ${cardTuple[2]} (Future) indicate about their exact question (outcome, timing/direction, and concrete next step).
+3. Write 3-4 clear, cohesive sentences in ${targetLangName}.
 Return strictly JSON: { "synthesis": "..." }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-4-hydrogen",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        temperature: 0.85,
+        temperature: 0.75,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -936,12 +949,12 @@ Return strictly JSON: { "synthesis": "..." }`;
 
     const parsed = JSON.parse(response.text?.trim() || "{}");
     return res.json({
-      synthesis: parsed.synthesis || `El pasado de ${cards[0]} conecta con el desafío de ${cards[1]} y conduce a la elevación de ${cards[2]}.`,
+      synthesis: parsed.synthesis || coherentFallback,
     });
   } catch (err) {
     console.warn("Could not generate 3-card AI synthesis:", err);
     return res.json({
-      synthesis: `El hilo sagrado une a ${cards[0]} con el reto de ${cards[1]} hacia la iluminación de ${cards[2]}.`,
+      synthesis: coherentFallback,
     });
   }
 });
@@ -958,6 +971,7 @@ app.get("/api/tarot/all", (req, res) => {
 // Automatic Payment & Instant Unlock System (Mercado Pago Only)
 // ============================================================================
 const PAYMENT_SESSIONS_FILE = path.join(VISITS_DATA_DIR, "payment_sessions.json");
+const CLAIMED_MP_PAYMENTS_FILE = path.join(VISITS_DATA_DIR, "claimed_mp_payments.json");
 const PAYMENT_HMAC_KEY_FILE = path.join(VISITS_DATA_DIR, "payment_hmac.key");
 
 function loadOrCreateHmacSecret(): string {
@@ -993,6 +1007,7 @@ interface ServerPaymentSession {
 }
 
 const paymentSessions = new Map<string, ServerPaymentSession>();
+const claimedMpPayments = new Map<string, string>(); // mpPaymentId -> visitorId
 const sseClientsBySession = new Map<string, Set<express.Response>>();
 
 try {
@@ -1003,6 +1018,17 @@ try {
       for (const item of parsed.slice(-500)) {
         if (item && typeof item.sessionId === "string") {
           paymentSessions.set(item.sessionId, item as ServerPaymentSession);
+        }
+      }
+    }
+  }
+  if (fs.existsSync(CLAIMED_MP_PAYMENTS_FILE)) {
+    const rawClaimed = fs.readFileSync(CLAIMED_MP_PAYMENTS_FILE, "utf-8");
+    const parsedClaimed = JSON.parse(rawClaimed);
+    if (parsedClaimed && typeof parsedClaimed === "object") {
+      for (const [mpId, vis] of Object.entries(parsedClaimed)) {
+        if (typeof vis === "string") {
+          claimedMpPayments.set(mpId, vis);
         }
       }
     }
@@ -1021,6 +1047,111 @@ function savePaymentSessionsDisk() {
   } catch (e) {
     console.warn("Could not save payment_sessions.json:", e);
   }
+}
+
+function saveClaimedMpPaymentsDisk() {
+  try {
+    if (!fs.existsSync(VISITS_DATA_DIR)) {
+      fs.mkdirSync(VISITS_DATA_DIR, { recursive: true });
+    }
+    const obj = Object.fromEntries(Array.from(claimedMpPayments.entries()).slice(-1000));
+    fs.writeFileSync(CLAIMED_MP_PAYMENTS_FILE, JSON.stringify(obj, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("Could not save claimed_mp_payments.json:", e);
+  }
+}
+
+function getMercadoPagoAccessToken(): string {
+  return (process.env.MERCADOPAGO_ACCESS_TOKEN || "").trim();
+}
+
+interface MpVerificationResult {
+  approved: boolean;
+  reason?: string;
+  mpPaymentId?: string;
+  mpStatus?: string;
+  externalReference?: string;
+  amount?: number;
+}
+
+async function verifyMercadoPagoPaymentOnApi(
+  paymentIdOrOperation: string,
+  expectedMinAmountArs: number = 0
+): Promise<MpVerificationResult> {
+  const token = getMercadoPagoAccessToken();
+  if (!token) {
+    return { approved: false, reason: "mp_token_not_configured" };
+  }
+
+  const raw = paymentIdOrOperation.trim();
+  const numericOnly = raw.replace(/\D/g, "");
+  let paymentObj: any = null;
+
+  try {
+    if (numericOnly.length >= 6) {
+      const directRes = await fetch(
+        `https://api.mercadopago.com/v1/payments/${encodeURIComponent(numericOnly)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (directRes.ok) {
+        paymentObj = await directRes.json();
+      }
+    }
+
+    if (!paymentObj && raw.length >= 4) {
+      const searchRes = await fetch(
+        `https://api.mercadopago.com/v1/payments/search?external_reference=${encodeURIComponent(raw)}&sort=date_created&criteria=desc&limit=1`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (Array.isArray(searchData?.results) && searchData.results.length > 0) {
+          paymentObj = searchData.results[0];
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Mercado Pago API request error:", err);
+    return { approved: false, reason: "mp_api_unreachable" };
+  }
+
+  if (!paymentObj || !paymentObj.id) {
+    return { approved: false, reason: "payment_not_found", mpStatus: "not_found" };
+  }
+
+  const mpStatus = String(paymentObj.status || "").toLowerCase();
+  if (mpStatus !== "approved") {
+    return {
+      approved: false,
+      reason: "payment_not_approved",
+      mpPaymentId: String(paymentObj.id),
+      mpStatus,
+    };
+  }
+
+  const paidAmount = Number(paymentObj.transaction_amount || 0);
+  if (expectedMinAmountArs > 0 && paidAmount > 0 && paidAmount < expectedMinAmountArs * 0.9) {
+    return {
+      approved: false,
+      reason: "amount_mismatch",
+      mpPaymentId: String(paymentObj.id),
+      mpStatus,
+      amount: paidAmount,
+    };
+  }
+
+  return {
+    approved: true,
+    mpPaymentId: String(paymentObj.id),
+    mpStatus,
+    externalReference:
+      typeof paymentObj.external_reference === "string" ? paymentObj.external_reference : undefined,
+    amount: paidAmount,
+  };
 }
 
 function signApprovalProof(sessionId: string, visitorId: string, provider: string): string {
@@ -1271,17 +1402,19 @@ async function approvePaymentSession(
   return session;
 }
 
-// Payment capabilities (Mercado Pago direct link + auto-return mode)
+// Payment capabilities (Mercado Pago real API + Checkout Pro status)
 app.get("/api/payments/capabilities", (req, res) => {
+  const hasToken = Boolean(getMercadoPagoAccessToken());
   res.json({
-    mpCheckoutProReady: false,
+    mpCheckoutProReady: hasToken,
+    mpApiVerificationReady: hasToken,
   });
 });
 
-// Create tracked payment session using configured Mercado Pago link
+// Create tracked payment session (Checkout Pro Preference when MERCADOPAGO_ACCESS_TOKEN + price configured, else Mercado Pago Link)
 app.post("/api/payments/create-session", async (req, res) => {
   try {
-    const { visitorId, pendingType = "pass" } = req.body || {};
+    const { visitorId, pendingType = "pass", origin: rawOrigin } = req.body || {};
     const cleanVisitorId = sanitizeIdParam(visitorId, 4, 128) || `vis_${crypto.randomBytes(6).toString("hex")}`;
     const validType: "past-life" | "spirit-question" | "pass" =
       pendingType === "past-life" || pendingType === "spirit-question" ? pendingType : "pass";
@@ -1307,13 +1440,57 @@ app.post("/api/payments/create-session", async (req, res) => {
     syncPaymentSessionToFirestore(session, true).catch(() => {});
 
     const cfg = await readMonetizationConfigServer();
-    const mpUrl = cfg.mpLink || "https://mpago.la/2cv7Gii";
+    let mpUrl = cfg.mpLink || "https://mpago.la/2cv7Gii";
+    let checkoutMode: "checkout_pro" | "link" = "link";
+
+    const mpToken = getMercadoPagoAccessToken();
+    const origin = normalizeOrigin(rawOrigin, req);
+
+    if (mpToken && cfg.passAmountArs > 0) {
+      try {
+        const prefRes = await fetch("https://api.mercadopago.com/checkout/preferences", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${mpToken}`,
+          },
+          body: JSON.stringify({
+            items: [
+              {
+                id: "akashic_unlimited_pass",
+                title: "Pase Akáshico Ilimitado • Lecturas y Preguntas",
+                quantity: 1,
+                unit_price: cfg.passAmountArs,
+                currency_id: "ARS",
+              },
+            ],
+            external_reference: sessionId,
+            back_urls: {
+              success: `${origin}/?mp_payment=approved&session_id=${encodeURIComponent(sessionId)}`,
+              pending: `${origin}/?mp_payment=pending&session_id=${encodeURIComponent(sessionId)}`,
+              failure: `${origin}/?mp_payment=failure&session_id=${encodeURIComponent(sessionId)}`,
+            },
+            auto_return: "approved",
+            notification_url: `${origin}/api/payments/mercadopago/webhook`,
+          }),
+        });
+        if (prefRes.ok) {
+          const prefData = await prefRes.json();
+          if (prefData?.init_point) {
+            mpUrl = prefData.init_point;
+            checkoutMode = "checkout_pro";
+          }
+        }
+      } catch (prefErr) {
+        console.warn("Checkout Pro preference creation fallback to link:", prefErr);
+      }
+    }
 
     return res.json({
       sessionId,
       refCode,
       mpUrl,
-      checkoutMode: "link",
+      checkoutMode,
     });
   } catch (err) {
     console.error("Error in /api/payments/create-session:", err);
@@ -1409,16 +1586,117 @@ app.get("/api/payments/session/:sessionId", async (req, res) => {
   });
 });
 
-// Payment link verification endpoints (Mercado Pago direct links & auto-return URL mode)
-app.post("/api/payments/mercadopago/verify", (_req, res) => {
-  return res.json({ approved: false, reason: "link_mode_only" });
+// Real Mercado Pago API verification on return URL (?payment_id=...&session_id=...)
+app.post("/api/payments/mercadopago/verify", async (req, res) => {
+  try {
+    const { paymentId, sessionId, visitorId } = req.body || {};
+    const cleanPaymentId = typeof paymentId === "string" || typeof paymentId === "number" ? String(paymentId).trim() : "";
+    if (!cleanPaymentId) {
+      return res.json({ approved: false, reason: "missing_payment_id" });
+    }
+
+    const cfg = await readMonetizationConfigServer();
+    const verification = await verifyMercadoPagoPaymentOnApi(cleanPaymentId, cfg.passAmountArs);
+    if (!verification.approved || !verification.mpPaymentId) {
+      return res.json({
+        approved: false,
+        reason: verification.reason || "payment_not_approved",
+        mpStatus: verification.mpStatus,
+      });
+    }
+
+    const cleanVisitor = sanitizeIdParam(visitorId, 4, 128) || "vis_mp_verify";
+    const existingClaimer = claimedMpPayments.get(verification.mpPaymentId);
+    if (existingClaimer && existingClaimer !== cleanVisitor && cleanVisitor !== "vis_mp_verify") {
+      return res.json({ approved: false, reason: "already_claimed" });
+    }
+
+    claimedMpPayments.set(verification.mpPaymentId, existingClaimer || cleanVisitor);
+    saveClaimedMpPaymentsDisk();
+
+    const targetSessionId =
+      sanitizeIdParam(sessionId, 8, 128) ||
+      sanitizeIdParam(verification.externalReference, 8, 128);
+
+    if (targetSessionId) {
+      const approved = await approvePaymentSession(
+        targetSessionId,
+        "mercadopago",
+        `mp_op_${verification.mpPaymentId}`
+      );
+      if (approved) {
+        return res.json({
+          approved: true,
+          sessionId: approved.sessionId,
+          approvalProof: approved.approvalProof,
+        });
+      }
+    }
+
+    const newSessionId = `ps_mp_${crypto.randomBytes(10).toString("hex")}`;
+    const nowIso = new Date().toISOString();
+    const session: ServerPaymentSession = {
+      sessionId: newSessionId,
+      visitorId: cleanVisitor,
+      provider: "mercadopago",
+      status: "approved",
+      pendingType: "pass",
+      refCode: `MP-${verification.mpPaymentId.slice(-6)}`,
+      approvalProof: signApprovalProof(newSessionId, cleanVisitor, "mercadopago"),
+      paymentRef: `mp_op_${verification.mpPaymentId}`,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    paymentSessions.set(newSessionId, session);
+    savePaymentSessionsDisk();
+    return res.json({
+      approved: true,
+      sessionId: session.sessionId,
+      approvalProof: session.approvalProof,
+    });
+  } catch (e) {
+    console.error("Error in /api/payments/mercadopago/verify:", e);
+    return res.status(500).json({ approved: false, reason: "server_error" });
+  }
 });
 
-app.post("/api/payments/mercadopago/webhook", (_req, res) => {
+// Live Mercado Pago Webhook (verifies real payment status via Mercado Pago API and unlocks SSE session)
+app.post("/api/payments/mercadopago/webhook", async (req, res) => {
+  try {
+    const topic = String(req.body?.type || req.body?.topic || req.query?.topic || req.query?.type || "").toLowerCase();
+    const paymentIdRaw =
+      req.body?.data?.id ||
+      req.query?.["data.id"] ||
+      req.query?.id ||
+      "";
+    const paymentId = paymentIdRaw ? String(paymentIdRaw).trim() : "";
+
+    if (paymentId && (!topic || topic.includes("payment")) && getMercadoPagoAccessToken()) {
+      const cfg = await readMonetizationConfigServer();
+      const verification = await verifyMercadoPagoPaymentOnApi(paymentId, cfg.passAmountArs);
+      if (verification.approved && verification.mpPaymentId && verification.externalReference) {
+        const cleanSessionId = sanitizeIdParam(verification.externalReference, 8, 128);
+        if (cleanSessionId) {
+          const existingSession = paymentSessions.get(cleanSessionId);
+          if (existingSession?.visitorId) {
+            claimedMpPayments.set(verification.mpPaymentId, existingSession.visitorId);
+            saveClaimedMpPaymentsDisk();
+          }
+          await approvePaymentSession(
+            cleanSessionId,
+            "mercadopago",
+            `mp_op_${verification.mpPaymentId}`
+          );
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Error handling Mercado Pago webhook:", e);
+  }
   return res.status(200).json({ received: true });
 });
 
-// Auto-Return URL Token or Fallback Code Verification (server-verified against Firestore config hashes)
+// Auto-Return URL Token Verification (server-verified against config hash)
 app.post("/api/payments/verify-return", async (req, res) => {
   try {
     const { token, sessionId, visitorId } = req.body || {};
@@ -1478,17 +1756,41 @@ app.post("/api/payments/verify-return", async (req, res) => {
   }
 });
 
+// Strict Mercado Pago Operation Number Validation (verifies directly against Mercado Pago API)
 app.post("/api/payments/verify-operation", async (req, res) => {
   try {
     const { operationNumber, sessionId, visitorId } = req.body || {};
     const cleanOp = typeof operationNumber === "string" ? operationNumber.trim() : "";
-    if (!cleanOp || cleanOp.length < 3) {
+    if (!cleanOp || cleanOp.length < 4) {
       return res.json({ approved: false, reason: "invalid_operation_number" });
     }
 
+    const cfg = await readMonetizationConfigServer();
+    const verification = await verifyMercadoPagoPaymentOnApi(cleanOp, cfg.passAmountArs);
+    if (!verification.approved || !verification.mpPaymentId) {
+      return res.json({
+        approved: false,
+        reason: verification.reason || "payment_not_approved",
+        mpStatus: verification.mpStatus,
+      });
+    }
+
+    const cleanVisitor = sanitizeIdParam(visitorId, 4, 128) || "vis_op_verify";
+    const existingClaimer = claimedMpPayments.get(verification.mpPaymentId);
+    if (existingClaimer && existingClaimer !== cleanVisitor) {
+      return res.json({ approved: false, reason: "already_claimed" });
+    }
+
+    claimedMpPayments.set(verification.mpPaymentId, cleanVisitor);
+    saveClaimedMpPaymentsDisk();
+
     const cleanSessionId = sanitizeIdParam(sessionId, 8, 128);
     if (cleanSessionId) {
-      const approved = await approvePaymentSession(cleanSessionId, "mercadopago", `mp_op_${cleanOp}`);
+      const approved = await approvePaymentSession(
+        cleanSessionId,
+        "mercadopago",
+        `mp_op_${verification.mpPaymentId}`
+      );
       if (approved) {
         return res.json({
           approved: true,
@@ -1499,7 +1801,6 @@ app.post("/api/payments/verify-operation", async (req, res) => {
     }
 
     const newSessionId = `ps_op_${crypto.randomBytes(10).toString("hex")}`;
-    const cleanVisitor = sanitizeIdParam(visitorId, 4, 128) || "vis_op_verify";
     const nowIso = new Date().toISOString();
     const session: ServerPaymentSession = {
       sessionId: newSessionId,
@@ -1507,9 +1808,9 @@ app.post("/api/payments/verify-operation", async (req, res) => {
       provider: "mercadopago",
       status: "approved",
       pendingType: "pass",
-      refCode: `MP-${cleanOp.slice(0, 8).toUpperCase()}`,
+      refCode: `MP-${verification.mpPaymentId.slice(-8).toUpperCase()}`,
       approvalProof: signApprovalProof(newSessionId, cleanVisitor, "mercadopago"),
-      paymentRef: `mp_op_${cleanOp}`,
+      paymentRef: `mp_op_${verification.mpPaymentId}`,
       createdAt: nowIso,
       updatedAt: nowIso,
     };

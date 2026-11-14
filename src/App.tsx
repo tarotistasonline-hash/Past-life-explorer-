@@ -11,7 +11,7 @@ import { CrystalBallLoader } from "./components/CrystalBallLoader";
 import { StarfieldBackground } from "./components/StarfieldBackground";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Globe } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Globe, ExternalLink } from "lucide-react";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
 import {
@@ -552,7 +552,11 @@ export default function App() {
           const res = await fetch("/api/payments/mercadopago/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId, sessionId: sessionIdParam }),
+            body: JSON.stringify({
+              paymentId,
+              sessionId: sessionIdParam,
+              visitorId: getOrCreateVisitorId(),
+            }),
           });
           if (res.ok) {
             const json = await res.json();
@@ -760,11 +764,11 @@ export default function App() {
           onClick={() => setActiveMainSection("TAROT")}
           className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
             activeMainSection === "TAROT"
-              ? "bg-gradient-to-r from-amber-600/60 to-purple-800/80 text-amber-200 border border-amber-500/60 shadow-md"
-              : "text-amber-400/80 hover:text-amber-200"
+              ? "bg-gradient-to-r from-violet-600 to-purple-700 text-white border border-violet-300/60 shadow-md"
+              : "text-violet-300 hover:text-violet-100"
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <Sparkles className="w-3.5 h-3.5 text-violet-200" />
           <span>{t("navTarot")}</span>
         </button>
 
@@ -934,6 +938,42 @@ export default function App() {
           runPendingConsultationIfAny();
         }}
       />
+
+      {/* Visible Payment Banner (Mercado Pago) */}
+      {monetizationCfg.paywallEnabled && (
+        <section
+          aria-label="Medio de pago"
+          className="w-full max-w-4xl mt-6 bg-[#0f0918]/90 border border-amber-500/35 rounded-2xl p-4 backdrop-blur-md shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 z-20 text-xs font-gothic"
+        >
+          <div className="space-y-1">
+            <span className="font-cinzel font-bold text-amber-200 block">
+              Desbloquear consultas ilimitadas
+            </span>
+            <p className="text-purple-300/80 text-[11px]">
+              Primeras 2 consultas 100% gratis. Desbloquea con Mercado Pago:
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <a
+              href={getEffectiveMpUrl(monetizationCfg)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
+            >
+              <span>Desbloquear con Mercado Pago</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsPaywallOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-amber-500/40 text-amber-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
+            >
+              Ver Pase / Ingresar Comprobante
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Footer with Real Visitor Counter */}
       <footer className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between py-4 text-[11px] font-gothic text-purple-400/70 z-20 border-t border-purple-900/30 mt-6 gap-3">

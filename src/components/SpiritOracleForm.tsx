@@ -463,7 +463,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => onOpenPaywall?.()}
-                  className="px-4 py-2 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-[11px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_14px_rgba(0,158,227,0.35)]"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)]"
                 >
                   Desbloquear con Mercado Pago{passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}
                 </a>
@@ -505,7 +505,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => onOpenPaywall?.()}
-                  className="px-3.5 py-2 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_14px_rgba(0,158,227,0.35)]"
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)]"
                 >
                   {language === "es"
                     ? `Desbloquear con Mercado Pago${passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}`
@@ -543,7 +543,7 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => onOpenPaywall?.()}
-                  className="px-4 py-2 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_15px_rgba(0,158,227,0.4)]"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_18px_rgba(245,158,11,0.45)]"
                 >
                   {language === "es"
                     ? `Desbloquear con Mercado Pago${passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}`

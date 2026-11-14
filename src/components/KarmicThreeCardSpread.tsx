@@ -8,6 +8,7 @@ import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { saveSpreadToGrimorio } from "../lib/grimorioStorage";
 import { copyMysticShareText, downloadParchmentImage } from "../lib/parchmentExport";
 import { getAdminHeaders, isAdminSession } from "../lib/adminTracking";
+import { getCoherentKarmicSpreadFallback } from "../lib/oracleCoherence";
 import {
   Sparkles,
   Volume2,
@@ -101,7 +102,7 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
   };
 
   const generateFallbackSynthesis = (c1: DailyArcana, c2: DailyArcana, c3: DailyArcana, name: string) => {
-    return `${name ? name + ", e" : "E"}l hilo de tu destino kármico revela que en tu pasado la energía de ${c1.name} sentó las bases de tus memorias akáshicas. En el presente, ${c2.name} representa la prueba viva que debes abrazar para trascender bloqueos. Finalmente, ${c3.name} ilumina tu sendero futuro como la llave de maestría y elevación espiritual.`;
+    return getCoherentKarmicSpreadFallback([c1.name, c2.name, c3.name], queryTopic, name, language);
   };
 
   const flipCard = (position: "past" | "present" | "future", cardObj?: DailyArcana | null) => {
@@ -172,19 +173,19 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
     <div className="w-full space-y-6">
       {/* Consultation Input Form Bar */}
       {!hasDrawn && (
-        <div className="bg-purple-950/40 border border-purple-800/60 rounded-2xl p-4 sm:p-6 backdrop-blur-md text-center max-w-xl mx-auto space-y-4 shadow-xl">
+        <div className="bg-violet-950/70 border border-violet-600/50 rounded-2xl p-4 sm:p-6 backdrop-blur-md text-center max-w-xl mx-auto space-y-4 shadow-[0_0_28px_rgba(139,92,246,0.22)]">
           <div className="space-y-1">
-            <h3 className="font-cinzel text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-indigo-200 to-amber-200">
+            <h3 className="font-cinzel text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-100 via-purple-200 to-amber-200">
               Tirada Kármica de 3 Cartas
             </h3>
-            <p className="text-xs font-gothic text-purple-300/80">
+            <p className="text-xs font-gothic text-violet-200/85">
               Revela la raíz de tu alma (Pasado), tu desafío evolutivo (Presente) y tu trascendencia (Destino).
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
             <div>
-              <label className="block text-[11px] font-cinzel text-purple-300 mb-1">
+              <label className="block text-[11px] font-cinzel text-violet-200 mb-1">
                 Tu Nombre o Iniciales
               </label>
               <input
@@ -192,11 +193,11 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
                 value={seekerName}
                 onChange={(e) => setSeekerName(e.target.value)}
                 placeholder="Ej. Helena"
-                className="w-full px-3 py-2 bg-neutral-950/80 border border-purple-700/50 rounded-xl text-purple-100 placeholder-purple-600/60 text-xs font-gothic focus:outline-none focus:border-purple-400"
+                className="w-full px-3 py-2 bg-violet-950/80 border border-violet-600/50 rounded-xl text-violet-100 placeholder-violet-300/55 text-xs font-gothic focus:outline-none focus:border-violet-400"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-cinzel text-purple-300 mb-1">
+              <label className="block text-[11px] font-cinzel text-violet-200 mb-1">
                 Intención o Pregunta
               </label>
               <input
@@ -204,7 +205,7 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
                 value={queryTopic}
                 onChange={(e) => setQueryTopic(e.target.value)}
                 placeholder="Ej. Amor, Propósito, Sanación"
-                className="w-full px-3 py-2 bg-neutral-950/80 border border-purple-700/50 rounded-xl text-purple-100 placeholder-purple-600/60 text-xs font-gothic focus:outline-none focus:border-purple-400"
+                className="w-full px-3 py-2 bg-violet-950/80 border border-violet-600/50 rounded-xl text-violet-100 placeholder-violet-300/55 text-xs font-gothic focus:outline-none focus:border-violet-400"
               />
             </div>
           </div>
@@ -213,7 +214,7 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
             type="button"
             onClick={handleStartDraw}
             disabled={isDrawing}
-            className="w-full py-3 bg-gradient-to-r from-purple-700 via-indigo-600 to-amber-600 hover:from-purple-600 hover:to-indigo-500 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wider uppercase rounded-xl transition cursor-pointer shadow-[0_0_25px_rgba(168,85,247,0.4)] flex items-center justify-center space-x-2"
+            className="w-full py-3 bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 hover:from-violet-500 hover:via-purple-500 hover:to-violet-600 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wider uppercase rounded-xl transition cursor-pointer shadow-[0_0_25px_rgba(139,92,246,0.45)] border border-violet-300/40 flex items-center justify-center space-x-2"
           >
             <Sparkles className="w-4 h-4 text-amber-300 animate-spin-slow" />
             <span>{isDrawing ? "Invocando los 3 Arcanos..." : "Barajar e Invocar Tirada Kármica"}</span>
@@ -233,6 +234,11 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
               <h3 className="font-decorative text-xl font-bold text-purple-100">
                 Pasado • Presente • Futuro
               </h3>
+              {queryTopic.trim() && (
+                <p className="text-xs font-gothic text-amber-200/90 mt-0.5 italic">
+                  Consulta: "{queryTopic.trim()}"
+                </p>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">

@@ -1349,6 +1349,28 @@ class OuijaAudioEngine {
     );
   }
 
+  /**
+   * Synchronously unlocks Web Speech API and Web Audio during a mobile user tap/submit
+   * so delayed narration (e.g. after shuffle animation or API fetch) is allowed on Android/iOS.
+   */
+  public primeSpeech() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    try {
+      const synth = window.speechSynthesis;
+      if (synth.paused) synth.resume();
+      if (!synth.speaking && !synth.pending) {
+        const silentPulse = new SpeechSynthesisUtterance(" ");
+        silentPulse.volume = 0;
+        silentPulse.rate = 10;
+        synth.speak(silentPulse);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   public speakSpiritTextFallback(
     text: string,
     onStart?: () => void,
@@ -1386,7 +1408,9 @@ class OuijaAudioEngine {
     try {
       const synth = window.speechSynthesis;
       if (synth.paused) synth.resume();
-      synth.cancel();
+      if (synth.speaking || synth.pending) {
+        synth.cancel();
+      }
 
       const utterance = new SpeechSynthesisUtterance(safeText);
       const voiceDetails = this.getSolemnVoiceDetails(targetLang);

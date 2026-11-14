@@ -10,6 +10,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { isAdminSession, getAdminHeaders } from "../lib/adminTracking";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { downloadParchmentImage, copyMysticShareText } from "../lib/parchmentExport";
+import { getCoherentTarotDrawFallback } from "../lib/oracleCoherence";
 import {
   Sparkles,
   Volume2,
@@ -60,6 +61,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
   const [revealedArcanarioIds, setRevealedArcanarioIds] = useState<number[]>([]);
   const [justFlippedArcanarioId, setJustFlippedArcanarioId] = useState<number | null>(null);
   const [selectedArcanarioCard, setSelectedArcanarioCard] = useState<DailyArcana | null>(null);
+  const [showArcanarioWrittenDesc, setShowArcanarioWrittenDesc] = useState(false);
   const [cosmicDateStr, setCosmicDateStr] = useState("");
 
   const autoNarrateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -196,7 +198,8 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
       () => {
         setIsPlayingVoice(false);
         setNarrationSection("");
-      }
+      },
+      language
     );
   };
 
@@ -207,6 +210,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     const willBeFlipped = !isFlipped;
     if (willBeFlipped) {
       audio.fadeOutForSelection();
+      audio.primeSpeech();
     }
     
     if (!isFlipped) {
@@ -235,6 +239,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
   const handleShuffleDeck = () => {
     if (isShuffling) return;
     audio.fadeOutForSelection();
+    audio.primeSpeech();
     triggerHaptic(HAPTIC_PATTERNS.tarotShuffle);
     handleStopVoice();
     setIsShuffling(true);
@@ -261,6 +266,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     if (e) e.preventDefault();
     if (isShuffling || isDrawing) return;
     audio.fadeOutForSelection();
+    audio.primeSpeech();
     setIsDrawing(true);
     setIsShuffling(true);
     handleStopVoice();
@@ -289,7 +295,14 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
         nextCard = data.arcana;
         window.dispatchEvent(new CustomEvent("ouija-consultation-recorded"));
       } else {
-        nextCard = getRandomArcana(currentArcana.id, language);
+        const raw = getRandomArcana(currentArcana.id, language);
+        const coherent = getCoherentTarotDrawFallback(
+          raw,
+          personalFocus,
+          personalName || "Buscador",
+          language
+        );
+        nextCard = { ...raw, ...coherent, isPersonalDraw: true };
       }
 
       setTimeout(() => {
@@ -307,7 +320,14 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     } catch {
       // Fallback
       setTimeout(() => {
-        const nextCard = getRandomArcana(currentArcana.id, language);
+        const raw = getRandomArcana(currentArcana.id, language);
+        const coherent = getCoherentTarotDrawFallback(
+          raw,
+          personalFocus,
+          personalName || "Buscador",
+          language
+        );
+        const nextCard: DailyArcana = { ...raw, ...coherent, isPersonalDraw: true };
         setCurrentArcana(nextCard);
         setIsDrawing(false);
         setIsShuffling(false);
@@ -324,6 +344,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
 
   const handleResetToUniversal = () => {
     handleStopVoice();
+    audio.primeSpeech();
     setIsFlipping(true);
     audio.playCardShuffle();
     const local = getUniversalArcanaForDate(new Date(), language);
@@ -353,68 +374,55 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     setRevealedArcanarioIds([]);
     setJustFlippedArcanarioId(null);
     setSelectedArcanarioCard(null);
+    setShowArcanarioWrittenDesc(false);
     setShowArcanario(true);
   };
 
   const handleShuffleArcanario = () => {
     triggerHaptic(HAPTIC_PATTERNS.tarotShuffle);
     audio.playFullDeckShuffle();
+    handleStopVoice();
     setRevealedArcanarioIds([]);
     setJustFlippedArcanarioId(null);
     setSelectedArcanarioCard(null);
+    setShowArcanarioWrittenDesc(false);
     setArcanarioDeck(buildShuffledLocalizedDeck());
   };
 
-  const handleToggleAllArcanario = () => {
+  const handleResetArcanarioSelection = () => {
     triggerHaptic(HAPTIC_PATTERNS.click);
-    if (revealedArcanarioIds.length === arcanarioDeck.length) {
-      setRevealedArcanarioIds([]);
-      setSelectedArcanarioCard(null);
-    } else {
-      audio.playCardShuffle();
-      setRevealedArcanarioIds(arcanarioDeck.map((c) => c.id));
-    }
+    handleStopVoice();
+    setRevealedArcanarioIds([]);
+    setJustFlippedArcanarioId(null);
+    setSelectedArcanarioCard(null);
+    setShowArcanarioWrittenDesc(false);
   };
 
   const handleSelectCardFromDeck = (card: DailyArcana) => {
     if (isShuffling) return;
     const localized = getLocalizedArcana(card, language);
     audio.fadeOutForSelection();
-    handleStopVoice();
+    if (autoNarrateTimeoutRef.current) clearTimeout(autoNarrateTimeoutRef.current);
     setIsFlipping(true);
-    audio.playCardShuffle();
-    setTimeout(() => {
-      audio.playTarotReveal();
-    }, 250);
     setCurrentArcana({ ...localized, isPersonalDraw: false });
     setIsFlipped(true);
     setTimeout(() => setIsFlipping(false), 700);
 
-    if (autoNarrateTimeoutRef.current) clearTimeout(autoNarrateTimeoutRef.current);
-    autoNarrateTimeoutRef.current = setTimeout(() => {
-      startNaturalNarration(localized);
-    }, 650);
+    // Start narration synchronously inside tap handler so mobile Chrome/Safari allows automatic voice playback
+    startNaturalNarration(localized);
   };
 
   const handleRevealArcanarioCard = (card: DailyArcana) => {
     const localized = getLocalizedArcana(card, language);
-    const alreadyRevealed = revealedArcanarioIds.includes(localized.id);
-
-    triggerHaptic(alreadyRevealed ? HAPTIC_PATTERNS.click : HAPTIC_PATTERNS.tarotCardFlip);
+    triggerHaptic(HAPTIC_PATTERNS.tarotCardFlip);
+    setRevealedArcanarioIds([localized.id]);
+    setJustFlippedArcanarioId(localized.id);
     setSelectedArcanarioCard(localized);
-
-    if (!alreadyRevealed) {
-      setRevealedArcanarioIds((prev) => [...prev, localized.id]);
-      setJustFlippedArcanarioId(localized.id);
-      setTimeout(() => {
-        setJustFlippedArcanarioId((prev) => (prev === localized.id ? null : prev));
-      }, 750);
-      handleSelectCardFromDeck(localized);
-    } else {
-      audio.fadeOutForSelection();
-      setCurrentArcana({ ...localized, isPersonalDraw: false });
-      setIsFlipped(true);
-    }
+    setShowArcanarioWrittenDesc(false);
+    setTimeout(() => {
+      setJustFlippedArcanarioId((prev) => (prev === localized.id ? null : prev));
+    }, 750);
+    handleSelectCardFromDeck(localized);
   };
 
   const handleCopyMessage = async () => {
@@ -476,10 +484,10 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
           <button
             onClick={handleShuffleDeck}
             disabled={isShuffling}
-            className="px-3 py-1.5 rounded-xl text-xs font-cinzel font-bold transition flex items-center space-x-1.5 cursor-pointer bg-gradient-to-r from-purple-800 to-indigo-900 hover:from-purple-700 hover:to-indigo-800 text-amber-200 border border-amber-500/40 shadow-[0_0_12px_rgba(251,191,36,0.2)] disabled:opacity-50"
+            className="px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer bg-violet-900/75 hover:bg-violet-800/85 text-violet-100 border border-violet-500/45 disabled:opacity-50"
             title={t("tarotShuffleBtn")}
           >
-            <Shuffle className={`w-3.5 h-3.5 text-amber-300 ${isShuffling ? "animate-spin" : ""}`} />
+            <Shuffle className={`w-3.5 h-3.5 text-violet-200 ${isShuffling ? "animate-spin" : ""}`} />
             <span>{isShuffling ? t("tarotShuffling") : t("tarotShuffleBtn")}</span>
           </button>
 
@@ -488,15 +496,15 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
             onClick={toggleVoicePlayback}
             className={`p-2 rounded-xl text-xs transition flex items-center justify-center cursor-pointer border ${
               isPlayingVoice
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-[0_0_12px_rgba(251,191,36,0.3)] animate-pulse"
-                : "bg-purple-950/40 text-purple-400 border-purple-900/40 hover:text-purple-200 hover:border-purple-700"
+                ? "bg-gradient-to-r from-violet-600 to-purple-700 text-white border-violet-300/60 shadow-[0_0_16px_rgba(139,92,246,0.45)] animate-pulse"
+                : "bg-violet-900/75 hover:bg-violet-800/85 text-violet-100 border-violet-500/45"
             }`}
             title={isPlayingVoice ? "Silenciar voz" : "Escuchar arcano"}
           >
             {isPlayingVoice ? (
-              <Volume2 className="w-4 h-4 text-amber-400" />
+              <Volume2 className="w-4 h-4 text-white" />
             ) : (
-              <VolumeX className="w-4 h-4 text-purple-400" />
+              <VolumeX className="w-4 h-4 text-violet-200" />
             )}
           </button>
 
@@ -507,20 +515,20 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition cursor-pointer flex items-center space-x-1 ${
               viewMode === "UNIVERSAL"
-                ? "bg-purple-800 text-purple-100 shadow-md border border-purple-500/50"
-                : "bg-purple-950/40 text-purple-400 hover:text-purple-200"
+                ? "bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-[0_0_16px_rgba(139,92,246,0.45)] border border-violet-300/60"
+                : "bg-violet-900/75 hover:bg-violet-800/85 text-violet-100 border border-violet-500/45"
             }`}
             title={t("tarotUniversalTitle")}
           >
-            <Calendar className="w-3 h-3" />
+            <Calendar className="w-3 h-3 text-violet-200" />
             <span>{t("tarotUniversalTitle")}</span>
           </button>
           <button
             onClick={() => setViewMode("PERSONAL")}
             className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition cursor-pointer ${
               viewMode === "PERSONAL"
-                ? "bg-gradient-to-r from-amber-600 to-purple-700 text-amber-100 shadow-md border border-amber-400/50"
-                : "bg-purple-950/40 text-purple-400 hover:text-purple-200"
+                ? "bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-[0_0_16px_rgba(139,92,246,0.45)] border border-violet-300/60"
+                : "bg-violet-900/75 hover:bg-violet-800/85 text-violet-100 border border-violet-500/45"
             }`}
           >
             {t("tarotPersonalDrawTitle")}
@@ -529,20 +537,20 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
             onClick={() => setViewMode("KARMIC_SPREAD")}
             className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
               viewMode === "KARMIC_SPREAD"
-                ? "bg-gradient-to-r from-indigo-700 to-purple-800 text-indigo-100 shadow-md border border-indigo-400/50"
-                : "bg-purple-950/40 text-purple-400 hover:text-purple-200"
+                ? "bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-[0_0_16px_rgba(139,92,246,0.45)] border border-violet-300/60"
+                : "bg-violet-900/75 hover:bg-violet-800/85 text-violet-100 border border-violet-500/45"
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-indigo-300" />
+            <Layers className="w-3.5 h-3.5 text-violet-200" />
             <span>Tirada 3 Cartas</span>
           </button>
           <button
             type="button"
             onClick={openArcanarioPanel}
-            className="px-3 py-1.5 rounded-xl text-xs font-cinzel font-bold transition cursor-pointer flex items-center space-x-1.5 bg-gradient-to-r from-amber-700/70 to-purple-800/80 hover:from-amber-600/80 hover:to-purple-700 text-amber-100 border border-amber-400/60 shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+            className="px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition cursor-pointer flex items-center space-x-1.5 bg-violet-900/75 hover:bg-violet-800/85 text-violet-100 border border-violet-500/45"
             title={t("tarotViewAllArcana")}
           >
-            <BookOpen className="w-3.5 h-3.5 text-amber-300" />
+            <BookOpen className="w-3.5 h-3.5 text-violet-200" />
             <span>{t("tarotViewAllArcana")}</span>
           </button>
         </div>
@@ -557,26 +565,30 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
           {viewMode === "PERSONAL" && (
         <form
           onSubmit={handleDrawPersonalCard}
-          className="mb-6 p-4 rounded-2xl bg-black/40 border border-purple-900/60 flex flex-col sm:flex-row items-center gap-3 animate-fade-in"
+          className="mb-6 p-4 rounded-2xl bg-violet-950/70 border border-violet-600/50 flex flex-col sm:flex-row items-center gap-3 animate-fade-in shadow-[0_0_24px_rgba(139,92,246,0.2)]"
         >
           <input
             type="text"
             value={personalName}
             onChange={(e) => setPersonalName(e.target.value)}
             placeholder={t("inputYourName")}
-            className="px-3.5 py-2 bg-black/60 border border-purple-800/60 rounded-xl text-xs text-purple-100 placeholder-purple-500 focus:outline-none focus:border-purple-400 w-full sm:w-1/3"
+            className="px-3.5 py-2 bg-violet-950/80 border border-violet-600/50 rounded-xl text-xs text-violet-100 placeholder-violet-300/60 focus:outline-none focus:border-violet-400 w-full sm:w-1/3"
           />
           <input
             type="text"
             value={personalFocus}
             onChange={(e) => setPersonalFocus(e.target.value)}
-            placeholder={t("inputFeeling")}
-            className="px-3.5 py-2 bg-black/60 border border-purple-800/60 rounded-xl text-xs text-purple-100 placeholder-purple-500 focus:outline-none focus:border-purple-400 flex-1"
+            placeholder={
+              language === "es"
+                ? "Tu pregunta concreta (ej: amor, trabajo, decisión)..."
+                : t("inputFeeling")
+            }
+            className="px-3.5 py-2 bg-violet-950/80 border border-violet-600/50 rounded-xl text-xs text-violet-100 placeholder-violet-300/60 focus:outline-none focus:border-violet-400 flex-1"
           />
           <button
             type="submit"
             disabled={isDrawing || isShuffling}
-            className="px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-cinzel font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-cinzel font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg border border-violet-400/50 flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
             <span>{isShuffling || isDrawing ? t("tarotShuffling") : t("tarotShuffleBtn")}</span>
@@ -661,27 +673,27 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
             <button
               onClick={handleShuffleDeck}
               disabled={isShuffling}
-              className="px-3.5 py-1.5 rounded-xl bg-purple-900/80 hover:bg-purple-800 border border-purple-500/50 text-amber-300 text-xs font-cinzel font-bold tracking-wide transition flex items-center space-x-1.5 cursor-pointer shadow-[0_0_12px_rgba(168,85,247,0.3)] disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl bg-violet-900/75 hover:bg-violet-800/85 border border-violet-500/45 text-violet-100 text-xs font-cinzel font-semibold tracking-wide transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
             >
-              <Shuffle className={`w-3.5 h-3.5 text-amber-400 ${isShuffling ? "animate-spin" : ""}`} />
+              <Shuffle className={`w-3.5 h-3.5 text-violet-200 ${isShuffling ? "animate-spin" : ""}`} />
               <span>{isShuffling ? t("tarotShuffling") : t("tarotShuffleBtn")}</span>
             </button>
 
             <button
               onClick={handleFlipCard}
               disabled={isShuffling}
-              className="px-3 py-1.5 rounded-xl bg-black/50 hover:bg-purple-950/60 border border-purple-800/60 text-purple-300 text-xs font-cinzel transition flex items-center space-x-1 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-violet-900/75 hover:bg-violet-800/85 border border-violet-500/45 text-violet-100 text-xs font-cinzel font-semibold transition flex items-center space-x-1 cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-purple-400" />
+              <RotateCcw className="w-3.5 h-3.5 text-violet-200" />
               <span>Voltear</span>
             </button>
 
             <button
               type="button"
               onClick={openArcanarioPanel}
-              className="px-3 py-1.5 rounded-xl bg-amber-950/70 hover:bg-amber-900/80 border border-amber-500/60 text-amber-200 text-xs font-cinzel font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
+              className="px-3 py-1.5 rounded-xl bg-violet-900/75 hover:bg-violet-800/85 border border-violet-500/45 text-violet-100 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
             >
-              <BookOpen className="w-3.5 h-3.5 text-amber-300" />
+              <BookOpen className="w-3.5 h-3.5 text-violet-200" />
               <span>22 Arcanos</span>
             </button>
           </div>
@@ -709,7 +721,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
                   <button
                     type="button"
                     onClick={handleFlipCard}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-purple-700 hover:from-amber-500 hover:to-purple-600 text-white text-xs font-cinzel font-bold tracking-wide transition flex items-center space-x-1.5 cursor-pointer shadow-lg"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white text-xs font-cinzel font-bold tracking-wide border border-violet-300/60 transition flex items-center space-x-1.5 cursor-pointer shadow-lg"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Voltear y Revelar Mensaje</span>
@@ -717,9 +729,9 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
                   <button
                     type="button"
                     onClick={openArcanarioPanel}
-                    className="px-4 py-2 rounded-xl bg-purple-950/70 hover:bg-purple-900 border border-amber-500/60 text-amber-200 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-violet-900/75 hover:bg-violet-800/85 border border-violet-500/45 text-violet-100 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer"
                   >
-                    <BookOpen className="w-3.5 h-3.5 text-amber-300" />
+                    <BookOpen className="w-3.5 h-3.5 text-violet-200" />
                     <span>{t("tarotViewAllArcana")}</span>
                   </button>
                 </div>
@@ -788,6 +800,11 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
             <p className="text-xs sm:text-sm text-purple-300/90 font-gothic italic">
               {currentArcana.archetype}
             </p>
+            {currentArcana.isPersonalDraw && personalFocus.trim() && (
+              <p className="text-xs text-amber-300/90 font-gothic mt-1">
+                Consulta: "{personalFocus.trim()}"
+              </p>
+            )}
 
             {/* Keyword Chips */}
             <div className="flex flex-wrap gap-1.5 mt-2.5">
@@ -1040,9 +1057,9 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
             <button
               type="button"
               onClick={openArcanarioPanel}
-              className="px-3.5 py-2 rounded-xl bg-purple-950/70 hover:bg-purple-900 border border-amber-500/60 text-amber-200 hover:text-amber-100 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
+              className="px-3.5 py-2 rounded-xl bg-violet-900/75 hover:bg-violet-800/85 border border-violet-500/45 text-violet-100 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
             >
-              <BookOpen className="w-3.5 h-3.5 text-amber-300" />
+              <BookOpen className="w-3.5 h-3.5 text-violet-200" />
               <span>{t("tarotViewAllArcana")}</span>
             </button>
           </div>
@@ -1062,7 +1079,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
             onClick={() => setShowArcanario(false)}
           >
             <div
-              className="relative w-full max-w-5xl max-h-[90vh] bg-[#0e081a] border border-purple-500/50 rounded-2xl p-4 sm:p-6 text-purple-100 flex flex-col shadow-[0_0_60px_rgba(147,51,234,0.45)] overflow-hidden"
+              className="relative w-full max-w-5xl max-h-[92dvh] bg-[#0e081a] border border-purple-500/50 rounded-2xl p-3.5 sm:p-6 text-purple-100 flex flex-col shadow-[0_0_60px_rgba(147,51,234,0.45)] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -1074,7 +1091,9 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
                       {t("tarotAllArcanaTitle")}
                     </h4>
                     <p className="text-[11px] font-gothic text-purple-300/85">
-                      Los 22 arcanos están boca abajo: elige uno para darlo vuelta y revelar su figura y mensaje.
+                      {selectedArcanarioCard
+                        ? "Escucha el mensaje revelado por voz o despliega la lectura escrita si lo deseas."
+                        : "Los 22 arcanos están boca abajo: elige uno para darlo vuelta y escuchar su mensaje."}
                     </p>
                   </div>
                 </div>
@@ -1084,20 +1103,10 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
                     type="button"
                     onClick={handleShuffleArcanario}
                     className="px-2.5 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-600/60 text-amber-200 text-[11px] font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer"
-                    title="Mezclar y volver a ocultar los 22 arcanos"
+                    title="Mezclar los 22 arcanos boca abajo"
                   >
                     <Shuffle className="w-3.5 h-3.5 text-amber-300" />
                     <span>Mezclar</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleToggleAllArcanario}
-                    className="px-2.5 py-1.5 rounded-xl bg-black/50 hover:bg-purple-950 border border-purple-800/70 text-purple-200 text-[11px] font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-purple-300" />
-                    <span>
-                      {revealedArcanarioIds.length === arcanarioDeck.length ? "Ocultar Todas" : "Revelar Todas"}
-                    </span>
                   </button>
                   <button
                     type="button"
@@ -1110,141 +1119,162 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
                 </div>
               </div>
 
-              {/* Scrollable Content: 22 Face-Down Flippable Cards */}
-              <div className="flex-1 overflow-y-auto pr-1">
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-1 pb-2">
-                  {arcanarioDeck.map((card, idx) => {
-                    const isRevealed = revealedArcanarioIds.includes(card.id);
-                    const isSelected = selectedArcanarioCard?.id === card.id;
-                    const isCardFlipping = justFlippedArcanarioId === card.id;
-                    return (
-                      <button
-                        key={card.id}
-                        type="button"
-                        onClick={() => handleRevealArcanarioCard(card)}
-                        className="relative h-40 sm:h-44 w-full cursor-pointer group perspective-1000 select-none animate-tarot-float text-left"
-                        style={{
-                          animationDelay: `${(idx % 6) * 0.45}s`,
-                        }}
-                        title={isRevealed ? `${card.name} — Ver mensaje` : "Toca para dar vuelta y revelar el mensaje"}
-                      >
-                        <div
-                          className={`w-full h-full rounded-xl relative transition-transform duration-700 transform-style-3d group-hover:scale-[1.03] ${
-                            isRevealed ? "rotate-y-0" : "rotate-y-180"
-                          }`}
+              {/* Scrollable Content: Either 22 Face-Down Cards OR Selected Revealed Card */}
+              <div className="flex-1 overflow-y-auto pr-1 overscroll-contain">
+                {!selectedArcanarioCard ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 sm:gap-3 pt-1 pb-2">
+                    {arcanarioDeck.map((card, idx) => {
+                      const isRevealed = revealedArcanarioIds.includes(card.id);
+                      const isCardFlipping = justFlippedArcanarioId === card.id;
+                      return (
+                        <button
+                          key={card.id}
+                          type="button"
+                          onClick={() => handleRevealArcanarioCard(card)}
+                          className="relative h-32 sm:h-44 w-full cursor-pointer group perspective-1000 select-none animate-tarot-float text-left"
+                          style={{
+                            animationDelay: `${(idx % 6) * 0.45}s`,
+                          }}
+                          title="Toca para elegir y revelar este arcano"
                         >
-                          {/* FRONT FACE: Revealed Tarot de Marsella Figure */}
                           <div
-                            className={`absolute inset-0 w-full h-full rounded-xl p-1 backface-hidden border overflow-hidden ${
-                              isSelected
-                                ? "bg-purple-900/90 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.5)] ring-1 ring-amber-400/80"
-                                : "bg-[#181024] border-purple-700/70"
+                            className={`w-full h-full rounded-xl relative transition-transform duration-700 transform-style-3d group-hover:scale-[1.03] ${
+                              isRevealed ? "rotate-y-0" : "rotate-y-180"
                             }`}
-                            style={{
-                              borderColor: isSelected ? card.colorHex : undefined,
-                            }}
                           >
-                            <MarseilleCardArt
-                              arcana={card}
-                              compact
-                              isHovered={isSelected}
-                              isFlipping={isCardFlipping}
-                            />
-                          </div>
+                            {/* FRONT FACE */}
+                            <div className="absolute inset-0 w-full h-full rounded-xl p-1 backface-hidden border bg-[#181024] border-amber-400/70 overflow-hidden">
+                              <MarseilleCardArt
+                                arcana={card}
+                                compact
+                                isFlipping={isCardFlipping}
+                              />
+                            </div>
 
-                          {/* BACK FACE: Reverted / Face-Down Mystic Tarot Card */}
-                          <div className="absolute inset-0 w-full h-full rounded-xl p-1.5 flex flex-col justify-between backface-hidden rotate-y-180 border-2 border-amber-500/55 group-hover:border-amber-300 bg-gradient-to-b from-[#1d1036] via-[#100821] to-[#07030e] shadow-[0_0_16px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_22px_rgba(251,191,36,0.4)] transition-colors">
-                            <div className="w-full h-full border border-amber-400/45 rounded-lg p-1.5 flex flex-col items-center justify-between relative bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.22),transparent_72%)]">
-                              <div className="w-full flex justify-between text-amber-400/75 text-[9px]">
-                                <span>✦</span>
-                                <span>☽</span>
-                                <span>✦</span>
-                              </div>
-
-                              <div className="flex flex-col items-center justify-center space-y-1.5 text-center">
-                                <div className="w-11 h-11 rounded-full border border-amber-400/55 flex items-center justify-center bg-purple-950/75 relative shadow-[0_0_12px_rgba(251,191,36,0.25)]">
-                                  <div className="absolute inset-1 rounded-full border border-purple-400/40 animate-spin-reverse" />
-                                  <Eye className="w-4 h-4 text-amber-300 group-hover:scale-110 transition-transform" />
+                            {/* BACK FACE: Reverted / Face-Down Mystic Tarot Card */}
+                            <div className="absolute inset-0 w-full h-full rounded-xl p-1.5 flex flex-col justify-between backface-hidden rotate-y-180 border-2 border-amber-500/55 group-hover:border-amber-300 bg-gradient-to-b from-[#1d1036] via-[#100821] to-[#07030e] shadow-[0_0_16px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_22px_rgba(251,191,36,0.4)] transition-colors">
+                              <div className="w-full h-full border border-amber-400/45 rounded-lg p-1.5 flex flex-col items-center justify-between relative bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.22),transparent_72%)]">
+                                <div className="w-full flex justify-between text-amber-400/75 text-[9px]">
+                                  <span>✦</span>
+                                  <span>☽</span>
+                                  <span>✦</span>
                                 </div>
-                                <span className="text-[8px] font-cinzel font-bold uppercase tracking-[0.16em] text-amber-300/90">
-                                  Arcano ?
-                                </span>
-                                <span className="text-[8px] text-purple-300/90 font-gothic italic leading-tight">
-                                  Toca para revelar
-                                </span>
-                              </div>
 
-                              <div className="w-full flex justify-between text-amber-400/75 text-[9px]">
-                                <span>✦</span>
-                                <span>☉</span>
-                                <span>✦</span>
+                                <div className="flex flex-col items-center justify-center space-y-1.5 text-center">
+                                  <div className="w-11 h-11 rounded-full border border-amber-400/55 flex items-center justify-center bg-purple-950/75 relative shadow-[0_0_12px_rgba(251,191,36,0.25)]">
+                                    <div className="absolute inset-1 rounded-full border border-purple-400/40 animate-spin-reverse" />
+                                    <Eye className="w-4 h-4 text-amber-300 group-hover:scale-110 transition-transform" />
+                                  </div>
+                                  <span className="text-[8px] font-cinzel font-bold uppercase tracking-[0.16em] text-amber-300/90">
+                                    Arcano ?
+                                  </span>
+                                  <span className="text-[8px] text-purple-300/90 font-gothic italic leading-tight">
+                                    Toca para elegir
+                                  </span>
+                                </div>
+
+                                <div className="w-full flex justify-between text-amber-400/75 text-[9px]">
+                                  <span>✦</span>
+                                  <span>☉</span>
+                                  <span>✦</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {selectedArcanarioCard && (
-                <div className="mt-3 shrink-0 rounded-2xl border border-amber-500/55 bg-gradient-to-r from-purple-950/95 via-[#160b29] to-indigo-950/90 p-3 sm:p-4 shadow-[0_0_25px_rgba(251,191,36,0.22)] animate-fade-in">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-800/60 pb-2 mb-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-cinzel font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                        Arcano {selectedArcanarioCard.romanNumber}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center space-y-4 py-2 animate-fade-in">
+                    {/* Card Title Badge */}
+                    <div className="text-center space-y-1">
+                      <span className="text-[11px] font-cinzel font-bold px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        Arcano {selectedArcanarioCard.romanNumber} • {selectedArcanarioCard.astrologicalSign}
                       </span>
-                      <span className="text-sm sm:text-base font-cinzel font-bold text-amber-100">
+                      <h5 className="text-base sm:text-xl font-cinzel font-bold text-amber-100">
                         {selectedArcanarioCard.marseilleTitle || selectedArcanarioCard.name} — {selectedArcanarioCard.name}
-                      </span>
-                      <span className="text-[11px] font-gothic text-purple-300">
-                        • {selectedArcanarioCard.astrologicalSign}
-                      </span>
+                      </h5>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    {/* Revealed Marseille Card Art Spotlight */}
+                    <div
+                      className="w-44 sm:w-52 h-[290px] sm:h-[340px] rounded-2xl p-2 border-2 bg-gradient-to-b from-[#180e2b] via-[#120822] to-[#0a0414] overflow-hidden animate-tarot-float"
+                      style={{
+                        borderColor: selectedArcanarioCard.colorHex,
+                        boxShadow: `0 0 32px ${selectedArcanarioCard.colorHex}65, inset 0 0 20px ${selectedArcanarioCard.colorHex}35`,
+                      }}
+                    >
+                      <MarseilleCardArt
+                        cardId={selectedArcanarioCard.id}
+                        romanNumber={selectedArcanarioCard.romanNumber}
+                        marseilleTitle={selectedArcanarioCard.marseilleTitle}
+                        name={selectedArcanarioCard.name}
+                        colorHex={selectedArcanarioCard.colorHex}
+                        isFlipping={justFlippedArcanarioId === selectedArcanarioCard.id}
+                        isHovered={true}
+                      />
+                    </div>
+
+                    {/* Voice Status + Optional Written Description Controls */}
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                       <button
                         type="button"
                         onClick={toggleVoicePlayback}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-cinzel transition flex items-center space-x-1 cursor-pointer border ${
+                        className={`px-3.5 py-2 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer border ${
                           isPlayingVoice
-                            ? "bg-amber-500/20 text-amber-300 border-amber-500/60"
-                            : "bg-purple-950/70 text-purple-200 border-purple-700/60 hover:border-amber-400/60"
+                            ? "bg-amber-500/20 text-amber-200 border-amber-400/60 shadow-[0_0_14px_rgba(251,191,36,0.3)] animate-pulse"
+                            : "bg-purple-950/80 text-purple-100 border-purple-600/60 hover:border-amber-400/60"
                         }`}
                       >
-                        {isPlayingVoice ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-                        <span>{isPlayingVoice ? "Silenciar" : "Escuchar"}</span>
+                        {isPlayingVoice ? <Volume2 className="w-4 h-4 text-amber-300" /> : <VolumeX className="w-4 h-4 text-purple-300" />}
+                        <span>{isPlayingVoice ? "Escuchando por Voz (Silenciar)" : "Escuchar por Voz"}</span>
                       </button>
+
                       <button
                         type="button"
-                        onClick={() => setShowArcanario(false)}
-                        className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-600 to-purple-700 hover:from-amber-500 hover:to-purple-600 text-white text-[11px] font-cinzel font-bold transition cursor-pointer shadow"
+                        onClick={() => setShowArcanarioWrittenDesc((prev) => !prev)}
+                        className="px-3.5 py-2 rounded-xl bg-purple-950/70 hover:bg-purple-900 border border-purple-600/60 text-purple-100 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer"
                       >
-                        Ver Lectura Completa
+                        <Scroll className="w-4 h-4 text-amber-300" />
+                        <span>{showArcanarioWrittenDesc ? "Ocultar descripción escrita" : "Ver descripción escrita"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleResetArcanarioSelection}
+                        className="px-3.5 py-2 rounded-xl bg-black/55 hover:bg-purple-950 border border-purple-700/60 text-purple-200 text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-purple-300" />
+                        <span>Elegir otro arcano</span>
                       </button>
                     </div>
-                  </div>
 
-                  <p className="text-xs sm:text-sm font-gothic italic text-purple-100 leading-relaxed mb-2">
-                    "{selectedArcanarioCard.dailyMessage}"
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-gothic">
-                    <div className="p-2 rounded-xl bg-black/35 border border-purple-800/50 text-purple-200">
-                      <span className="font-cinzel font-bold text-amber-300 uppercase text-[10px] block mb-0.5">
-                        {t("tarotPracticalAdvice")}
-                      </span>
-                      {selectedArcanarioCard.practicalAdvice}
-                    </div>
-                    <div className="p-2 rounded-xl bg-black/35 border border-amber-700/40 text-amber-200 italic">
-                      <span className="font-cinzel font-bold text-amber-300 uppercase not-italic text-[10px] block mb-0.5">
-                        {t("tarotDailyAffirmation")}
-                      </span>
-                      "{selectedArcanarioCard.dailyAffirmation}"
-                    </div>
+                    {/* Optional Written Description (Hidden by Default) */}
+                    {showArcanarioWrittenDesc && (
+                      <div className="w-full max-w-2xl rounded-2xl border border-amber-500/45 bg-gradient-to-r from-purple-950/90 via-[#160b29] to-indigo-950/85 p-4 space-y-3 animate-fade-in">
+                        <p className="text-xs sm:text-sm font-gothic italic text-purple-100 leading-relaxed">
+                          "{selectedArcanarioCard.dailyMessage}"
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-gothic">
+                          <div className="p-2.5 rounded-xl bg-black/35 border border-purple-800/50 text-purple-200">
+                            <span className="font-cinzel font-bold text-amber-300 uppercase text-[10px] block mb-0.5">
+                              {t("tarotPracticalAdvice")}
+                            </span>
+                            {selectedArcanarioCard.practicalAdvice}
+                          </div>
+                          <div className="p-2.5 rounded-xl bg-black/35 border border-amber-700/40 text-amber-200 italic">
+                            <span className="font-cinzel font-bold text-amber-300 uppercase not-italic text-[10px] block mb-0.5">
+                              {t("tarotDailyAffirmation")}
+                            </span>
+                            "{selectedArcanarioCard.dailyAffirmation}"
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>,
           document.body

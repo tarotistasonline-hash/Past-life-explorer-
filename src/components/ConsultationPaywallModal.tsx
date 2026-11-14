@@ -9,9 +9,6 @@ import {
   Loader2,
   RefreshCw,
   KeyRound,
-  CreditCard,
-  Heart,
-  Check,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import { SupportedLanguage } from "../types";
@@ -62,12 +59,12 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleLimitReached: "Has completado tus 2 consultas gratuitas",
     titleUpgrade: "Desbloquea Lecturas Ilimitadas",
     subtitle:
-      "Disfruta de tus primeras 2 consultas 100% gratis. El pase ilimitado aplica a partir de la 3ª consulta mediante Mercado Pago, Stripe o Ko-fi.",
+      "Disfruta de tus primeras 2 consultas 100% gratis. El pase ilimitado aplica a partir de la 3ª consulta mediante Mercado Pago.",
     queuedPastLife: "Tu lectura de vida pasada está lista y comenzará automáticamente al confirmarse tu pago.",
     queuedQuestion: "Tu pregunta a la Tabla Ouija está lista y se responderá automáticamente al confirmarse tu pago.",
     includes1: "Primeras 2 consultas 100% gratuitas en vidas pasadas y tabla ouija.",
     includes2: "Lecturas ilimitadas de vidas pasadas y preguntas akáshicas sin restricciones.",
-    includes3: "Desbloqueo inmediato con link de Mercado Pago, Stripe o número de operación.",
+    includes3: "Desbloqueo inmediato con Mercado Pago o número de operación.",
     payMp: "Desbloquear con Mercado Pago",
     waitingAutoTitle: "Esperando confirmación automática...",
     waitingAutoDesc: "No cierres esta ventana: apenas finalices el pago se desbloqueará y ejecutará tu lectura.",
@@ -82,12 +79,12 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleLimitReached: "You have used your 2 free consultations",
     titleUpgrade: "Unlock Unlimited Readings",
     subtitle:
-      "Enjoy your first 2 consultations 100% free. Unlimited access applies from the 3rd consultation via Mercado Pago, Stripe, or Ko-fi.",
+      "Enjoy your first 2 consultations 100% free. Unlimited access applies from the 3rd consultation via Mercado Pago.",
     queuedPastLife: "Your past-life reading is queued and will start automatically upon confirmation.",
     queuedQuestion: "Your Ouija question is queued and will be answered automatically upon confirmation.",
     includes1: "First 2 consultations 100% free for past lives and Ouija.",
     includes2: "Unlimited past-life readings and Akashic questions without restrictions.",
-    includes3: "Instant unlock via Mercado Pago, Stripe, or operation number.",
+    includes3: "Instant unlock via Mercado Pago or operation number.",
     payMp: "Unlock with Mercado Pago",
     waitingAutoTitle: "Waiting for automatic confirmation...",
     waitingAutoDesc: "Keep this window open: your reading will unlock automatically once paid.",
@@ -102,12 +99,12 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleLimitReached: "Você usou suas 2 consultas gratuitas",
     titleUpgrade: "Desbloqueie Leituras Ilimitadas",
     subtitle:
-      "Aproveite suas primeiras 2 consultas 100% gratuitas. O passe ilimitado se aplica a partir da 3ª consulta via Mercado Pago, Stripe ou Ko-fi.",
+      "Aproveite suas primeiras 2 consultas 100% gratuitas. O passe ilimitado se aplica a partir da 3ª consulta via Mercado Pago.",
     queuedPastLife: "Sua leitura de vida passada está pronta e começará automaticamente após a confirmação.",
     queuedQuestion: "Sua pergunta na Tábua Ouija está pronta e será respondida automaticamente após a confirmação.",
     includes1: "Primeiras 2 consultas 100% gratuitas em vidas passadas e Ouija.",
     includes2: "Leituras ilimitadas de vidas passadas e perguntas akáshicas.",
-    includes3: "Desbloqueio instantâneo via Mercado Pago, Stripe ou número de operação.",
+    includes3: "Desbloqueio instantâneo via Mercado Pago ou número de operação.",
     payMp: "Desbloquear com Mercado Pago",
     waitingAutoTitle: "Aguardando confirmação automática...",
     waitingAutoDesc: "Mantenha esta janela aberta: sua leitura começará automaticamente após o pagamento.",
@@ -122,12 +119,12 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleLimitReached: "Vous avez utilisé vos 2 consultations gratuites",
     titleUpgrade: "Débloquez des Lectures Illimitées",
     subtitle:
-      "Profitez de vos 2 premières consultations 100% gratuites. L'accès illimité s'applique à partir de la 3ème consultation via Mercado Pago, Stripe ou Ko-fi.",
+      "Profitez de vos 2 premières consultations 100% gratuites. L'accès illimité s'applique à partir de la 3ème consultation via Mercado Pago.",
     queuedPastLife: "Votre lecture de vie antérieure est prête et démarrera automatiquement.",
     queuedQuestion: "Votre question Ouija est prête et recevra sa réponse automatiquement.",
     includes1: "2 premières consultations 100% gratuites pour vies antérieures et Ouija.",
     includes2: "Lectures illimitées de vies antérieures et questions akashiques.",
-    includes3: "Déblocage instantané via Mercado Pago, Stripe ou numéro d'opération.",
+    includes3: "Déblocage instantané via Mercado Pago ou numéro d'opération.",
     payMp: "Débloquer avec Mercado Pago",
     waitingAutoTitle: "En attente de confirmation...",
     waitingAutoDesc: "Gardez cette fenêtre ouverte : votre lecture démarrera automatiquement dès validation.",
@@ -142,12 +139,12 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleLimitReached: "Hai esaurito i 2 consulti gratuiti",
     titleUpgrade: "Sblocca Letture Illimitate",
     subtitle:
-      "Goditi i primi 2 consulti 100% gratuiti. L'accesso illimitato si applica dal 3° consulto tramite Mercado Pago, Stripe o Ko-fi.",
+      "Goditi i primi 2 consulti 100% gratuiti. L'accesso illimitato si applica dal 3° consulto tramite Mercado Pago.",
     queuedPastLife: "La tua lettura delle vite passate è pronta e inizierà automaticamente.",
     queuedQuestion: "La tua domanda Ouija è pronta e riceverà risposta automaticamente.",
     includes1: "Primi 2 consulti 100% gratuiti per vite passate e Ouija.",
     includes2: "Letture illimitate delle vite passate e domande akashiche.",
-    includes3: "Sblocco istantaneo tramite Mercado Pago, Stripe o numero di operazione.",
+    includes3: "Sblocco istantaneo tramite Mercado Pago o numero di operazione.",
     payMp: "Sblocca con Mercado Pago",
     waitingAutoTitle: "In attesa di conferma...",
     waitingAutoDesc: "Tieni aperta questa finestra: la lettura inizierà automaticamente dopo il pagamento.",
@@ -162,12 +159,12 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleLimitReached: "Du hast deine 2 kostenlosen Abfragen aufgebraucht",
     titleUpgrade: "Unbegrenzte Lesungen freischalten",
     subtitle:
-      "Genieße deine ersten 2 Abfragen 100% kostenlos. Der unbegrenzte Zugang gilt ab der 3. Abfrage über Mercado Pago, Stripe oder Ko-fi.",
+      "Genieße deine ersten 2 Abfragen 100% kostenlos. Der unbegrenzte Zugang gilt ab der 3. Abfrage über Mercado Pago.",
     queuedPastLife: "Deine Lesung über ein früheres Leben steht bereit und startet automatisch.",
     queuedQuestion: "Deine Ouija-Frage steht bereit und wird automatisch beantwortet.",
     includes1: "Erste 2 Abfragen 100% kostenlos für frühere Leben und Ouija.",
     includes2: "Unbegrenzte Lesungen früherer Leben und Akasha-Fragen.",
-    includes3: "Sofortige Freischaltung über Mercado Pago, Stripe oder Vorgangsnummer.",
+    includes3: "Sofortige Freischaltung über Mercado Pago oder Vorgangsnummer.",
     payMp: "Mit Mercado Pago freischalten",
     waitingAutoTitle: "Warte auf Bestätigung...",
     waitingAutoDesc: "Lass dieses Fenster offen: Deine Lesung startet sofort automatisch nach Zahlung.",
@@ -301,13 +298,13 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
     [language, sessionId, triggerUnlockSuccess]
   );
 
-  // Manual operation verification handler
+  // Manual operation verification handler (verified against real Mercado Pago API)
   const handleValidateOperation = async (e: React.FormEvent) => {
     e.preventDefault();
     triggerHaptic(HAPTIC_PATTERNS.click);
     const cleanOp = operationNumber.trim();
-    if (!cleanOp || cleanOp.length < 3) {
-      setOpFeedback({ type: "err", msg: "Por favor ingresa un número de operación válido." });
+    if (!cleanOp || cleanOp.length < 4) {
+      setOpFeedback({ type: "err", msg: "Por favor ingresa un número de operación válido de Mercado Pago." });
       return;
     }
 
@@ -326,15 +323,26 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
       });
       const data = await res.json();
       if (res.ok && data?.approved && data?.approvalProof) {
-        setOpFeedback({ type: "ok", msg: "¡Operación validada con éxito! Acceso inmediato concedido." });
+        setOpFeedback({ type: "ok", msg: "¡Pago verificado en Mercado Pago! Acceso inmediato concedido." });
         setTimeout(() => {
           triggerUnlockSuccess(data.approvalProof, data.sessionId);
         }, 600);
       } else {
-        setOpFeedback({ type: "err", msg: "No se pudo validar el número de operación. Inténtalo nuevamente." });
+        let errMsg = "No se encontró un pago aprobado en Mercado Pago con ese número de operación.";
+        if (data?.reason === "mp_token_not_configured") {
+          errMsg =
+            "Falta configurar MERCADOPAGO_ACCESS_TOKEN en los Secrets del servidor para validar pagos reales.";
+        } else if (data?.reason === "already_claimed") {
+          errMsg = "Ese número de operación de Mercado Pago ya fue utilizado anteriormente.";
+        } else if (data?.reason === "amount_mismatch") {
+          errMsg = "El importe del comprobante no coincide con el valor del pase configurado.";
+        } else if (data?.reason === "payment_not_approved" && data?.mpStatus) {
+          errMsg = `El pago figura con estado "${data.mpStatus}" en Mercado Pago (debe estar aprobado).`;
+        }
+        setOpFeedback({ type: "err", msg: errMsg });
       }
     } catch {
-      setOpFeedback({ type: "err", msg: "Error de conexión al validar la operación." });
+      setOpFeedback({ type: "err", msg: "Error de conexión al validar la operación con Mercado Pago." });
     } finally {
       setIsValidatingOp(false);
     }
@@ -481,49 +489,23 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
           </div>
         ) : (
           <>
-            {/* Primary Payment Buttons: Mercado Pago, Stripe & Ko-fi */}
-            <div className="space-y-2.5 pt-1">
+            {/* Primary Payment Button: Mercado Pago */}
+            <div className="space-y-3 pt-1">
               {/* Mercado Pago Button */}
               <a
                 href={mpUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={handlePaymentClick}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-[#009EE3] hover:bg-[#008AD0] text-white font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(0,158,227,0.4)] border border-sky-300/30 transition cursor-pointer"
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_22px_rgba(245,158,11,0.45)] border border-amber-200/70 transition cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>{copy.payMp}</span>
                 {cfg.passPriceArs.trim() && (
-                  <span className="px-2 py-0.5 rounded bg-black/25 font-mono text-[11px]">
+                  <span className="px-2 py-0.5 rounded bg-black/20 text-neutral-950 font-mono text-[11px] font-bold">
                     {cfg.passPriceArs.trim()}
                   </span>
                 )}
-                <ExternalLink className="w-3.5 h-3.5 opacity-90" />
-              </a>
-
-              {/* Stripe Button */}
-              <a
-                href="https://buy.stripe.com/test_fZudRa5m20kM6kXfd0gUM00"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handlePaymentClick}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-[#635BFF] hover:bg-[#5851DB] text-white font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(99,91,255,0.35)] border border-indigo-300/30 transition cursor-pointer"
-              >
-                <CreditCard className="w-4 h-4" />
-                <span>Pagar con Stripe (Tarjeta / USD)</span>
-                <ExternalLink className="w-3.5 h-3.5 opacity-90" />
-              </a>
-
-              {/* Ko-fi Button */}
-              <a
-                href="https://ko-fi.com/J3J31XDE6Q"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handlePaymentClick}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-[#29abe0] hover:bg-[#2295c5] text-white font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(41,171,224,0.35)] border border-sky-200/35 transition cursor-pointer"
-              >
-                <Heart className="w-4 h-4 text-pink-200 fill-pink-200" />
-                <span>Apoyar en Ko-fi</span>
                 <ExternalLink className="w-3.5 h-3.5 opacity-90" />
               </a>
             </div>

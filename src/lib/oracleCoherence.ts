@@ -818,3 +818,124 @@ export function getCoherentPastLifeFallback(
     },
   };
 }
+
+/**
+ * Generates a concrete, topic-coherent Tarot answer when AI is unavailable or rate-limited.
+ */
+export function getCoherentTarotDrawFallback(
+  card: {
+    name: string;
+    archetype?: string;
+    dailyMessage: string;
+    practicalAdvice: string;
+    dailyAffirmation: string;
+    meditationQuestion?: string;
+  },
+  focusQuery: string,
+  seekerName: string = "Buscador",
+  lang: string = "es"
+): {
+  dailyMessage: string;
+  practicalAdvice: string;
+  dailyAffirmation: string;
+  meditationQuestion: string;
+} {
+  const cleanQuery = (focusQuery || "").trim();
+  if (!cleanQuery) {
+    return {
+      dailyMessage: card.dailyMessage,
+      practicalAdvice: card.practicalAdvice,
+      dailyAffirmation: card.dailyAffirmation,
+      meditationQuestion: card.meditationQuestion || "",
+    };
+  }
+
+  const language = (lang || "es").toLowerCase();
+  const { topic, isYesNoQuestion } = detectQuestionTopic(cleanQuery);
+  const name = seekerName.trim() || (language === "en" ? "Seeker" : "Buscador");
+
+  if (language === "en") {
+    const topicHint: Record<QuestionTopic, string> = {
+      LOVE_RELATIONSHIP: `Regarding your question "${cleanQuery}", ${card.name} shows real emotional potential, provided you communicate clearly and act without fear.`,
+      INFIDELITY_JEALOUSY: `Regarding "${cleanQuery}", ${card.name} asks you to look directly at concrete facts and honest actions rather than reacting to anxious assumptions.`,
+      EX_RECONCILIATION: `Regarding "${cleanQuery}", ${card.name} reveals unfinished emotional ties, yet movement only succeeds if both change old patterns first.`,
+      WORK_CAREER: `On your career inquiry "${cleanQuery}", ${card.name} signals a decisive turning point where initiative and clear boundaries open better opportunities.`,
+      JOB_INTERVIEW: `Regarding "${cleanQuery}", ${card.name} favors concrete preparation and confident follow-through; your effort creates tangible momentum.`,
+      MONEY_FINANCE: `Regarding "${cleanQuery}", ${card.name} advises disciplined stewardship first, avoiding impulsive risks while consolidating steady income.`,
+      BUY_SELL_INVEST: `Regarding "${cleanQuery}", ${card.name} points toward reviewing every contract detail and waiting for balanced terms before signing.`,
+      TRAVEL_MOVING: `Regarding "${cleanQuery}", ${card.name} supports movement and relocation once practical logistics are firmly organized.`,
+      HEALTH_VITALITY: `Regarding "${cleanQuery}", ${card.name} emphasizes recovery through consistent rest, calm routines, and attentive self-care.`,
+      PREGNANCY_CHILDREN: `Regarding "${cleanQuery}", ${card.name} brings nurturing and protective energy; trust natural timing alongside calm medical guidance.`,
+      DECEASED_LOVED_ONE: `Regarding "${cleanQuery}", ${card.name} conveys peace, remembrance, and a steady spiritual bond that remains intact.`,
+      STUDIES_EXAMS: `Regarding "${cleanQuery}", ${card.name} points to solid progress when you pair focused study with steady confidence.`,
+      DECISION_YES_NO: `In direct response to "${cleanQuery}", ${card.name} leans ${isYesNoQuestion ? "toward a constructive YES once you act with clarity" : "toward decisive, conscious action"}.`,
+      GENERAL_SPIRITUAL: `Directly answering "${cleanQuery}", ${card.name} brings clarity and calls you to align intention with concrete action.`,
+    };
+
+    return {
+      dailyMessage: `${name}, ${topicHint[topic]} ${card.dailyMessage}`,
+      practicalAdvice: `Applied to "${cleanQuery}": ${card.practicalAdvice}`,
+      dailyAffirmation: card.dailyAffirmation,
+      meditationQuestion: card.meditationQuestion || `What concrete step does ${card.name} invite you to take today regarding "${cleanQuery}"?`,
+    };
+  }
+
+  const topicHintEs: Record<QuestionTopic, string> = {
+    LOVE_RELATIONSHIP: `En respuesta directa a tu consulta "${cleanQuery}", ${card.name} muestra un vínculo con potencial real si hablas con honestidad y marcas acuerdos claros desde hoy.`,
+    INFIDELITY_JEALOUSY: `Frente a tu duda "${cleanQuery}", ${card.name} te pide observar los hechos concretos y la coherencia diaria de esa persona antes de sacar conclusiones por miedo.`,
+    EX_RECONCILIATION: `Sobre tu pregunta "${cleanQuery}", ${card.name} indica que aún queda un lazo emocional pendiente, pero un regreso sano solo funciona si ambos cambian lo que antes falló.`,
+    WORK_CAREER: `Respecto a tu consulta laboral "${cleanQuery}", ${card.name} marca un giro concreto: tomar la iniciativa y ordenar prioridades te abrirá una puerta más sólida.`,
+    JOB_INTERVIEW: `Sobre tu postulación "${cleanQuery}", ${card.name} augura una señal favorable si demuestras seguridad, preparación concreta y realizas el seguimiento oportuno.`,
+    MONEY_FINANCE: `En relación con "${cleanQuery}", ${card.name} señala que la estabilidad llega ordenando cuentas, evitando gastos impulsivos y negociando con firmeza.`,
+    BUY_SELL_INVEST: `Ante tu decisión sobre "${cleanQuery}", ${card.name} recomienda revisar cada condición con lupa y cerrar el trato solo cuando los números te respalden.`,
+    TRAVEL_MOVING: `Respecto a "${cleanQuery}", ${card.name} respalda el movimiento o cambio de lugar una vez que asegures fechas, papeles y recursos básicos.`,
+    HEALTH_VITALITY: `Sobre "${cleanQuery}", ${card.name} te orienta a priorizar el descanso real, hábitos sostenibles y la escucha atenta de tu cuerpo sin postergar controles.`,
+    PREGNANCY_CHILDREN: `Respecto a "${cleanQuery}", ${card.name} trae una energía fértil y protectora; avanza con serenidad y cuidado en cada etapa.`,
+    DECEASED_LOVED_ONE: `En respuesta a "${cleanQuery}", ${card.name} transmite paz y continuidad afectiva: ese ser querido permanece en serenidad y acompañado por tu recuerdo.`,
+    STUDIES_EXAMS: `Sobre "${cleanQuery}", ${card.name} indica un resultado favorable siempre que sostengas un repaso metódico y confíes en lo que ya preparaste.`,
+    DECISION_YES_NO: `En respuesta directa a "${cleanQuery}", ${card.name} se inclina ${isYesNoQuestion ? "hacia un SÍ favorable siempre que avances con paso firme y sin dudas" : "hacia una decisión clara y consciente"}.`,
+    GENERAL_SPIRITUAL: `Respondiendo directamente a "${cleanQuery}", ${card.name} aporta claridad práctica para que actúes con firmeza y sin rodeos.`,
+  };
+
+  return {
+    dailyMessage: `${name}, ${topicHintEs[topic]} ${card.dailyMessage}`,
+    practicalAdvice: `Para "${cleanQuery}": ${card.practicalAdvice}`,
+    dailyAffirmation: card.dailyAffirmation,
+    meditationQuestion: card.meditationQuestion || `¿Qué decisión concreta te pide ${card.name} tomar hoy respecto a "${cleanQuery}"?`,
+  };
+}
+
+export function getCoherentKarmicSpreadFallback(
+  cards: [string, string, string],
+  queryTopic: string,
+  seekerName: string = "Buscador",
+  lang: string = "es"
+): string {
+  const cleanQuery = (queryTopic || "").trim() || (lang === "en" ? "your current path" : "tu situación actual");
+  const { topic } = detectQuestionTopic(cleanQuery);
+  const name = seekerName.trim() || (lang === "en" ? "Seeker" : "Buscador");
+  const [c1, c2, c3] = cards;
+
+  if ((lang || "es").toLowerCase() === "en") {
+    return `${name}, answering your question "${cleanQuery}": ${c1} in the Past shows the root that shaped this situation, ${c2} in the Present marks the concrete decision or attitude required right now, and ${c3} in the Future points to a constructive resolution once you act with clarity.`;
+  }
+
+  const closingByTopicEs: Record<QuestionTopic, string> = {
+    LOVE_RELATIONSHIP: `Para avanzar en el amor, apuesta por el diálogo sincero y hechos recíprocos.`,
+    INFIDELITY_JEALOUSY: `Confía en lo que muestran los hechos concretos y exige transparencia real.`,
+    EX_RECONCILIATION: `Solo retoma el vínculo si ves cambios reales y no promesas repetidas.`,
+    WORK_CAREER: `Tu crecimiento laboral se destraba cuando das un paso firme y valoras tu trabajo.`,
+    JOB_INTERVIEW: `Tu preparación y seguridad marcarán la diferencia para concretar la oportunidad.`,
+    MONEY_FINANCE: `Con orden y decisiones prudentes hoy, tu economía tenderá a estabilizarse.`,
+    BUY_SELL_INVEST: `Cierra la operación solo cuando las condiciones y cifras sean claras para ti.`,
+    TRAVEL_MOVING: `El cambio de rumbo es favorable si organizas primero los detalles prácticos.`,
+    HEALTH_VITALITY: `Prioriza el equilibrio físico y el descanso para recuperar tu energía vital.`,
+    PREGNANCY_CHILDREN: `Un ciclo de cuidado y creación se abre paso con calma y protección.`,
+    DECEASED_LOVED_ONE: `El lazo afectivo permanece en paz y gratitud más allá del tiempo.`,
+    STUDIES_EXAMS: `La constancia en tu estudio te dará el resultado concreto que buscas.`,
+    DECISION_YES_NO: `El panorama se inclina de forma favorable si decides con determinación hoy.`,
+    GENERAL_SPIRITUAL: `Actuar con coherencia entre lo que sientes y haces te dará la respuesta concreta.`,
+  };
+
+  return `${name}, en respuesta directa a tu pregunta "${cleanQuery}": ${c1} en el Pasado muestra el origen concreto de lo que hoy vives; ${c2} en el Presente señala exactamente qué debes ajustar o decidir ahora; y ${c3} en el Futuro anuncia el desenlace hacia el cual te diriges. ${closingByTopicEs[topic]}`;
+}
