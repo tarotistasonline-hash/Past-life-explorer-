@@ -21,5 +21,16 @@
     "paymentRef": "mp_op_123456789",
     "createdAt": "2026-11-14T00:40:55.061Z",
     "updatedAt": "2026-11-14T00:40:55.061Z"
+  },
+  {
+    "sessionId": "ps_ret_c4649e34b25b51e2dd61",
+    "visitorId": "vis_test_check",
+    "provider": "auto",
+    "status": "approved",
+    "pendingType": "pass",
+    "refCode": "AK-AUTO",
+    "approvalProof": "8aef05a46dd6bee1d6e0330340f953331a1f9ddc7aa39556562eb08cb5868c15",
+    "createdAt": "2026-11-14T15:41:13.578Z",
+    "updatedAt": "2026-11-14T15:41:13.578Z"
   }
 ]

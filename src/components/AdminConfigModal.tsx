@@ -127,12 +127,12 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
 
   if (!isOpen) return null;
 
-  const publishMonetization = async (customSuccessMsg?: string) => {
+  const publishMonetization = async (customSuccessMsg?: string, forceUpdateReturnToken = false) => {
     setSaveStatus(null);
     setIsSavingCloud(true);
     try {
       const nextCfg = { ...formCfg };
-      if (autoReturnToken.trim()) {
+      if (autoReturnToken.trim() && (!nextCfg.autoReturnTokenHash || forceUpdateReturnToken)) {
         nextCfg.autoReturnTokenHash = await sha256ExactHex(autoReturnToken);
       }
       const saved = await saveMonetizationConfig(nextCfg);
@@ -586,7 +586,8 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                       setCopiedAutoUrl(true);
                       setTimeout(() => setCopiedAutoUrl(false), 3000);
                       await publishMonetization(
-                        "¡URL copiada y activada para todos los visitantes!"
+                        "¡URL copiada y activada para todos los visitantes!",
+                        true
                       );
                     }}
                     className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-cinzel font-bold flex items-center space-x-1 cursor-pointer shrink-0"
