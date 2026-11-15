@@ -955,9 +955,24 @@ export default function App() {
                   Tienes acceso completo sin cobro. Tus visitantes ven el pase de Mercado Pago tras {monetizationCfg.freeConsultationsLimit} consultas gratuitas.
                 </p>
               </div>
-              <span className="px-3.5 py-2 rounded-xl bg-amber-950/60 border border-amber-400/50 text-amber-200 font-cinzel font-bold text-[11px] shrink-0">
-                Acceso Propietario Activo
-              </span>
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <a
+                  href={getEffectiveMpUrl(monetizationCfg)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
+                >
+                  <span>Desbloquear con Mercado Pago</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsPaywallOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-amber-500/40 text-amber-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
+                >
+                  Ver Panel de Desbloqueo
+                </button>
+              </div>
             </>
           ) : (
             <>

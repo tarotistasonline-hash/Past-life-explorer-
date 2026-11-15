@@ -457,14 +457,23 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
         <div className="mt-4 pt-3 border-t border-purple-900/40 text-[11px] font-gothic">
           <div className="flex flex-wrap items-center justify-between gap-2">
             {isCreatorUnlimited ? (
-              <span className="text-amber-300 flex items-center space-x-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>
-                  {language === "en"
-                    ? "Creator Mode active: unlimited readings and questions enabled."
-                    : "Modo Creador activo: consultas ilimitadas habilitadas."}
+              <>
+                <span className="text-amber-300 flex items-center space-x-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>
+                    {language === "en"
+                      ? "Creator Mode active: unlimited readings and questions enabled."
+                      : "Modo Creador activo: consultas ilimitadas habilitadas."}
+                  </span>
                 </span>
-              </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)]"
+                >
+                  {language === "en" ? "View Mercado Pago Panel" : "Ver panel Mercado Pago"}
+                </button>
+              </>
             ) : isPassUnlocked ? (
               <span className="text-emerald-300 flex items-center space-x-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
