@@ -42,6 +42,7 @@ export interface VisitsStats {
   todayVisits: number;
   totalConsultations: number;
   uniqueVisitorsCount: number;
+  onlineVisitors?: number;
   lastUpdated?: string;
 }
 

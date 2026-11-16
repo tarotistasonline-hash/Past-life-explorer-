@@ -22,6 +22,9 @@ export interface TranslationDictionary {
   channeledConsultations: string;
   portalOfficialRecord: string;
   portalRecordDesc: string;
+  onlineNowLabel: string;
+  onlineVisitorsTitle: string;
+  onlineExcludingCreator: string;
   closeRecord: string;
   creatorModeTitle: string;
   creatorModeActive: string;
@@ -242,6 +245,9 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     channeledConsultations: "Consultas Akáshicas Canalizadas",
     portalOfficialRecord: "Registro Oficial del Portal",
     portalRecordDesc: "Este contador registra en tiempo real cada alma que accede al oráculo y realiza una consulta de vidas pasadas a través de la tabla Ouija.",
+    onlineNowLabel: "en línea",
+    onlineVisitorsTitle: "Visitantes en Línea Ahora",
+    onlineExcludingCreator: "Excluyendo al creador",
     closeRecord: "Cerrar Registro",
     creatorModeTitle: "Filtro de Tráfico (Modo Creador)",
     creatorModeActive: "Tus visitas están excluidas del contador",
@@ -452,6 +458,9 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     channeledConsultations: "Channeled Akashic Consultations",
     portalOfficialRecord: "Official Portal Registry",
     portalRecordDesc: "This counter registers in real time every soul that accesses the oracle and conducts a past life consultation through the Ouija board.",
+    onlineNowLabel: "online",
+    onlineVisitorsTitle: "Visitors Online Now",
+    onlineExcludingCreator: "Excluding creator",
     closeRecord: "Close Registry",
     creatorModeTitle: "Traffic Filter (Creator Mode)",
     creatorModeActive: "Your visits are excluded from metrics",
@@ -662,6 +671,9 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     channeledConsultations: "Consultas Akáshicas Canalizadas",
     portalOfficialRecord: "Registro Oficial do Portal",
     portalRecordDesc: "Este contador registra em tempo real cada alma que acessa o oráculo e realiza uma consulta de vidas passadas pelo tabuleiro Ouija.",
+    onlineNowLabel: "online",
+    onlineVisitorsTitle: "Visitantes Online Agora",
+    onlineExcludingCreator: "Excluindo o criador",
     closeRecord: "Fechar Registro",
     creatorModeTitle: "Filtro de Tráfego (Modo Criador)",
     creatorModeActive: "Suas visitas estão excluídas das métricas",
@@ -872,6 +884,9 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     channeledConsultations: "Consultations Akashiques Canalisées",
     portalOfficialRecord: "Registre Officiel du Portail",
     portalRecordDesc: "Ce compteur enregistre en temps réel chaque âme qui accède à l'oracle et effectue une consultation de vie antérieure via la planche Ouija.",
+    onlineNowLabel: "en ligne",
+    onlineVisitorsTitle: "Visiteurs en Ligne Maintenant",
+    onlineExcludingCreator: "Hors créateur",
     closeRecord: "Fermer le Registre",
     creatorModeTitle: "Filtre de Trafic (Mode Créateur)",
     creatorModeActive: "Vos visites sont exclues des métriques",
@@ -1082,6 +1097,9 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     channeledConsultations: "Consultazioni Akashiche Canalizzate",
     portalOfficialRecord: "Registro Ufficiale del Portale",
     portalRecordDesc: "Questo contatore registra in tempo reale ogni anima che accede all'oracolo ed esegue una consultazione di vite passate tramite la tavola Ouija.",
+    onlineNowLabel: "online",
+    onlineVisitorsTitle: "Visitatori Online Ora",
+    onlineExcludingCreator: "Escluso il creatore",
     closeRecord: "Chiudi Registro",
     creatorModeTitle: "Filtro di Traffico (Modo Creatore)",
     creatorModeActive: "Le tue visite sono escluse dalle metriche",
@@ -1292,6 +1310,9 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     channeledConsultations: "Gechannelte Akasha-Konsultationen",
     portalOfficialRecord: "Offizielles Portal-Register",
     portalRecordDesc: "Dieser Zähler erfasst in Echtzeit jede Seele, die auf das Orakel zugreift und eine Reinkarnationsabfrage über das Ouija-Brett durchführt.",
+    onlineNowLabel: "online",
+    onlineVisitorsTitle: "Besucher Jetzt Online",
+    onlineExcludingCreator: "Ohne Ersteller",
     closeRecord: "Register Schließen",
     creatorModeTitle: "Verkehrsfilter (Entwicklermodus)",
     creatorModeActive: "Ihre Besuche sind von Metriken ausgeschlossen",

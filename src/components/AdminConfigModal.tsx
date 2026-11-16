@@ -258,6 +258,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
   const todayVisitsVal = visitsStats?.todayVisits ?? 0;
   const totalConsultationsVal = visitsStats?.totalConsultations ?? 0;
   const uniqueVisitorsVal = visitsStats?.uniqueVisitorsCount ?? 0;
+  const onlineVisitorsVal = visitsStats?.onlineVisitors ?? 0;
 
   const previewMpUrl = getEffectiveMpUrl(formCfg);
 
@@ -415,7 +416,12 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
           </p>
 
           {/* Metrics Overview Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
+            <div className="p-3 rounded-2xl bg-emerald-950/35 border border-emerald-500/45 text-center">
+              <span className="text-[10px] text-emerald-300 uppercase font-cinzel block">En Línea</span>
+              <span className="text-xl font-cinzel font-bold text-emerald-300">{onlineVisitorsVal}</span>
+              <span className="text-[9px] text-emerald-300/75 font-gothic block">Sin creador</span>
+            </div>
             <div className="p-3 rounded-2xl bg-purple-950/40 border border-purple-800/40 text-center">
               <span className="text-[10px] text-purple-400 uppercase font-cinzel block">Visitas Totales</span>
               <span className="text-xl font-cinzel font-bold text-purple-100">{totalVisitsVal}</span>
@@ -428,7 +434,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
               <span className="text-[10px] text-purple-400 uppercase font-cinzel block">Consultas</span>
               <span className="text-xl font-cinzel font-bold text-purple-100">{totalConsultationsVal}</span>
             </div>
-            <div className="p-3 rounded-2xl bg-purple-950/40 border border-purple-800/40 text-center">
+            <div className="p-3 rounded-2xl bg-purple-950/40 border border-purple-800/40 text-center col-span-2 sm:col-span-1">
               <span className="text-[10px] text-purple-400 uppercase font-cinzel block">Únicos</span>
               <span className="text-xl font-cinzel font-bold text-emerald-300">{uniqueVisitorsVal}</span>
             </div>

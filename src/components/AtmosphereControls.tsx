@@ -139,6 +139,8 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
 
   const totalVisitsVal = visitsStats?.totalVisits ?? 0;
   const formattedVisits = totalVisitsVal.toLocaleString(locale);
+  const onlineVisitorsVal = visitsStats?.onlineVisitors ?? 0;
+  const formattedOnline = onlineVisitorsVal.toLocaleString(locale);
 
   return (
     <>
@@ -181,6 +183,9 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             <Eye className="w-3.5 h-3.5 text-purple-300" />
             <span className="font-cinzel font-semibold text-purple-100">{formattedVisits}</span>
             <span className="hidden md:inline text-[11px] text-purple-300/80">{t("realVisits")}</span>
+            <span className="text-purple-500/70">·</span>
+            <span className="font-cinzel font-bold text-emerald-300">{formattedOnline}</span>
+            <span className="hidden sm:inline text-[11px] text-emerald-300/90">{t("onlineNowLabel")}</span>
           </button>
 
           {/* Language Selector Dropdown */}
@@ -341,6 +346,26 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             <div className="flex items-center space-x-2 text-purple-200 font-cinzel font-semibold text-lg border-b border-purple-900/50 pb-2">
               <Eye className="w-5 h-5 text-emerald-400" />
               <span>{t("visitsModalTitle")}</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-emerald-950/35 border border-emerald-500/40 flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-2.5">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <div>
+                  <span className="text-xs font-cinzel font-bold text-emerald-200 block">
+                    {t("onlineVisitorsTitle")}
+                  </span>
+                  <span className="text-[10px] font-gothic text-emerald-300/80">
+                    {t("onlineExcludingCreator")}
+                  </span>
+                </div>
+              </div>
+              <span className="text-2xl font-cinzel font-bold text-emerald-300">
+                {formattedOnline}
+              </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

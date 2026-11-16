@@ -53,6 +53,7 @@ const getInitialVisitsStats = (): VisitsStats => {
             todayVisits: Number(parsed.todayVisits) || 0,
             totalConsultations: Number(parsed.totalConsultations) || 0,
             uniqueVisitorsCount: Number(parsed.uniqueVisitorsCount) || 0,
+            onlineVisitors: typeof parsed.onlineVisitors === "number" ? Math.max(0, parsed.onlineVisitors) : 0,
             lastUpdated: parsed.lastUpdated || new Date().toISOString(),
           };
         }
@@ -66,6 +67,7 @@ const getInitialVisitsStats = (): VisitsStats => {
     todayVisits: 0,
     totalConsultations: 0,
     uniqueVisitorsCount: 0,
+    onlineVisitors: 0,
   };
 };
 
@@ -153,12 +155,17 @@ export default function App() {
       const incomingToday = typeof incoming.todayVisits === "number" ? incoming.todayVisits : prev.todayVisits;
       const incomingConsultations = typeof incoming.totalConsultations === "number" ? incoming.totalConsultations : prev.totalConsultations;
       const incomingUniques = typeof incoming.uniqueVisitorsCount === "number" ? incoming.uniqueVisitorsCount : prev.uniqueVisitorsCount;
+      const incomingOnline =
+        typeof incoming.onlineVisitors === "number"
+          ? Math.max(0, incoming.onlineVisitors)
+          : prev.onlineVisitors ?? 0;
 
       const next: VisitsStats = {
         totalVisits: incomingTotal > 0 ? incomingTotal : prev.totalVisits,
         todayVisits: incomingToday,
         totalConsultations: incomingConsultations > 0 ? incomingConsultations : prev.totalConsultations,
         uniqueVisitorsCount: incomingUniques > 0 ? incomingUniques : prev.uniqueVisitorsCount,
+        onlineVisitors: incomingOnline,
         lastUpdated: incoming.lastUpdated || new Date().toISOString(),
       };
       try {
@@ -232,7 +239,7 @@ export default function App() {
         // ignore storage restrictions
       }
 
-      const isAdmin = isAdminSession();
+      const isAdmin = isAdminSession() || isAuthorizedAdmin();
 
       try {
         const isNewSession = !sessionStorage.getItem("ouija_session_logged");
@@ -300,12 +307,71 @@ export default function App() {
 
     registerVisit();
 
-    // Backup polling for environments where real-time sockets are throttled
+    const sendHeartbeat = async (leave = false) => {
+      const visitorId = getOrCreateVisitorId();
+      const isAdmin = isAdminSession() || isAuthorizedAdmin();
+      if (leave && typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+        try {
+          const blob = new Blob(
+            [JSON.stringify({ visitorId, isAdmin, leave: true })],
+            { type: "application/json" }
+          );
+          navigator.sendBeacon("/api/visits/heartbeat", blob);
+          return;
+        } catch {
+          // fallback below
+        }
+      }
+      try {
+        const res = await fetch("/api/visits/heartbeat", {
+          method: "POST",
+          cache: "no-store",
+          keepalive: leave,
+          headers: {
+            "Content-Type": "application/json",
+            ...getAdminHeaders(),
+          },
+          body: JSON.stringify({ visitorId, isAdmin, leave }),
+        });
+        if (res.ok && !leave) {
+          const stats = await res.json();
+          mergeVisitsStats(stats);
+        }
+      } catch {
+        // fallback to basic stats fetch
+        if (!leave) fetchVisitsStats();
+      }
+    };
+
+    // Keep real-time online count updated & exclude creator immediately on auth change
     const visitsInterval = setInterval(() => {
-      fetchVisitsStats();
+      sendHeartbeat(false);
     }, 15000);
 
-    return () => clearInterval(visitsInterval);
+    const onVisibilityOrAuthChange = () => {
+      if (document.visibilityState === "visible") {
+        sendHeartbeat(false);
+      }
+    };
+    const onCreatorChange = () => {
+      sendHeartbeat(false);
+    };
+    const onPageHide = () => {
+      sendHeartbeat(true);
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityOrAuthChange);
+    window.addEventListener("ouija-creator-mode-change", onCreatorChange);
+    window.addEventListener("ouija-admin-auth-change", onCreatorChange);
+    window.addEventListener("pagehide", onPageHide);
+
+    return () => {
+      clearInterval(visitsInterval);
+      document.removeEventListener("visibilitychange", onVisibilityOrAuthChange);
+      window.removeEventListener("ouija-creator-mode-change", onCreatorChange);
+      window.removeEventListener("ouija-admin-auth-change", onCreatorChange);
+      window.removeEventListener("pagehide", onPageHide);
+    };
   }, [fetchVisitsStats, mergeVisitsStats]);
 
   // Listen for real-time consultation events across components
@@ -1019,6 +1085,12 @@ export default function App() {
             <Eye className="w-3.5 h-3.5 text-purple-400" />
             <span>
               <strong>{visitsStats?.totalVisits !== undefined ? visitsStats.totalVisits.toLocaleString(locale) : "1"}</strong> {t("realVisits")}
+            </span>
+          </div>
+          <div className="flex items-center space-x-1.5 text-emerald-300/90">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>
+              <strong>{(visitsStats?.onlineVisitors ?? 0).toLocaleString(locale)}</strong> {t("onlineNowLabel")}
             </span>
           </div>
         </div>

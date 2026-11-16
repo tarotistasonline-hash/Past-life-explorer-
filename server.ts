@@ -202,8 +202,35 @@ async function ensureMetricsDoc(): Promise<PortalMetricsPayload | null> {
   }
 }
 
+// Real-time Active Online Visitors Presence (excludes creator/admin sessions)
+const ONLINE_TTL_MS = 45_000;
+const activeOnlineVisitors = new Map<string, number>();
+
+function pruneOnlineVisitors(now = Date.now()): number {
+  for (const [id, lastSeen] of activeOnlineVisitors.entries()) {
+    if (now - lastSeen > ONLINE_TTL_MS) {
+      activeOnlineVisitors.delete(id);
+    }
+  }
+  return activeOnlineVisitors.size;
+}
+
+function touchOnlineVisitor(rawVisitorId: unknown, isExcluded: boolean, leave = false): number {
+  const now = Date.now();
+  const cleanId = sanitizeVisitorId(rawVisitorId);
+  if (cleanId) {
+    if (isExcluded || leave) {
+      activeOnlineVisitors.delete(cleanId);
+    } else {
+      activeOnlineVisitors.set(cleanId, now);
+    }
+  }
+  return pruneOnlineVisitors(now);
+}
+
 async function getAuthoritativeVisitsStats() {
   const todayKey = getTodayKey();
+  const onlineVisitors = pruneOnlineVisitors();
   if (firestoreDb) {
     try {
       const data = await ensureMetricsDoc();
@@ -217,6 +244,7 @@ async function getAuthoritativeVisitsStats() {
           todayVisits: data.todayVisits,
           totalConsultations: data.totalConsultations,
           uniqueVisitorsCount: data.uniqueVisitorsCount,
+          onlineVisitors,
           lastUpdated: data.lastUpdated,
         };
       }
@@ -231,6 +259,7 @@ async function getAuthoritativeVisitsStats() {
     todayVisits: todayCount,
     totalConsultations: visitsState.totalConsultations,
     uniqueVisitorsCount: visitsState.uniqueVisitors.length,
+    onlineVisitors,
     lastUpdated: visitsState.lastUpdated,
   };
 }
@@ -308,8 +337,14 @@ app.get("/api/visits", async (req, res) => {
 app.post("/api/visits/hit", async (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   const { visitorId, isAdmin } = req.body || {};
-  const isExcluded = Boolean(isAdmin || req.headers["x-admin-exclude"] === "true");
+  const adminEmail = String(req.headers["x-admin-email"] || "").trim().toLowerCase();
+  const isExcluded = Boolean(
+    isAdmin ||
+      req.headers["x-admin-exclude"] === "true" ||
+      adminEmail === "tarotistasonline@gmail.com"
+  );
   const todayKey = getTodayKey();
+  const onlineVisitors = touchOnlineVisitor(visitorId, isExcluded);
 
   if (!isExcluded) {
     try {
@@ -317,6 +352,7 @@ app.post("/api/visits/hit", async (req, res) => {
       if (firestoreResult) {
         return res.json({
           ...firestoreResult,
+          onlineVisitors,
           excluded: false,
         });
       }
@@ -341,6 +377,39 @@ app.post("/api/visits/hit", async (req, res) => {
   const stats = await getAuthoritativeVisitsStats();
   res.json({
     ...stats,
+    onlineVisitors,
+    excluded: isExcluded,
+  });
+});
+
+// Real-time Presence Heartbeat (tracks currently online visitors, excluding creator/admin)
+app.post("/api/visits/heartbeat", express.text({ type: "*/*" }), async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  let payload: any = req.body;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      payload = {};
+    }
+  }
+  const { visitorId, isAdmin, leave } = payload || {};
+  const adminEmail = String(req.headers["x-admin-email"] || "").trim().toLowerCase();
+  const isExcluded = Boolean(
+    isAdmin ||
+      req.headers["x-admin-exclude"] === "true" ||
+      adminEmail === "tarotistasonline@gmail.com"
+  );
+
+  const onlineVisitors = touchOnlineVisitor(visitorId, isExcluded, Boolean(leave));
+  if (leave) {
+    return res.status(200).json({ onlineVisitors, excluded: isExcluded });
+  }
+
+  const stats = await getAuthoritativeVisitsStats();
+  return res.json({
+    ...stats,
+    onlineVisitors,
     excluded: isExcluded,
   });
 });
