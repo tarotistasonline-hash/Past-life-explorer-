@@ -6,12 +6,13 @@ import { PastLifeModal } from "./components/PastLifeModal";
 import { PastLifeCodex } from "./components/PastLifeCodex";
 import { AtmosphereControls } from "./components/AtmosphereControls";
 import { DailyTarotCard } from "./components/DailyTarotCard";
+import { NatalChartSection, NatalRequestPayload } from "./components/NatalChartSection";
 import { GrimorioModal } from "./components/GrimorioModal";
 import { CrystalBallLoader } from "./components/CrystalBallLoader";
 import { StarfieldBackground } from "./components/StarfieldBackground";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Globe, ExternalLink } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Globe, ExternalLink, Orbit } from "lucide-react";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
 import {
@@ -73,7 +74,7 @@ const getInitialVisitsStats = (): VisitsStats => {
 
 export default function App() {
   const { t, language, setLanguage, options } = useLanguage();
-  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "CODEX">("ALL");
+  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "NATAL" | "CODEX">("ALL");
   const [mode, setMode] = useState<BoardMode>("IDLE");
   const [spelledWord, setSpelledWord] = useState("");
   const [activeChar, setActiveChar] = useState("");
@@ -89,6 +90,10 @@ export default function App() {
   const [pendingConsultation, setPendingConsultation] = useState<PendingConsultation | null>(
     () => getPendingConsultation()
   );
+  const [pendingNatalExecution, setPendingNatalExecution] = useState<{
+    id: string;
+    data: NatalRequestPayload;
+  } | null>(null);
   const [paymentSuccessBanner, setPaymentSuccessBanner] = useState<string>("");
   const [allowanceTick, setAllowanceTick] = useState(0);
   const monetizationCfg = useMonetizationConfig();
@@ -383,7 +388,7 @@ export default function App() {
     return () => window.removeEventListener("ouija-consultation-recorded", handleConsultationEvent);
   }, [fetchVisitsStats]);
 
-  // Load saved codex records from localStorage
+  // Load saved codex records from localStorage & listen for history clear events
   useEffect(() => {
     try {
       const stored = localStorage.getItem("ouija_past_lives_codex");
@@ -393,6 +398,19 @@ export default function App() {
     } catch (e) {
       console.warn("Failed to load past life codex", e);
     }
+
+    const handleHistoryCleared = () => {
+      setSavedRecords([]);
+      setCurrentPastLife(null);
+      setCurrentSpiritResponse(null);
+      setSpelledWord("");
+      setMode("IDLE");
+      setIsModalOpen(false);
+      setErrorMsg("");
+    };
+
+    window.addEventListener("ouija-history-cleared", handleHistoryCleared);
+    return () => window.removeEventListener("ouija-history-cleared", handleHistoryCleared);
   }, []);
 
   const handleSaveToCodex = () => {
@@ -548,7 +566,7 @@ export default function App() {
     [fetchVisitsStats, language, monetizationCfg, t]
   );
 
-  // Immediately execute any pending past-life reading or spirit question after payment unlock
+  // Immediately execute any pending past-life reading, spirit question, or natal chart after payment unlock
   const runPendingConsultationIfAny = useCallback(() => {
     const queued = getPendingConsultation() || pendingConsultation;
     if (!queued) return false;
@@ -563,6 +581,9 @@ export default function App() {
       executePastLifeConsult(queued.data);
     } else if (queued.type === "spirit-question") {
       executeGeneralConsult(queued.question, queued.name);
+    } else if (queued.type === "natal-chart") {
+      setActiveMainSection((prev) => (prev === "ALL" ? "ALL" : "NATAL"));
+      setPendingNatalExecution({ id: queued.id, data: queued.data });
     }
     return true;
   }, [executeGeneralConsult, executePastLifeConsult, pendingConsultation]);
@@ -742,6 +763,12 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleSendNatalToOuija = (query: string) => {
+    setActiveMainSection("OUIJA");
+    setPrefilledOuijaQuestion(query);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const isCurrentSaved = savedRecords.some(
     (r) => r.pastLifeDetails.title === currentPastLife?.title
   );
@@ -836,6 +863,18 @@ export default function App() {
         >
           <Sparkles className="w-3.5 h-3.5 text-violet-200" />
           <span>{t("navTarot")}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainSection("NATAL")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+            activeMainSection === "NATAL"
+              ? "bg-purple-900/80 text-purple-100 border border-amber-400/60 shadow-md"
+              : "text-amber-200/90 hover:text-amber-100"
+          }`}
+        >
+          <Orbit className="w-3.5 h-3.5 text-amber-300" />
+          <span>{t("navNatal")}</span>
         </button>
 
         <button
@@ -950,6 +989,39 @@ export default function App() {
           <DailyTarotCard onSendToOuija={handleSendCardToOuija} />
         )}
 
+        {/* Section: Natal Chart / Carta Natal (Shown if ALL or NATAL) */}
+        {(activeMainSection === "ALL" || activeMainSection === "NATAL") && (
+          <NatalChartSection
+            onSendToOuija={handleSendNatalToOuija}
+            isPaywallEnabled={monetizationCfg.paywallEnabled}
+            freeLimit={monetizationCfg.freeConsultationsLimit}
+            remainingFree={remainingFree}
+            isPassUnlocked={isPassUnlocked}
+            isCreatorUnlimited={isCreatorOrAdmin}
+            onOpenPaywall={() => setIsPaywallOpen(true)}
+            onConsumeFreeConsultation={() => {
+              incrementFreeConsultationsUsed();
+              setAllowanceTick((v) => v + 1);
+            }}
+            onQueuePendingNatal={(data) => {
+              const queued: PendingConsultation = {
+                id: `pend_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                type: "natal-chart",
+                data,
+                createdAt: Date.now(),
+              };
+              savePendingConsultation(queued);
+              setPendingConsultation(queued);
+            }}
+            pendingNatalExecution={pendingNatalExecution}
+            onPendingNatalHandled={(id) => {
+              setPendingNatalExecution((curr) => (curr?.id === id ? null : curr));
+            }}
+            mpLink={getEffectiveMpUrl(monetizationCfg)}
+            passPriceArs={monetizationCfg.passPriceArs}
+          />
+        )}
+
         {/* Section: Codex of Past Lives Logged (Shown if ALL or CODEX) */}
         {(activeMainSection === "ALL" || activeMainSection === "CODEX") && (
           <PastLifeCodex
@@ -1018,7 +1090,8 @@ export default function App() {
                   Modo Creador activo • Consultas ilimitadas
                 </span>
                 <p className="text-purple-300/80 text-[11px]">
-                  Tienes acceso completo sin cobro. Tus visitantes ven el pase de Mercado Pago tras {monetizationCfg.freeConsultationsLimit} consultas gratuitas.
+                  Tienes acceso completo sin cobro. Tus visitantes ven el pase de Mercado Pago tras {monetizationCfg.freeConsultationsLimit}{" "}
+                  {monetizationCfg.freeConsultationsLimit === 1 ? "consulta gratuita" : "consultas gratuitas"}.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2.5 shrink-0">
@@ -1028,7 +1101,9 @@ export default function App() {
                   rel="noopener noreferrer"
                   className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
                 >
-                  <span>Desbloquear con Mercado Pago</span>
+                  <span>
+                    Desbloquear con Mercado Pago{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
+                  </span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
                 <button
@@ -1047,7 +1122,9 @@ export default function App() {
                   Desbloquear consultas ilimitadas
                 </span>
                 <p className="text-purple-300/80 text-[11px]">
-                  Primeras {monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea con Mercado Pago:
+                  {monetizationCfg.freeConsultationsLimit === 1
+                    ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea ilimitado con Mercado Pago:"
+                    : `Primeras ${monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea con Mercado Pago:`}
                 </p>
               </div>
 
@@ -1058,7 +1135,9 @@ export default function App() {
                   rel="noopener noreferrer"
                   className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
                 >
-                  <span>Desbloquear con Mercado Pago</span>
+                  <span>
+                    Desbloquear con Mercado Pago{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
+                  </span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
                 <button

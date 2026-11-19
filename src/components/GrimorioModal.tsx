@@ -37,13 +37,23 @@ export const GrimorioModal: React.FC<GrimorioModalProps> = ({
   const [records, setRecords] = useState<GrimorioRecord[]>(() => getGrimorioRecords());
   const [selectedRecord, setSelectedRecord] = useState<GrimorioRecord | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   useEffect(() => {
     const handleUpdate = () => {
       setRecords(getGrimorioRecords());
     };
+    const handleCleared = () => {
+      setRecords([]);
+      setSelectedRecord(null);
+      setConfirmClearAll(false);
+    };
     window.addEventListener("ouija-grimorio-updated", handleUpdate);
-    return () => window.removeEventListener("ouija-grimorio-updated", handleUpdate);
+    window.addEventListener("ouija-history-cleared", handleCleared);
+    return () => {
+      window.removeEventListener("ouija-grimorio-updated", handleUpdate);
+      window.removeEventListener("ouija-history-cleared", handleCleared);
+    };
   }, []);
 
   useEffect(() => {
@@ -70,12 +80,11 @@ export const GrimorioModal: React.FC<GrimorioModalProps> = ({
     }
   };
 
-  const handleClearAll = () => {
-    if (window.confirm("¿Deseas vaciar todas las memorias registradas en tu Grimorio?")) {
-      clearAllGrimorio();
-      setRecords([]);
-      setSelectedRecord(null);
-    }
+  const handleConfirmClearAll = () => {
+    clearAllGrimorio();
+    setRecords([]);
+    setSelectedRecord(null);
+    setConfirmClearAll(false);
   };
 
   const handleShare = async (record: GrimorioRecord, e: React.MouseEvent) => {
@@ -133,16 +142,19 @@ export const GrimorioModal: React.FC<GrimorioModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            {records.length > 0 && (
+            {records.length > 0 && !confirmClearAll && (
               <button
-                onClick={handleClearAll}
-                className="px-2.5 py-1 text-[11px] font-cinzel rounded-lg bg-red-950/50 hover:bg-red-900/70 text-red-300 border border-red-800/40 transition cursor-pointer"
-                title="Vaciar Grimorio"
+                type="button"
+                onClick={() => setConfirmClearAll(true)}
+                className="px-2.5 py-1 text-[11px] font-cinzel rounded-lg bg-red-950/50 hover:bg-red-900/70 text-red-300 border border-red-800/40 transition cursor-pointer flex items-center gap-1"
+                title="Limpiar historial del Grimorio"
               >
-                Vaciar
+                <Trash2 className="w-3 h-3" />
+                <span>Limpiar historial</span>
               </button>
             )}
             <button
+              type="button"
               onClick={onClose}
               className="p-2 rounded-full bg-purple-950 text-purple-300 hover:text-white hover:bg-purple-900 transition cursor-pointer"
             >
@@ -150,6 +162,30 @@ export const GrimorioModal: React.FC<GrimorioModalProps> = ({
             </button>
           </div>
         </div>
+
+        {confirmClearAll && (
+          <div className="mb-3 p-3 rounded-xl bg-red-950/60 border border-red-500/50 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="text-red-100 font-gothic">
+              ¿Deseas limpiar todas las memorias registradas en tu Grimorio?
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleConfirmClearAll}
+                className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-cinzel font-semibold text-[11px] cursor-pointer"
+              >
+                Confirmar
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmClearAll(false)}
+                className="px-3 py-1 rounded-lg bg-purple-950 hover:bg-purple-900 text-purple-200 border border-purple-700/60 font-cinzel text-[11px] cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto pr-1 space-y-3">

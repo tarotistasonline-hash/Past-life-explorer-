@@ -22,6 +22,7 @@ import {
   getCoherentTarotDrawFallback,
   getCoherentKarmicSpreadFallback,
 } from "./src/lib/oracleCoherence.ts";
+import { buildLocalNatalReading } from "./src/lib/natalChart.ts";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -1084,6 +1085,106 @@ app.get("/api/tarot/all", (req, res) => {
   });
 });
 
+// API Route 6: Natal Chart Deep AI Interpretation
+app.post("/api/natal-chart/interpret", async (req, res) => {
+  incrementConsultation(req);
+  const { chart, language = "es" } = req.body || {};
+  if (!chart || !chart.sun || !chart.moon || !chart.ascendant) {
+    return res.status(400).json({ error: "Missing natal chart payload" });
+  }
+
+  const fallbackReading = buildLocalNatalReading(chart, language);
+  const ai = getAIClient();
+  if (!ai) {
+    return res.json({ reading: fallbackReading, isAiEnhanced: false });
+  }
+
+  try {
+    const targetLangName = getLanguageName(language);
+    const planetsSummary = Array.isArray(chart.planets)
+      ? chart.planets
+          .map(
+            (p: any) =>
+              `${p.name}: ${p.sign} ${p.degree}°${String(p.minutes ?? 0).padStart(2, "0")}' (Casa ${p.house}${p.isRetrograde ? ", Rx" : ""})`
+          )
+          .join("; ")
+      : "";
+    const aspectsSummary = Array.isArray(chart.aspects)
+      ? chart.aspects
+          .slice(0, 6)
+          .map((a: any) => `${a.planet1} ${a.type} ${a.planet2} (orbe ${a.orb}°)`)
+          .join("; ")
+      : "";
+
+    const prompt = `Act as an expert classical & psychological astrologer.
+Interpret this exact natal chart in ${targetLangName} with clarity, grounded psychological depth, and practical insight:
+- Seeker: ${chart.seekerName || "Consultante"}
+- Birth Data: ${chart.birthDate} ${chart.birthTime} • ${chart.locationSummary}
+- Timezone Applied: ${chart.timezoneInfo?.offsetLabel || ""} (${chart.timezoneInfo?.dstNote || ""})
+- Sun: ${chart.sun.sign} (${chart.sun.degree}° Casa ${chart.sun.house})
+- Moon: ${chart.moon.sign} (${chart.moon.degree}° Casa ${chart.moon.house})
+- Ascendant: ${chart.ascendant.sign} (${chart.ascendant.degree}°)
+- Midheaven: ${chart.midheaven?.sign || ""} (${chart.midheaven?.degree ?? 0}°)
+- North Node: ${chart.northNode?.sign || ""} (Casa ${chart.northNode?.house ?? 1})
+- Planetary Placements: ${planetsSummary}
+- Major Aspects: ${aspectsSummary}
+- Dominant Element / Modality: ${chart.dominantElement} / ${chart.dominantModality}
+
+Write concrete, insightful interpretations in ${targetLangName}. Respond strictly as JSON.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-4-hydrogen",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            energyHeadline: { type: Type.STRING },
+            sunEssence: { type: Type.STRING },
+            moonSanctuary: { type: Type.STRING },
+            ascendantDestiny: { type: Type.STRING },
+            vocationalLegacy: { type: Type.STRING },
+            elementalBalance: { type: Type.STRING },
+            aspectsInterpretation: { type: Type.STRING },
+            grandNarrative: { type: Type.STRING },
+            cosmicAffirmation: { type: Type.STRING },
+          },
+          required: [
+            "energyHeadline",
+            "sunEssence",
+            "moonSanctuary",
+            "ascendantDestiny",
+            "vocationalLegacy",
+            "elementalBalance",
+            "aspectsInterpretation",
+            "grandNarrative",
+            "cosmicAffirmation",
+          ],
+        },
+      },
+    });
+
+    const jsonText = response.text?.trim();
+    if (jsonText) {
+      const parsed = JSON.parse(jsonText);
+      return res.json({
+        reading: {
+          ...fallbackReading,
+          ...parsed,
+          lifePurpose: parsed.vocationalLegacy || fallbackReading.lifePurpose,
+          isAiEnhanced: true,
+        },
+        isAiEnhanced: true,
+      });
+    }
+  } catch (err) {
+    handleGeminiError("/api/natal-chart/interpret", err);
+  }
+
+  return res.json({ reading: fallbackReading, isAiEnhanced: false });
+});
+
 // ============================================================================
 // Automatic Payment & Instant Unlock System (Mercado Pago Only)
 // ============================================================================
@@ -1319,9 +1420,9 @@ interface ServerMonetizationConfig {
 const DEFAULT_SERVER_MONETIZATION: ServerMonetizationConfig = {
   mpLink: "https://mpago.la/2cv7Gii",
   paywallEnabled: true,
-  freeConsultationsLimit: 2,
-  passPriceArs: "",
-  passAmountArs: 0,
+  freeConsultationsLimit: 1,
+  passPriceArs: "$6.000 ARS",
+  passAmountArs: 6000,
   autoReturnTokenHash: "",
 };
 
@@ -1347,7 +1448,7 @@ function readLocalMonetizationFile(): ServerMonetizationConfig | null {
       freeConsultationsLimit:
         typeof raw.freeConsultationsLimit === "number"
           ? Math.min(10, Math.max(1, Math.round(raw.freeConsultationsLimit)))
-          : 2,
+          : 1,
       passPriceArs:
         typeof raw.passPriceArs === "string"
           ? raw.passPriceArs.trim().slice(0, 32)

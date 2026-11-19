@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Music, MessageSquareHeart } from "lucide-react";
+import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Music, Mail, Trash2 } from "lucide-react";
 import { audio } from "../lib/audio";
 import { VisitsStats } from "../types";
 import { useLanguage } from "../context/LanguageContext";
@@ -7,6 +7,7 @@ import { LanguageSelector } from "./LanguageSelector";
 import { MoonPhaseWidget } from "./MoonPhaseWidget";
 import { isAdminSession, setAdminSession, isAuthorizedAdmin } from "../lib/adminTracking";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
+import { clearAllGrimorio } from "../lib/grimorioStorage";
 import { AdminConfigModal } from "./AdminConfigModal";
 import { AdminUnlockModal } from "./AdminUnlockModal";
 import { FeedbackModal } from "./FeedbackModal";
@@ -37,6 +38,8 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [isSpeakingVoice, setIsSpeakingVoice] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
+  const [historyClearedBanner, setHistoryClearedBanner] = useState(false);
 
   useEffect(() => {
     const handleDroneChange = (e: any) => {
@@ -280,14 +283,29 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             <span className="hidden sm:inline">{t("guideBtn")}</span>
           </button>
 
-          {/* Feedback / Opinions Modal Trigger */}
+          {/* Feedback / Message Mailbox Trigger */}
           <button
             onClick={() => setShowFeedbackModal(true)}
-            title="Buzón de Opiniones y Sugerencias"
+            title="Buzón de Mensajes, Opiniones y Sugerencias"
             className="p-2 sm:px-3 sm:py-1.5 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-600/50 rounded-xl text-amber-200 font-medium flex items-center space-x-1 transition cursor-pointer"
           >
-            <MessageSquareHeart className="w-4 h-4 text-amber-300" />
-            <span className="hidden sm:inline">Opiniones</span>
+            <Mail className="w-4 h-4 text-amber-300" />
+            <span className="hidden sm:inline">Buzón</span>
+          </button>
+
+          {/* Clear Local History Trigger */}
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic(HAPTIC_PATTERNS.click);
+              setHistoryClearedBanner(false);
+              setShowClearHistoryModal(true);
+            }}
+            title="Limpiar historial guardado (Codex, Grimorio, Carta Natal y Buzón)"
+            className="p-2 sm:px-3 sm:py-1.5 bg-red-950/35 hover:bg-red-900/55 border border-red-800/45 rounded-xl text-red-200 font-medium flex items-center space-x-1 transition cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-300" />
+            <span className="hidden lg:inline text-[11px] font-cinzel font-semibold">Limpiar historial</span>
           </button>
         </div>
       </div>
@@ -490,6 +508,87 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
       />
+
+      {/* Clear All Local History Confirmation Modal */}
+      {showClearHistoryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in"
+          onClick={() => setShowClearHistoryModal(false)}
+        >
+          <div
+            className="relative w-full max-w-md bg-[#0e0919] border border-red-500/45 rounded-3xl p-6 text-purple-100 shadow-[0_0_50px_rgba(239,68,68,0.2)] space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowClearHistoryModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-purple-950/80 hover:bg-purple-900 text-purple-300 hover:text-white transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center space-x-3 border-b border-purple-900/60 pb-3">
+              <div className="p-2.5 rounded-2xl bg-red-950/60 border border-red-500/40 text-red-300">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-cinzel font-bold text-base text-red-200">
+                  Limpiar Historial Local
+                </h3>
+                <p className="text-[11px] font-gothic text-purple-300/80">
+                  Borra las lecturas y mensajes guardados en este dispositivo
+                </p>
+              </div>
+            </div>
+
+            {historyClearedBanner ? (
+              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-200 text-xs font-cinzel font-semibold text-center">
+                ✓ Historial limpiado correctamente. El portal quedó listo para nuevas consultas.
+              </div>
+            ) : (
+              <>
+                <p className="text-xs font-gothic text-purple-200/90 leading-relaxed">
+                  Esta acción eliminará el <strong>Codex de Vidas Pasadas</strong>, el <strong>Grimorio</strong>, la última <strong>Carta Natal guardada</strong>, las respuestas visibles en el tablero y los <strong>mensajes guardados del Buzón</strong>. Tu pase desbloqueado y el contador global del portal no se alteran.
+                </p>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowClearHistoryModal(false)}
+                    className="px-4 py-2 rounded-xl bg-purple-950 hover:bg-purple-900 border border-purple-700/60 text-purple-200 font-cinzel font-semibold text-xs cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic(HAPTIC_PATTERNS.click);
+                      audio.stopSpeech();
+                      clearAllGrimorio();
+                      try {
+                        localStorage.removeItem("ouija_past_lives_codex");
+                        localStorage.removeItem("ouija_natal_chart_saved_v1");
+                        localStorage.removeItem("ouija_user_feedback_list");
+                      } catch {
+                        // ignore
+                      }
+                      window.dispatchEvent(new CustomEvent("ouija-history-cleared"));
+                      setHistoryClearedBanner(true);
+                      setTimeout(() => {
+                        setHistoryClearedBanner(false);
+                        setShowClearHistoryModal(false);
+                      }, 1400);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-cinzel font-bold text-xs cursor-pointer flex items-center gap-1.5 shadow"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirmar Limpieza</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 };

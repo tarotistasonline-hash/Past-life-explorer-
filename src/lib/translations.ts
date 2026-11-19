@@ -7,6 +7,7 @@ export interface TranslationDictionary {
   navAll: string;
   navOuija: string;
   navTarot: string;
+  navNatal: string;
   navCodex: string;
   tabOuija: string;
   tabTarot: string;
@@ -222,6 +223,30 @@ export interface TranslationDictionary {
   footerTitle: string;
   footerRights: string;
   languageSelect: string;
+
+  // Carta Natal
+  natalTitle: string;
+  natalSubtitle: string;
+  natalNewChart: string;
+  natalNameLabel: string;
+  natalNamePlaceholder: string;
+  natalDateLabel: string;
+  natalTimeLabel: string;
+  natalUnknownTime: string;
+  natalPlaceLabel: string;
+  natalCityPlaceholder: string;
+  natalCountryPlaceholder: string;
+  natalQuickCities: string;
+  natalAdvancedToggle: string;
+  natalCalculateBtn: string;
+  natalMissingDate: string;
+  natalListenBtn: string;
+  natalStopVoice: string;
+  natalExportPdf: string;
+  natalTabWheel: string;
+  natalTabPositions: string;
+  natalTabAspects: string;
+  natalTabReading: string;
 }
 
 export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
@@ -231,6 +256,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     navAll: "Todo el Portal",
     navOuija: "Tabla Ouija & Oráculo",
     navTarot: "Arcano del Día (Tarot)",
+    navNatal: "Carta Natal",
     navCodex: "Códice",
     tabOuija: "Tabla Ouija",
     tabTarot: "Arcano de Marsella",
@@ -437,6 +463,28 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     footerTitle: "Tabla Ouija Interactiva • Registros Akáshicos y Lectura de Vidas Pasadas",
     footerRights: "Experiencia espiritual y oracular interactiva",
     languageSelect: "Idioma",
+    natalTitle: "Carta Natal • Cartografía Celeste",
+    natalSubtitle: "Cálculo astronómico VSOP87 con horario de verano histórico (Argentina post-1940 y mundial)",
+    natalNewChart: "Nueva Carta",
+    natalNameLabel: "Consultante",
+    natalNamePlaceholder: "Ej: Elena Montes",
+    natalDateLabel: "Fecha de Nacimiento",
+    natalTimeLabel: "Hora",
+    natalUnknownTime: "Sin hora exacta",
+    natalPlaceLabel: "Lugar de Nacimiento",
+    natalCityPlaceholder: "Ciudad (ej. Buenos Aires)",
+    natalCountryPlaceholder: "País (ej. Argentina)",
+    natalQuickCities: "Ciudades",
+    natalAdvancedToggle: "Ajuste manual de coordenadas o huso UTC",
+    natalCalculateBtn: "Calcular Carta Natal",
+    natalMissingDate: "Por favor, ingresa una fecha de nacimiento válida.",
+    natalListenBtn: "Escuchar Relato",
+    natalStopVoice: "Detener Voz",
+    natalExportPdf: "Descargar PDF",
+    natalTabWheel: "Rueda Celestial",
+    natalTabPositions: "Planetas y Casas",
+    natalTabAspects: "Aspectos",
+    natalTabReading: "Interpretación",
   },
   en: {
     appTitle: "INTERACTIVE OUIJA BOARD",
@@ -444,6 +492,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     navAll: "Full Portal",
     navOuija: "Ouija Board & Oracle",
     navTarot: "Arcana of the Day (Tarot)",
+    navNatal: "Natal Chart",
     navCodex: "Codex",
     tabOuija: "Ouija Board",
     tabTarot: "Marseille Arcana",
@@ -650,6 +699,28 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     footerTitle: "Interactive Ouija Board • Akashic Records & Past Life Reading",
     footerRights: "Interactive spiritual and oracular experience",
     languageSelect: "Language",
+    natalTitle: "Natal Chart • Celestial Cartography",
+    natalSubtitle: "VSOP87 ephemeris calculation with historical DST rules (post-1940 Argentina & global IANA)",
+    natalNewChart: "New Chart",
+    natalNameLabel: "Seeker",
+    natalNamePlaceholder: "e.g. Alex Rivers",
+    natalDateLabel: "Birth Date",
+    natalTimeLabel: "Time",
+    natalUnknownTime: "Unknown time",
+    natalPlaceLabel: "Birthplace",
+    natalCityPlaceholder: "City (e.g. Buenos Aires)",
+    natalCountryPlaceholder: "Country (e.g. Argentina)",
+    natalQuickCities: "Cities",
+    natalAdvancedToggle: "Manual coordinates or UTC override",
+    natalCalculateBtn: "Calculate Natal Chart",
+    natalMissingDate: "Please enter a valid birth date.",
+    natalListenBtn: "Listen Reading",
+    natalStopVoice: "Stop Voice",
+    natalExportPdf: "Download PDF",
+    natalTabWheel: "Natal Wheel",
+    natalTabPositions: "Planets & Houses",
+    natalTabAspects: "Aspects",
+    natalTabReading: "Interpretation",
   },
   pt: {
     appTitle: "TABULEIRO OUIJA INTERATIVO",
@@ -657,6 +728,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     navAll: "Portal Completo",
     navOuija: "Tabuleiro Ouija & Oráculo",
     navTarot: "Arcano do Dia (Tarô)",
+    navNatal: "Mapa Astral",
     navCodex: "Códex",
     tabOuija: "Tabuleiro Ouija",
     tabTarot: "Arcano de Marselha",
@@ -863,6 +935,28 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     footerTitle: "Tabuleiro Ouija Interativo • Registros Akáshicos e Leitura de Vidas Passadas",
     footerRights: "Experiência espiritual e oracular interativa",
     languageSelect: "Idioma",
+    natalTitle: "Mapa Astral • Cartografia Celeste",
+    natalSubtitle: "Cálculo astronômico VSOP87 com horário de verão histórico (Argentina pós-1940 e global)",
+    natalNewChart: "Novo Mapa",
+    natalNameLabel: "Consulente",
+    natalNamePlaceholder: "Ex: Elena Montes",
+    natalDateLabel: "Data de Nascimento",
+    natalTimeLabel: "Hora",
+    natalUnknownTime: "Hora desconhecida",
+    natalPlaceLabel: "Local de Nascimento",
+    natalCityPlaceholder: "Cidade (ex. Buenos Aires)",
+    natalCountryPlaceholder: "País (ex. Argentina)",
+    natalQuickCities: "Cidades",
+    natalAdvancedToggle: "Ajuste manual de coordenadas ou fuso UTC",
+    natalCalculateBtn: "Calcular Mapa Astral",
+    natalMissingDate: "Por favor, insira uma data de nascimento válida.",
+    natalListenBtn: "Ouvir Relato",
+    natalStopVoice: "Parar Voz",
+    natalExportPdf: "Baixar PDF",
+    natalTabWheel: "Roda Celeste",
+    natalTabPositions: "Planetas e Casas",
+    natalTabAspects: "Aspectos",
+    natalTabReading: "Interpretação",
   },
   fr: {
     appTitle: "PLANCHE OUIJA INTERACTIVE",
@@ -870,6 +964,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     navAll: "Tout le Portail",
     navOuija: "Planche Ouija & Oracle",
     navTarot: "Arcane du Jour (Tarot)",
+    navNatal: "Thème Natal",
     navCodex: "Codex",
     tabOuija: "Planche Ouija",
     tabTarot: "Arcane de Marseille",
@@ -1076,6 +1171,28 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     footerTitle: "Planche Ouija Interactive • Annales Akashiques & Vies Antérieures",
     footerRights: "Expérience spirituelle et oraculaire interactive",
     languageSelect: "Langue",
+    natalTitle: "Thème Natal • Cartographie Céleste",
+    natalSubtitle: "Calcul astronomique VSOP87 avec heure d'été historique (Argentine post-1940 et monde)",
+    natalNewChart: "Nouveau Thème",
+    natalNameLabel: "Consultant",
+    natalNamePlaceholder: "Ex: Sophie Moreau",
+    natalDateLabel: "Date de Naissance",
+    natalTimeLabel: "Heure",
+    natalUnknownTime: "Heure inconnue",
+    natalPlaceLabel: "Lieu de Naissance",
+    natalCityPlaceholder: "Ville",
+    natalCountryPlaceholder: "Pays",
+    natalQuickCities: "Villes",
+    natalAdvancedToggle: "Coordonnées manuelles ou décalage UTC",
+    natalCalculateBtn: "Calculer le Thème Natal",
+    natalMissingDate: "Veuillez saisir une date de naissance valide.",
+    natalListenBtn: "Écouter",
+    natalStopVoice: "Arrêter",
+    natalExportPdf: "Télécharger PDF",
+    natalTabWheel: "Roue Céleste",
+    natalTabPositions: "Planètes & Maisons",
+    natalTabAspects: "Aspects",
+    natalTabReading: "Interprétation",
   },
   it: {
     appTitle: "TAVOLA OUIJA INTERATTIVA",
@@ -1083,6 +1200,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     navAll: "Tutto il Portale",
     navOuija: "Tavola Ouija & Oracolo",
     navTarot: "Arcano del Giorno (Tarocchi)",
+    navNatal: "Tema Natale",
     navCodex: "Codex",
     tabOuija: "Tavola Ouija",
     tabTarot: "Arcano di Marsiglia",
@@ -1289,6 +1407,28 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     footerTitle: "Tavola Ouija Interattiva • Registri Akashici e Vite Passate",
     footerRights: "Esperienza spirituale e oracolare interattiva",
     languageSelect: "Lingua",
+    natalTitle: "Tema Natale • Cartografia Celeste",
+    natalSubtitle: "Calcolo astronomico VSOP87 con ora legale storica (Argentina post-1940 e globale)",
+    natalNewChart: "Nuovo Tema",
+    natalNameLabel: "Consultante",
+    natalNamePlaceholder: "Es: Elena Rossi",
+    natalDateLabel: "Data di Nascita",
+    natalTimeLabel: "Ora",
+    natalUnknownTime: "Ora sconosciuta",
+    natalPlaceLabel: "Luogo di Nascita",
+    natalCityPlaceholder: "Città",
+    natalCountryPlaceholder: "Paese",
+    natalQuickCities: "Città",
+    natalAdvancedToggle: "Coordinate manuali o fuso UTC",
+    natalCalculateBtn: "Calcola Tema Natale",
+    natalMissingDate: "Inserisci una data di nascita valida.",
+    natalListenBtn: "Ascolta",
+    natalStopVoice: "Ferma Voce",
+    natalExportPdf: "Scarica PDF",
+    natalTabWheel: "Ruota Celeste",
+    natalTabPositions: "Pianeti e Case",
+    natalTabAspects: "Aspetti",
+    natalTabReading: "Interpretazione",
   },
   de: {
     appTitle: "INTERAKTIVES OUIJA-BRETT",
@@ -1296,6 +1436,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     navAll: "Gesamtes Portal",
     navOuija: "Ouija-Brett & Orakel",
     navTarot: "Tages-Arkanum (Tarot)",
+    navNatal: "Geburtshoroskop",
     navCodex: "Kodex",
     tabOuija: "Ouija-Brett",
     tabTarot: "Marseille-Arkanum",
@@ -1502,6 +1643,28 @@ export const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     footerTitle: "Interaktives Ouija-Brett • Akasha-Chronik & Frühere Leben",
     footerRights: "Interaktives spirituelles und orakelhaftes Erlebnis",
     languageSelect: "Sprache",
+    natalTitle: "Geburtshoroskop • Himmelskartografie",
+    natalSubtitle: "VSOP87-Ephemeridenberechnung mit historischer Sommerzeit (Argentinien ab 1940 & weltweit)",
+    natalNewChart: "Neues Horoskop",
+    natalNameLabel: "Fragesteller",
+    natalNamePlaceholder: "Z.B. Elena Montes",
+    natalDateLabel: "Geburtsdatum",
+    natalTimeLabel: "Uhrzeit",
+    natalUnknownTime: "Uhrzeit unbekannt",
+    natalPlaceLabel: "Geburtsort",
+    natalCityPlaceholder: "Stadt",
+    natalCountryPlaceholder: "Land",
+    natalQuickCities: "Städte",
+    natalAdvancedToggle: "Manuelle Koordinaten oder UTC-Offset",
+    natalCalculateBtn: "Horoskop Berechnen",
+    natalMissingDate: "Bitte gib ein gültiges Geburtsdatum ein.",
+    natalListenBtn: "Anhören",
+    natalStopVoice: "Stopp",
+    natalExportPdf: "PDF Herunterladen",
+    natalTabWheel: "Horoskoprad",
+    natalTabPositions: "Planeten & Häuser",
+    natalTabAspects: "Aspekte",
+    natalTabReading: "Deutung",
   },
 };
 

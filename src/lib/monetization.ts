@@ -14,9 +14,9 @@ export interface MonetizationConfig {
 export const DEFAULT_MONETIZATION_CONFIG: MonetizationConfig = {
   mpLink: DEFAULT_MP_LINK,
   paywallEnabled: true,
-  freeConsultationsLimit: 2,
-  passPriceArs: "",
-  passAmountArs: 0,
+  freeConsultationsLimit: 1,
+  passPriceArs: "$6.000 ARS",
+  passAmountArs: 6000,
   autoReturnTokenHash: "",
 };
 
@@ -38,9 +38,25 @@ export type PendingConsultation =
       question: string;
       name: string;
       createdAt: number;
+    }
+  | {
+      id: string;
+      type: "natal-chart";
+      data: {
+        name: string;
+        birthDate: string;
+        birthTime: string;
+        hasExactTime: boolean;
+        birthCity: string;
+        birthCountry: string;
+        latitudeOverride?: number | null;
+        longitudeOverride?: number | null;
+        manualOffsetHours?: number | null;
+      };
+      createdAt: number;
     };
 
-const LOCAL_FALLBACK_KEY = "ouija_monetization_cache_v8";
+const LOCAL_FALLBACK_KEY = "ouija_monetization_cache_v9";
 const FREE_USED_KEY = "ouija_free_consultations_used_v1";
 const PASS_UNLOCKED_KEY = "ouija_pass_unlocked_hash_v1";
 const PASS_UNLOCKED_PROOF_KEY = "ouija_pass_unlocked_proof_v2";
@@ -83,7 +99,7 @@ export function sanitizeMonetizationConfig(input: Partial<MonetizationConfig>): 
   const rawLimit = Number(input.freeConsultationsLimit);
   const clampedLimit = Number.isFinite(rawLimit)
     ? Math.min(10, Math.max(1, Math.round(rawLimit)))
-    : 2;
+    : 1;
 
   const rawAmount = Number(input.passAmountArs);
   const clampedAmount = Number.isFinite(rawAmount) && rawAmount >= 0

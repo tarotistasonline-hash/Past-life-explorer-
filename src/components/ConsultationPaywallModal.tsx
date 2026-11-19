@@ -36,12 +36,13 @@ interface ConsultationPaywallModalProps {
 
 interface PaywallCopy {
   badge: string;
-  titleLimitReached: string;
+  titleLimitReached: (limit: number) => string;
   titleUpgrade: string;
-  subtitle: string;
+  subtitle: (limit: number) => string;
   queuedPastLife: string;
   queuedQuestion: string;
-  includes1: string;
+  queuedNatalChart: string;
+  includes1: (limit: number) => string;
   includes2: string;
   includes3: string;
   payMp: string;
@@ -57,14 +58,21 @@ interface PaywallCopy {
 const COPY: Record<SupportedLanguage, PaywallCopy> = {
   es: {
     badge: "Pase de Consultas Akáshicas • Sin Límite",
-    titleLimitReached: "Has completado tus 2 consultas gratuitas",
+    titleLimitReached: (n) =>
+      n === 1 ? "Has utilizado tu consulta gratuita" : `Has completado tus ${n} consultas gratuitas`,
     titleUpgrade: "Desbloquea Lecturas Ilimitadas",
-    subtitle:
-      "Disfruta de tus primeras 2 consultas 100% gratis. El pase ilimitado aplica a partir de la 3ª consulta mediante Mercado Pago.",
+    subtitle: (n) =>
+      n === 1
+        ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. El pase ilimitado aplica a partir de la 2ª consulta mediante Mercado Pago."
+        : `Disfruta de tus primeras ${n} consultas 100% gratis. El pase ilimitado aplica a partir de la ${n + 1}ª consulta mediante Mercado Pago.`,
     queuedPastLife: "Tu lectura de vida pasada está lista y comenzará automáticamente al confirmarse tu pago.",
     queuedQuestion: "Tu pregunta a la Tabla Ouija está lista y se responderá automáticamente al confirmarse tu pago.",
-    includes1: "Primeras 2 consultas 100% gratuitas en vidas pasadas y tabla ouija.",
-    includes2: "Lecturas ilimitadas de vidas pasadas y preguntas akáshicas sin restricciones.",
+    queuedNatalChart: "Tu Carta Natal completa (voz, rueda y PDF) está lista y se revelará automáticamente al confirmarse tu pago.",
+    includes1: (n) =>
+      n === 1
+        ? "Primera consulta 100% gratuita en carta natal, vidas pasadas o tabla ouija."
+        : `Primeras ${n} consultas 100% gratuitas en vidas pasadas, tabla ouija y carta natal.`,
+    includes2: "Lecturas ilimitadas de vidas pasadas, preguntas akáshicas y cartas natales con PDF.",
     includes3: "Desbloqueo inmediato con Mercado Pago o número de operación.",
     payMp: "Desbloquear con Mercado Pago",
     waitingAutoTitle: "Esperando confirmación automática...",
@@ -77,14 +85,21 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
   },
   en: {
     badge: "Akashic Consultation Pass • Unlimited",
-    titleLimitReached: "You have used your 2 free consultations",
+    titleLimitReached: (n) =>
+      n === 1 ? "You have used your free consultation" : `You have used your ${n} free consultations`,
     titleUpgrade: "Unlock Unlimited Readings",
-    subtitle:
-      "Enjoy your first 2 consultations 100% free. Unlimited access applies from the 3rd consultation via Mercado Pago.",
+    subtitle: (n) =>
+      n === 1
+        ? "Your first consultation (Natal Chart, Ouija, or Past Life) is 100% free. Unlimited access applies from the 2nd consultation via Mercado Pago."
+        : `Enjoy your first ${n} consultations 100% free. Unlimited access applies from consultation #${n + 1} via Mercado Pago.`,
     queuedPastLife: "Your past-life reading is queued and will start automatically upon confirmation.",
     queuedQuestion: "Your Ouija question is queued and will be answered automatically upon confirmation.",
-    includes1: "First 2 consultations 100% free for past lives and Ouija.",
-    includes2: "Unlimited past-life readings and Akashic questions without restrictions.",
+    queuedNatalChart: "Your complete Natal Chart (voice, wheel & PDF) is ready and will unlock automatically upon confirmation.",
+    includes1: (n) =>
+      n === 1
+        ? "First consultation 100% free for natal charts, past lives, or Ouija."
+        : `First ${n} consultations 100% free for past lives, Ouija, and natal charts.`,
+    includes2: "Unlimited past-life readings, Akashic questions, and natal charts with PDF export.",
     includes3: "Instant unlock via Mercado Pago or operation number.",
     payMp: "Unlock with Mercado Pago",
     waitingAutoTitle: "Waiting for automatic confirmation...",
@@ -97,14 +112,21 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
   },
   pt: {
     badge: "Passe de Consultas Akáshicas • Ilimitado",
-    titleLimitReached: "Você usou suas 2 consultas gratuitas",
+    titleLimitReached: (n) =>
+      n === 1 ? "Você usou sua consulta gratuita" : `Você usou suas ${n} consultas gratuitas`,
     titleUpgrade: "Desbloqueie Leituras Ilimitadas",
-    subtitle:
-      "Aproveite suas primeiras 2 consultas 100% gratuitas. O passe ilimitado se aplica a partir da 3ª consulta via Mercado Pago.",
+    subtitle: (n) =>
+      n === 1
+        ? "Sua primeira consulta é 100% gratuita. O passe ilimitado se aplica a partir da 2ª consulta via Mercado Pago."
+        : `Aproveite suas primeiras ${n} consultas 100% gratuitas. O passe ilimitado se aplica a partir da ${n + 1}ª consulta via Mercado Pago.`,
     queuedPastLife: "Sua leitura de vida passada está pronta e começará automaticamente após a confirmação.",
     queuedQuestion: "Sua pergunta na Tábua Ouija está pronta e será respondida automaticamente após a confirmação.",
-    includes1: "Primeiras 2 consultas 100% gratuitas em vidas passadas e Ouija.",
-    includes2: "Leituras ilimitadas de vidas passadas e perguntas akáshicas.",
+    queuedNatalChart: "Seu Mapa Astral completo (voz, roda e PDF) está pronto e será revelado após a confirmação.",
+    includes1: (n) =>
+      n === 1
+        ? "Primeira consulta 100% gratuita em mapa astral, vidas passadas ou Ouija."
+        : `Primeiras ${n} consultas 100% gratuitas em vidas passadas, Ouija e mapa astral.`,
+    includes2: "Leituras ilimitadas de vidas passadas, perguntas akáshicas e mapas astrais com PDF.",
     includes3: "Desbloqueio instantâneo via Mercado Pago ou número de operação.",
     payMp: "Desbloquear com Mercado Pago",
     waitingAutoTitle: "Aguardando confirmação automática...",
@@ -117,14 +139,21 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
   },
   fr: {
     badge: "Pass Consultations Akashiques • Illimité",
-    titleLimitReached: "Vous avez utilisé vos 2 consultations gratuites",
+    titleLimitReached: (n) =>
+      n === 1 ? "Vous avez utilisé votre consultation gratuite" : `Vous avez utilisé vos ${n} consultations gratuites`,
     titleUpgrade: "Débloquez des Lectures Illimitées",
-    subtitle:
-      "Profitez de vos 2 premières consultations 100% gratuites. L'accès illimité s'applique à partir de la 3ème consultation via Mercado Pago.",
+    subtitle: (n) =>
+      n === 1
+        ? "Votre première consultation est 100% gratuite. L'accès illimité s'applique dès la 2ème consultation via Mercado Pago."
+        : `Profitez de vos ${n} premières consultations 100% gratuites. L'accès illimité s'applique dès la ${n + 1}ème consultation via Mercado Pago.`,
     queuedPastLife: "Votre lecture de vie antérieure est prête et démarrera automatiquement.",
     queuedQuestion: "Votre question Ouija est prête et recevra sa réponse automatiquement.",
-    includes1: "2 premières consultations 100% gratuites pour vies antérieures et Ouija.",
-    includes2: "Lectures illimitées de vies antérieures et questions akashiques.",
+    queuedNatalChart: "Votre Thème Natal complet (voix, roue et PDF) est prêt et s'ouvrira dès confirmation.",
+    includes1: (n) =>
+      n === 1
+        ? "1ère consultation 100% gratuite pour thème natal, vies antérieures ou Ouija."
+        : `${n} premières consultations 100% gratuites pour vies antérieures, Ouija et thème natal.`,
+    includes2: "Lectures illimitées de vies antérieures, questions akashiques et thèmes natals en PDF.",
     includes3: "Déblocage instantané via Mercado Pago ou numéro d'opération.",
     payMp: "Débloquer avec Mercado Pago",
     waitingAutoTitle: "En attente de confirmation...",
@@ -137,14 +166,21 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
   },
   it: {
     badge: "Pass Consulti Akashici • Illimitati",
-    titleLimitReached: "Hai esaurito i 2 consulti gratuiti",
+    titleLimitReached: (n) =>
+      n === 1 ? "Hai esaurito il tuo consulto gratuito" : `Hai esaurito i ${n} consulti gratuiti`,
     titleUpgrade: "Sblocca Letture Illimitate",
-    subtitle:
-      "Goditi i primi 2 consulti 100% gratuiti. L'accesso illimitato si applica dal 3° consulto tramite Mercado Pago.",
+    subtitle: (n) =>
+      n === 1
+        ? "Il tuo primo consulto è 100% gratuito. L'accesso illimitato si applica dal 2° consulto tramite Mercado Pago."
+        : `Goditi i primi ${n} consulti 100% gratuiti. L'accesso illimitato si applica dal ${n + 1}° consulto tramite Mercado Pago.`,
     queuedPastLife: "La tua lettura delle vite passate è pronta e inizierà automaticamente.",
     queuedQuestion: "La tua domanda Ouija è pronta e riceverà risposta automaticamente.",
-    includes1: "Primi 2 consulti 100% gratuiti per vite passate e Ouija.",
-    includes2: "Letture illimitate delle vite passate e domande akashiche.",
+    queuedNatalChart: "Il tuo Tema Natale completo (voce, ruota e PDF) è pronto e si sbloccherà dopo il pagamento.",
+    includes1: (n) =>
+      n === 1
+        ? "Primo consulto 100% gratuito per tema natale, vite passate o Ouija."
+        : `Primi ${n} consulti 100% gratuiti per vite passate, Ouija e tema natale.`,
+    includes2: "Letture illimitate delle vite passate, domande akashiche e temi natali in PDF.",
     includes3: "Sblocco istantaneo tramite Mercado Pago o numero di operazione.",
     payMp: "Sblocca con Mercado Pago",
     waitingAutoTitle: "In attesa di conferma...",
@@ -157,14 +193,21 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
   },
   de: {
     badge: "Akasha-Beratungspass • Unbegrenzt",
-    titleLimitReached: "Du hast deine 2 kostenlosen Abfragen aufgebraucht",
+    titleLimitReached: (n) =>
+      n === 1 ? "Du hast deine kostenlose Abfrage aufgebraucht" : `Du hast deine ${n} kostenlosen Abfragen aufgebraucht`,
     titleUpgrade: "Unbegrenzte Lesungen freischalten",
-    subtitle:
-      "Genieße deine ersten 2 Abfragen 100% kostenlos. Der unbegrenzte Zugang gilt ab der 3. Abfrage über Mercado Pago.",
+    subtitle: (n) =>
+      n === 1
+        ? "Deine erste Abfrage ist 100% kostenlos. Der unbegrenzte Zugang gilt ab der 2. Abfrage über Mercado Pago."
+        : `Genieße deine ersten ${n} Abfragen 100% kostenlos. Der unbegrenzte Zugang gilt ab Abfrage ${n + 1} über Mercado Pago.`,
     queuedPastLife: "Deine Lesung über ein früheres Leben steht bereit und startet automatisch.",
     queuedQuestion: "Deine Ouija-Frage steht bereit und wird automatisch beantwortet.",
-    includes1: "Erste 2 Abfragen 100% kostenlos für frühere Leben und Ouija.",
-    includes2: "Unbegrenzte Lesungen früherer Leben und Akasha-Fragen.",
+    queuedNatalChart: "Dein vollständiges Geburtshoroskop (Stimme, Rad & PDF) wird nach Zahlung sofort freigeschaltet.",
+    includes1: (n) =>
+      n === 1
+        ? "Erste Abfrage 100% kostenlos für Geburtshoroskop, frühere Leben oder Ouija."
+        : `Erste ${n} Abfragen 100% kostenlos für frühere Leben, Ouija und Geburtshoroskop.`,
+    includes2: "Unbegrenzte Lesungen früherer Leben, Akasha-Fragen und Geburtshoroskope als PDF.",
     includes3: "Sofortige Freischaltung über Mercado Pago oder Vorgangsnummer.",
     payMp: "Mit Mercado Pago freischalten",
     waitingAutoTitle: "Warte auf Bestätigung...",
@@ -443,10 +486,10 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
             <span>{copy.badge}</span>
           </div>
           <h2 className="text-lg sm:text-xl font-cinzel font-bold text-amber-100 leading-snug">
-            {limitReached ? copy.titleLimitReached : copy.titleUpgrade}
+            {limitReached ? copy.titleLimitReached(cfg.freeConsultationsLimit) : copy.titleUpgrade}
           </h2>
           <p className="text-xs sm:text-sm font-gothic text-purple-200/85 leading-relaxed">
-            {copy.subtitle}
+            {copy.subtitle(cfg.freeConsultationsLimit)}
           </p>
         </div>
 
@@ -458,6 +501,8 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
               <p className="font-semibold text-amber-200">
                 {pendingConsultation.type === "past-life"
                   ? copy.queuedPastLife
+                  : pendingConsultation.type === "natal-chart"
+                  ? copy.queuedNatalChart
                   : copy.queuedQuestion}
               </p>
               {pendingConsultation.type === "past-life" && pendingConsultation.data.focusQuery && (
@@ -470,6 +515,11 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
                   "{pendingConsultation.question}"
                 </p>
               )}
+              {pendingConsultation.type === "natal-chart" && (
+                <p className="text-[11px] text-amber-200/80 italic line-clamp-2">
+                  {pendingConsultation.data.name} • {pendingConsultation.data.birthDate} • {pendingConsultation.data.birthCity}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -478,7 +528,7 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
         <div className="p-3.5 rounded-2xl bg-purple-950/45 border border-purple-800/50 space-y-2 text-xs font-gothic text-purple-200/90">
           <div className="flex items-start space-x-2">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-            <span>{copy.includes1}</span>
+            <span>{copy.includes1(cfg.freeConsultationsLimit)}</span>
           </div>
           <div className="flex items-start space-x-2">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />

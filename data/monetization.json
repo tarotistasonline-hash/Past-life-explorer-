@@ -1,8 +1,8 @@
 {
   "mpLink": "https://mpago.la/2cv7Gii",
   "paywallEnabled": true,
-  "freeConsultationsLimit": 2,
-  "passPriceArs": "",
-  "passAmountArs": 0,
+  "freeConsultationsLimit": 1,
+  "passPriceArs": "$6.000 ARS",
+  "passAmountArs": 6000,
   "autoReturnTokenHash": "6a6f46b0882972ece2b397194a7bc52d30beb724752a45853c5730e60b67a737"
 }
