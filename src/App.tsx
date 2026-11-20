@@ -3,7 +3,7 @@ import { BoardMode, PastLifeDetails, PastLifeRevelation, SpiritResponse, VisitsS
 import { OuijaBoard } from "./components/OuijaBoard";
 import { SpiritOracleForm } from "./components/SpiritOracleForm";
 import { PastLifeModal } from "./components/PastLifeModal";
-import { PastLifeCodex } from "./components/PastLifeCodex";
+import { AntenaDimensionalPanel } from "./components/AntenaDimensionalPanel";
 import { AtmosphereControls } from "./components/AtmosphereControls";
 import { DailyTarotCard } from "./components/DailyTarotCard";
 import { NatalChartSection, NatalRequestPayload } from "./components/NatalChartSection";
@@ -12,7 +12,7 @@ import { CrystalBallLoader } from "./components/CrystalBallLoader";
 import { StarfieldBackground } from "./components/StarfieldBackground";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Globe, ExternalLink, Orbit } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Globe, ExternalLink, Orbit, Antenna } from "lucide-react";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
 import {
@@ -74,7 +74,7 @@ const getInitialVisitsStats = (): VisitsStats => {
 
 export default function App() {
   const { t, language, setLanguage, options } = useLanguage();
-  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "NATAL" | "CODEX">("ALL");
+  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "NATAL">("ALL");
   const [mode, setMode] = useState<BoardMode>("IDLE");
   const [spelledWord, setSpelledWord] = useState("");
   const [activeChar, setActiveChar] = useState("");
@@ -433,15 +433,6 @@ export default function App() {
 
     // Save into central Grimorio
     savePastLifeToGrimorio(newRecord, locale);
-  };
-
-  const handleClearCodex = () => {
-    setSavedRecords([]);
-    try {
-      localStorage.removeItem("ouija_past_lives_codex");
-    } catch (e) {
-      console.warn("Failed to clear codex", e);
-    }
   };
 
   // Execute Past Life Channeling API call
@@ -877,17 +868,17 @@ export default function App() {
           <span>{t("navNatal")}</span>
         </button>
 
-        <button
-          onClick={() => setActiveMainSection("CODEX")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
-            activeMainSection === "CODEX"
-              ? "bg-purple-900/80 text-purple-100 border border-purple-500/60 shadow-md"
-              : "text-purple-400 hover:text-purple-200"
-          }`}
+        <a
+          href="https://antena-dimensional.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Contactar con otras inteligencias o civilizaciones en Antena Dimensional"
+          className="px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/45 text-cyan-200 hover:text-white"
         >
-          <BookOpen className="w-3.5 h-3.5 text-purple-400" />
-          <span>{t("navCodex")} ({savedRecords.length})</span>
-        </button>
+          <Antenna className="w-3.5 h-3.5 text-cyan-300" />
+          <span>Antena Dimensional</span>
+          <ExternalLink className="w-3 h-3 opacity-75" />
+        </a>
 
         <button
           onClick={() => setShowGrimorioModal(true)}
@@ -1022,19 +1013,8 @@ export default function App() {
           />
         )}
 
-        {/* Section: Codex of Past Lives Logged (Shown if ALL or CODEX) */}
-        {(activeMainSection === "ALL" || activeMainSection === "CODEX") && (
-          <PastLifeCodex
-            records={savedRecords}
-            onSelectRecord={(rec) => {
-              audio.fadeOutForSelection();
-              setCurrentPastLife(rec.pastLifeDetails);
-              setSeekerName(rec.seekerName);
-              setIsModalOpen(true);
-            }}
-            onClearCodex={handleClearCodex}
-          />
-        )}
+        {/* Section: Antena Dimensional (External Interstellar Contact Portal) */}
+        {activeMainSection === "ALL" && <AntenaDimensionalPanel />}
       </main>
 
       {/* Past Life Revelation Modal */}
@@ -1056,6 +1036,14 @@ export default function App() {
         <GrimorioModal
           isOpen={showGrimorioModal}
           onClose={() => setShowGrimorioModal(false)}
+          onOpenPastLifeDetails={(rec) => {
+            if (rec.pastLifeData) {
+              setCurrentPastLife(rec.pastLifeData.pastLifeDetails);
+              setSeekerName(rec.pastLifeData.seekerName || rec.seekerName);
+              setShowGrimorioModal(false);
+              setIsModalOpen(true);
+            }
+          }}
         />
       )}
 
