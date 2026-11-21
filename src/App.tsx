@@ -74,7 +74,7 @@ const getInitialVisitsStats = (): VisitsStats => {
 
 export default function App() {
   const { t, language, setLanguage, options } = useLanguage();
-  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "NATAL">("ALL");
+  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "NATAL" | "ANTENA">("ALL");
   const [mode, setMode] = useState<BoardMode>("IDLE");
   const [spelledWord, setSpelledWord] = useState("");
   const [activeChar, setActiveChar] = useState("");
@@ -868,17 +868,23 @@ export default function App() {
           <span>{t("navNatal")}</span>
         </button>
 
-        <a
-          href="https://antena-dimensional.vercel.app/"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Contactar con otras inteligencias o civilizaciones en Antena Dimensional"
-          className="px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/45 text-cyan-200 hover:text-white"
+        <button
+          onClick={() => {
+            setActiveMainSection("ANTENA");
+            setTimeout(() => {
+              document.getElementById("antena-dimensional-section")?.scrollIntoView({ behavior: "smooth" });
+            }, 50);
+          }}
+          title="Ver Portal de Antena Dimensional"
+          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+            activeMainSection === "ANTENA"
+              ? "bg-cyan-950/90 text-cyan-200 border border-cyan-400/80 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
+              : "text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40 border border-cyan-500/35"
+          }`}
         >
           <Antenna className="w-3.5 h-3.5 text-cyan-300" />
           <span>Antena Dimensional</span>
-          <ExternalLink className="w-3 h-3 opacity-75" />
-        </a>
+        </button>
 
         <button
           onClick={() => setShowGrimorioModal(true)}
@@ -1014,7 +1020,9 @@ export default function App() {
         )}
 
         {/* Section: Antena Dimensional (External Interstellar Contact Portal) */}
-        {activeMainSection === "ALL" && <AntenaDimensionalPanel />}
+        {(activeMainSection === "ALL" || activeMainSection === "ANTENA") && (
+          <AntenaDimensionalPanel />
+        )}
       </main>
 
       {/* Past Life Revelation Modal */}
