@@ -15,8 +15,8 @@ export const DEFAULT_MONETIZATION_CONFIG: MonetizationConfig = {
   mpLink: DEFAULT_MP_LINK,
   paywallEnabled: true,
   freeConsultationsLimit: 1,
-  passPriceArs: "$8.000 ARS",
-  passAmountArs: 8000,
+  passPriceArs: "$6.000 ARS",
+  passAmountArs: 6000,
   autoReturnTokenHash: "",
 };
 
