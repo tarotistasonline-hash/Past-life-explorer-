@@ -7,12 +7,12 @@ import { AntenaDimensionalPanel } from "./components/AntenaDimensionalPanel";
 import { AtmosphereControls } from "./components/AtmosphereControls";
 import { DailyTarotCard } from "./components/DailyTarotCard";
 import { NatalChartSection, NatalRequestPayload } from "./components/NatalChartSection";
-import { GrimorioModal } from "./components/GrimorioModal";
+import { KabbalahMissionSection } from "./components/KabbalahMissionSection";
 import { CrystalBallLoader } from "./components/CrystalBallLoader";
 import { StarfieldBackground } from "./components/StarfieldBackground";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, BookOpen, Layers, Globe, ExternalLink, Orbit, Antenna } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, Compass, Layers, Globe, ExternalLink, Orbit, Antenna } from "lucide-react";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
 import {
@@ -74,7 +74,7 @@ const getInitialVisitsStats = (): VisitsStats => {
 
 export default function App() {
   const { t, language, setLanguage, options } = useLanguage();
-  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "NATAL" | "ANTENA">("ALL");
+  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "NATAL" | "CABALA" | "ANTENA">("ALL");
   const [mode, setMode] = useState<BoardMode>("IDLE");
   const [spelledWord, setSpelledWord] = useState("");
   const [activeChar, setActiveChar] = useState("");
@@ -85,7 +85,6 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [visitsStats, setVisitsStats] = useState<VisitsStats>(getInitialVisitsStats);
   const [prefilledOuijaQuestion, setPrefilledOuijaQuestion] = useState("");
-  const [showGrimorioModal, setShowGrimorioModal] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [pendingConsultation, setPendingConsultation] = useState<PendingConsultation | null>(
     () => getPendingConsultation()
@@ -814,7 +813,12 @@ export default function App() {
       <AtmosphereControls
         fogOn={fogOn}
         setFogOn={setFogOn}
-        onOpenGrimorio={() => setShowGrimorioModal(true)}
+        onOpenKabbalah={() => {
+          setActiveMainSection("CABALA");
+          setTimeout(() => {
+            document.getElementById("kabbalah-mission-section")?.scrollIntoView({ behavior: "smooth" });
+          }, 50);
+        }}
         visitsStats={visitsStats}
       />
 
@@ -887,12 +891,21 @@ export default function App() {
         </button>
 
         <button
-          onClick={() => setShowGrimorioModal(true)}
-          className="px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap bg-purple-950/60 hover:bg-purple-900 border border-purple-700/60 text-purple-200"
-          title="Abrir Grimorio Personal"
+          onClick={() => {
+            setActiveMainSection("CABALA");
+            setTimeout(() => {
+              document.getElementById("kabbalah-mission-section")?.scrollIntoView({ behavior: "smooth" });
+            }, 50);
+          }}
+          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+            activeMainSection === "CABALA"
+              ? "bg-amber-950/85 text-amber-100 border border-amber-400/75 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+              : "text-amber-200/90 hover:text-amber-100 hover:bg-amber-950/35 border border-amber-500/35"
+          }`}
+          title="Tu Misión de Vida según la Cábala (Árbol de la Vida)"
         >
-          <BookOpen className="w-3.5 h-3.5 text-purple-300" />
-          <span>Grimorio</span>
+          <Compass className="w-3.5 h-3.5 text-amber-300" />
+          <span>Misión Cábala</span>
         </button>
       </nav>
 
@@ -1019,6 +1032,11 @@ export default function App() {
           />
         )}
 
+        {/* Section: Misión de Vida según la Cábala (Árbol de la Vida) */}
+        {(activeMainSection === "ALL" || activeMainSection === "CABALA") && (
+          <KabbalahMissionSection onSendToOuija={handleSendNatalToOuija} />
+        )}
+
         {/* Section: Antena Dimensional (External Interstellar Contact Portal) */}
         {(activeMainSection === "ALL" || activeMainSection === "ANTENA") && (
           <AntenaDimensionalPanel />
@@ -1036,22 +1054,6 @@ export default function App() {
           }}
           onSaveToCodex={handleSaveToCodex}
           isSaved={isCurrentSaved}
-        />
-      )}
-
-      {/* Grimorio Personal / Archivo de Ecos Modal */}
-      {showGrimorioModal && (
-        <GrimorioModal
-          isOpen={showGrimorioModal}
-          onClose={() => setShowGrimorioModal(false)}
-          onOpenPastLifeDetails={(rec) => {
-            if (rec.pastLifeData) {
-              setCurrentPastLife(rec.pastLifeData.pastLifeDetails);
-              setSeekerName(rec.pastLifeData.seekerName || rec.seekerName);
-              setShowGrimorioModal(false);
-              setIsModalOpen(true);
-            }
-          }}
         />
       )}
 

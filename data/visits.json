@@ -1,16 +1,18 @@
 {
-  "totalVisits": 54,
-  "totalConsultations": 25,
+  "totalVisits": 359,
+  "totalConsultations": 28,
   "dailyVisits": {
     "2026-08-29": 5,
     "2026-09-04": 3,
-    "2026-09-24": 6
+    "2026-09-24": 6,
+    "2026-11-22": 45
   },
   "uniqueVisitors": [
     "visitor_init",
     "user_real_test",
     "user_real_test_2",
-    "vis_a1dn9m93l_1790215774851"
+    "vis_a1dn9m93l_1790215774851",
+    "vis_wqp6hebbj_1795092556233"
   ],
-  "lastUpdated": "2026-11-19T13:38:30.176Z"
+  "lastUpdated": "2026-11-22T23:00:21.020Z"
 }

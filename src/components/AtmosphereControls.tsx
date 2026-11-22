@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, BookOpen, Music, Mail, Trash2 } from "lucide-react";
+import { Volume2, VolumeX, Moon, HelpCircle, X, Eye, Sparkles, Shield, ShieldCheck, Maximize2, Minimize2, Compass, Music, Mail, Trash2 } from "lucide-react";
 import { audio } from "../lib/audio";
 import { VisitsStats } from "../types";
 import { useLanguage } from "../context/LanguageContext";
@@ -15,14 +15,14 @@ import { FeedbackModal } from "./FeedbackModal";
 interface AtmosphereControlsProps {
   fogOn: boolean;
   setFogOn: (on: boolean) => void;
-  onOpenGrimorio?: () => void;
+  onOpenKabbalah?: () => void;
   visitsStats: VisitsStats | null;
 }
 
 export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   fogOn,
   setFogOn,
-  onOpenGrimorio,
+  onOpenKabbalah,
   visitsStats,
 }) => {
   const { t, language } = useLanguage();
@@ -197,15 +197,15 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
           {/* Moon Phase Real-time Widget */}
           <MoonPhaseWidget />
 
-          {/* Grimorio Personal / Ecos del Alma Trigger */}
-          {onOpenGrimorio && (
+          {/* Misión de Vida según la Cábala Trigger */}
+          {onOpenKabbalah && (
             <button
-              onClick={onOpenGrimorio}
-              title="Abrir Grimorio Personal (Lecturas Guardadas)"
-              className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-purple-700/60 bg-purple-950/70 hover:bg-purple-900 text-purple-200 flex items-center space-x-1.5 transition cursor-pointer shadow-sm"
+              onClick={onOpenKabbalah}
+              title="Abrir Misión de Vida según la Cábala (Árbol de la Vida)"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/50 text-amber-200 flex items-center space-x-1.5 transition cursor-pointer shadow-sm whitespace-nowrap shrink-0"
             >
-              <BookOpen className="w-3.5 h-3.5 text-purple-300" />
-              <span className="hidden lg:inline text-[11px] font-cinzel font-semibold">Grimorio</span>
+              <Compass className="w-3.5 h-3.5 text-amber-300" />
+              <span className="hidden lg:inline text-[11px] font-cinzel font-semibold">Misión Cábala</span>
             </button>
           )}
 
@@ -301,7 +301,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
               setHistoryClearedBanner(false);
               setShowClearHistoryModal(true);
             }}
-            title="Limpiar historial guardado (Codex, Grimorio, Carta Natal y Buzón)"
+            title="Limpiar historial guardado (Codex, Misión Cábala, Carta Natal y Buzón)"
             className="p-2 sm:px-3 sm:py-1.5 bg-red-950/35 hover:bg-red-900/55 border border-red-800/45 rounded-xl text-red-200 font-medium flex items-center space-x-1 transition cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5 text-red-300" />
@@ -548,7 +548,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
             ) : (
               <>
                 <p className="text-xs font-gothic text-purple-200/90 leading-relaxed">
-                  Esta acción eliminará el <strong>Codex de Vidas Pasadas</strong>, el <strong>Grimorio</strong>, la última <strong>Carta Natal guardada</strong>, las respuestas visibles en el tablero y los <strong>mensajes guardados del Buzón</strong>. Tu pase desbloqueado y el contador global del portal no se alteran.
+                  Esta acción eliminará el <strong>Codex de Vidas Pasadas</strong>, la última lectura de <strong>Misión de Vida (Cábala)</strong>, la última <strong>Carta Natal guardada</strong>, las respuestas visibles en el tablero y los <strong>mensajes guardados del Buzón</strong>. Tu pase desbloqueado y el contador global del portal no se alteran.
                 </p>
                 <div className="flex items-center justify-end gap-2 pt-1">
                   <button
@@ -567,6 +567,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
                       try {
                         localStorage.removeItem("ouija_past_lives_codex");
                         localStorage.removeItem("ouija_natal_chart_saved_v1");
+                        localStorage.removeItem("ouija_kabbalah_mission_v1");
                         localStorage.removeItem("ouija_user_feedback_list");
                       } catch {
                         // ignore

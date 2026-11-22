@@ -23,6 +23,7 @@ import {
   getCoherentKarmicSpreadFallback,
 } from "./src/lib/oracleCoherence.ts";
 import { buildLocalNatalReading } from "./src/lib/natalChart.ts";
+import { calculateKabbalahProfile, buildLocalKabbalahReading } from "./src/lib/kabbalah.ts";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -1183,6 +1184,96 @@ Write concrete, insightful interpretations in ${targetLangName}. Respond strictl
   }
 
   return res.json({ reading: fallbackReading, isAiEnhanced: false });
+});
+
+// API Route 7: Kabbalah Life Mission (Árbol de la Vida) AI Interpretation
+app.post("/api/kabbalah/mission", async (req, res) => {
+  incrementConsultation(req);
+  const { fullName, birthDate, language = "es" } = req.body || {};
+  if (!fullName || !birthDate) {
+    return res.status(400).json({ error: "Se requiere nombre completo y fecha de nacimiento" });
+  }
+
+  const profile = calculateKabbalahProfile(String(fullName), String(birthDate));
+  const fallbackReading = buildLocalKabbalahReading(profile, language);
+  const ai = getAIClient();
+
+  if (!ai) {
+    return res.json({ profile, reading: fallbackReading, isAiEnhanced: false });
+  }
+
+  try {
+    const targetLangName = getLanguageName(language);
+    const prompt = `Act as a wise, grounded scholar of Kabbalah and the Tree of Life (Etz Chaim).
+Analyze the user's Soul Life Mission in ${targetLangName} based strictly on these Kabbalistic calculations:
+- Name: ${profile.fullName}
+- Birth Date: ${profile.birthDate}
+- Birth Life Path Number: ${profile.lifePathNumber} (Raw sum: ${profile.lifePathRaw})
+- Primary Birth Sephira: ${profile.primarySephira.name} (${profile.primarySephira.hebrewName}) - ${profile.primarySephira.meaning}
+- Pillar of the Tree of Life: ${profile.dominantPillar}
+- Name Gematria Value: ${profile.nameGematriaRaw} -> Reduced: ${profile.nameNumber} (Soul Urge: ${profile.soulUrgeNumber}, Expression: ${profile.expressionNumber})
+- Name Sephira: ${profile.nameSephira.name} (${profile.nameSephira.hebrewName}) - ${profile.nameSephira.meaning}
+- Hebrew Letter / Path: ${profile.hebrewPath.letter} (${profile.hebrewPath.hebrewChar}) - "${profile.hebrewPath.meaning}" (${profile.hebrewPath.pathTitle})
+${profile.masterNumberNote ? `- Master Resonance: ${profile.masterNumberNote}` : ""}
+
+Write a deep, authentic, clear, inspiring Kabbalistic Life Mission reading in ${targetLangName}. Respond strictly as JSON.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-4-hydrogen",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            headline: { type: Type.STRING },
+            lifeMissionSummary: { type: Type.STRING },
+            sephiraConnection: { type: Type.STRING },
+            nameVibrationInsight: { type: Type.STRING },
+            tikkunLesson: { type: Type.STRING },
+            soulGifts: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            practicalAlignment: { type: Type.STRING },
+            kabbalisticAffirmation: { type: Type.STRING },
+          },
+          required: [
+            "headline",
+            "lifeMissionSummary",
+            "sephiraConnection",
+            "nameVibrationInsight",
+            "tikkunLesson",
+            "soulGifts",
+            "practicalAlignment",
+            "kabbalisticAffirmation",
+          ],
+        },
+      },
+    });
+
+    const jsonText = response.text?.trim();
+    if (jsonText) {
+      const parsed = JSON.parse(jsonText);
+      return res.json({
+        profile,
+        reading: {
+          ...fallbackReading,
+          ...parsed,
+          soulGifts:
+            Array.isArray(parsed.soulGifts) && parsed.soulGifts.length > 0
+              ? parsed.soulGifts.slice(0, 4)
+              : fallbackReading.soulGifts,
+          isAiEnhanced: true,
+        },
+        isAiEnhanced: true,
+      });
+    }
+  } catch (err) {
+    handleGeminiError("/api/kabbalah/mission", err);
+  }
+
+  return res.json({ profile, reading: fallbackReading, isAiEnhanced: false });
 });
 
 // ============================================================================
