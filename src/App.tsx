@@ -1073,39 +1073,39 @@ export default function App() {
         }}
       />
 
-      {/* Visible Payment Banner (Mercado Pago) */}
+      {/* Visible Payment Banner (ExtensionPay) */}
       {monetizationCfg.paywallEnabled && (
         <section
           aria-label="Medio de pago"
-          className="w-full max-w-4xl mt-6 bg-[#0f0918]/90 border border-amber-500/35 rounded-2xl p-4 backdrop-blur-md shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 z-20 text-xs font-gothic"
+          className="w-full max-w-4xl mt-6 bg-[#060212]/90 border border-cyan-500/40 rounded-2xl p-4 backdrop-blur-md shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 z-20 text-xs font-gothic"
         >
           {isCreatorOrAdmin ? (
             <>
               <div className="space-y-1">
-                <span className="font-cinzel font-bold text-amber-200 block">
+                <span className="font-cinzel font-bold text-cyan-200 block">
                   Modo Creador activo • Consultas ilimitadas
                 </span>
-                <p className="text-purple-300/80 text-[11px]">
-                  Tienes acceso completo sin cobro. Tus visitantes ven el pase de Mercado Pago tras {monetizationCfg.freeConsultationsLimit}{" "}
+                <p className="text-cyan-300/80 text-[11px]">
+                  Tienes acceso completo sin cobro. Tus visitantes ven el pase de ExtensionPay tras {monetizationCfg.freeConsultationsLimit}{" "}
                   {monetizationCfg.freeConsultationsLimit === 1 ? "consulta gratuita" : "consultas gratuitas"}.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                 <a
-                  href={getEffectiveMpUrl(monetizationCfg)}
+                  href="https://extensionpay.com/h/1824"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-600 hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-500 text-slate-950 border border-cyan-200/80 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(34,211,238,0.4)] flex items-center space-x-1"
                 >
-                  <span>
-                    Desbloquear con Mercado Pago{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
-                  </span>
                   <ExternalLink className="w-3.5 h-3.5" />
+                  <span>
+                    Desbloquear con ExtensionPay{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
+                  </span>
                 </a>
                 <button
                   type="button"
                   onClick={() => setIsPaywallOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-amber-500/40 text-amber-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
                 >
                   Ver Panel de Desbloqueo
                 </button>
@@ -1114,34 +1114,34 @@ export default function App() {
           ) : (
             <>
               <div className="space-y-1">
-                <span className="font-cinzel font-bold text-amber-200 block">
+                <span className="font-cinzel font-bold text-cyan-200 block">
                   Desbloquear consultas ilimitadas
                 </span>
-                <p className="text-purple-300/80 text-[11px]">
+                <p className="text-cyan-300/80 text-[11px]">
                   {monetizationCfg.freeConsultationsLimit === 1
-                    ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea ilimitado con Mercado Pago:"
-                    : `Primeras ${monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea con Mercado Pago:`}
+                    ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea ilimitado con ExtensionPay:"
+                    : `Primeras ${monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea con ExtensionPay:`}
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                 <a
-                  href={getEffectiveMpUrl(monetizationCfg)}
+                  href="https://extensionpay.com/h/1824"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-600 hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-500 text-slate-950 border border-cyan-200/80 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(34,211,238,0.4)] flex items-center space-x-1"
                 >
-                  <span>
-                    Desbloquear con Mercado Pago{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
-                  </span>
                   <ExternalLink className="w-3.5 h-3.5" />
+                  <span>
+                    Desbloquear con ExtensionPay{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
+                  </span>
                 </a>
                 <button
                   type="button"
                   onClick={() => setIsPaywallOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-amber-500/40 text-amber-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
                 >
-                  Ver Pase / Ingresar Comprobante
+                  Ver Pase / Verificar Pago
                 </button>
               </div>
             </>
