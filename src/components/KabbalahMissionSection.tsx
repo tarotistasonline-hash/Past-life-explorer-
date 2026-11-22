@@ -28,7 +28,7 @@ import {
 import { audio } from "../lib/audio";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { copyMysticShareText } from "../lib/parchmentExport";
-import treeOfLifeImg from "../assets/images/kabbalah_tree_of_life_1795388193641.jpg";
+import treeOfLifeImg from "../assets/images/kabbalah_tree_attractive_1795389197170.jpg";
 
 export const KABBALAH_STORAGE_KEY = "ouija_kabbalah_mission_v1";
 
@@ -617,17 +617,17 @@ export const KabbalahMissionSection: React.FC<KabbalahMissionSectionProps> = ({
                       top: `${seph.yPercent}%`,
                     }}
                     title={`${seph.number}. ${seph.name} (${seph.hebrewName}) — ${seph.meaning}`}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-mono tabular-nums font-bold transition-transform duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-mono tabular-nums font-bold transition-transform duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
                       isBirth
-                        ? "bg-amber-400/95 text-neutral-950 ring-4 ring-amber-300/60 scale-110 shadow-[0_0_20px_rgba(251,191,36,0.9)]"
+                        ? "bg-amber-400/35 text-white ring-4 ring-amber-300 scale-115 shadow-[0_0_24px_rgba(251,191,36,0.95)] backdrop-blur-[1px]"
                         : isName
-                        ? "bg-purple-500/90 text-white ring-3 ring-purple-300/60 scale-105 shadow-[0_0_16px_rgba(168,85,247,0.85)]"
+                        ? "bg-purple-500/35 text-white ring-3 ring-purple-300 scale-110 shadow-[0_0_20px_rgba(168,85,247,0.9)] backdrop-blur-[1px]"
                         : isInspected
-                        ? "bg-black/75 text-amber-200 border-2 border-amber-300 scale-105"
-                        : "bg-black/45 hover:bg-black/75 text-amber-100/90 border border-amber-400/40 hover:border-amber-300"
+                        ? "bg-black/35 text-amber-200 ring-2 ring-amber-300/90 scale-105"
+                        : "bg-black/15 hover:bg-black/45 text-white/85 border border-amber-300/35 hover:border-amber-200"
                     }`}
                   >
-                    {seph.number}
+                    <span className="drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">{seph.number}</span>
                   </button>
                 );
               })}

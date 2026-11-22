@@ -45,6 +45,7 @@ interface PaywallCopy {
   includes1: (limit: number) => string;
   includes2: string;
   includes3: string;
+  includes4: string;
   payMp: string;
   waitingAutoTitle: string;
   waitingAutoDesc: string;
@@ -73,7 +74,8 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         ? "Primera consulta 100% gratuita en carta natal, vidas pasadas o tabla ouija."
         : `Primeras ${n} consultas 100% gratuitas en vidas pasadas, tabla ouija y carta natal.`,
     includes2: "Lecturas ilimitadas de vidas pasadas, preguntas akáshicas y cartas natales con PDF.",
-    includes3: "Desbloqueo inmediato con Mercado Pago o número de operación.",
+    includes3: "Instalación directa como App en tu celular (Android / iPhone) o computadora.",
+    includes4: "Desbloqueo inmediato con Mercado Pago o número de operación.",
     payMp: "Desbloquear con Mercado Pago",
     waitingAutoTitle: "Esperando confirmación automática...",
     waitingAutoDesc: "No cierres esta ventana: apenas finalices el pago se desbloqueará y ejecutará tu lectura.",
@@ -100,7 +102,8 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         ? "First consultation 100% free for natal charts, past lives, or Ouija."
         : `First ${n} consultations 100% free for past lives, Ouija, and natal charts.`,
     includes2: "Unlimited past-life readings, Akashic questions, and natal charts with PDF export.",
-    includes3: "Instant unlock via Mercado Pago or operation number.",
+    includes3: "Installable as a standalone App on Android, iPhone, or desktop.",
+    includes4: "Instant unlock via Mercado Pago or operation number.",
     payMp: "Unlock with Mercado Pago",
     waitingAutoTitle: "Waiting for automatic confirmation...",
     waitingAutoDesc: "Keep this window open: your reading will unlock automatically once paid.",
@@ -127,7 +130,8 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         ? "Primeira consulta 100% gratuita em mapa astral, vidas passadas ou Ouija."
         : `Primeiras ${n} consultas 100% gratuitas em vidas passadas, Ouija e mapa astral.`,
     includes2: "Leituras ilimitadas de vidas passadas, perguntas akáshicas e mapas astrais com PDF.",
-    includes3: "Desbloqueio instantâneo via Mercado Pago ou número de operação.",
+    includes3: "Instalação como App no celular (Android / iPhone) ou computador.",
+    includes4: "Desbloqueio instantâneo via Mercado Pago ou número de operação.",
     payMp: "Desbloquear com Mercado Pago",
     waitingAutoTitle: "Aguardando confirmação automática...",
     waitingAutoDesc: "Mantenha esta janela aberta: sua leitura começará automaticamente após o pagamento.",
@@ -154,7 +158,8 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         ? "1ère consultation 100% gratuite pour thème natal, vies antérieures ou Ouija."
         : `${n} premières consultations 100% gratuites pour vies antérieures, Ouija et thème natal.`,
     includes2: "Lectures illimitées de vies antérieures, questions akashiques et thèmes natals en PDF.",
-    includes3: "Déblocage instantané via Mercado Pago ou numéro d'opération.",
+    includes3: "Installation directe en tant qu'application sur mobile ou ordinateur.",
+    includes4: "Déblocage instantané via Mercado Pago ou numéro d'opération.",
     payMp: "Débloquer avec Mercado Pago",
     waitingAutoTitle: "En attente de confirmation...",
     waitingAutoDesc: "Gardez cette fenêtre ouverte : votre lecture démarrera automatiquement dès validation.",
@@ -181,7 +186,8 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         ? "Primo consulto 100% gratuito per tema natale, vite passate o Ouija."
         : `Primi ${n} consulti 100% gratuiti per vite passate, Ouija e tema natale.`,
     includes2: "Letture illimitate delle vite passate, domande akashiche e temi natali in PDF.",
-    includes3: "Sblocco istantaneo tramite Mercado Pago o numero di operazione.",
+    includes3: "Installabile come App dedicata su cellulare (Android / iPhone) o PC.",
+    includes4: "Sblocco istantaneo tramite Mercado Pago o numero di operazione.",
     payMp: "Sblocca con Mercado Pago",
     waitingAutoTitle: "In attesa di conferma...",
     waitingAutoDesc: "Tieni aperta questa finestra: la lettura inizierà automaticamente dopo il pagamento.",
@@ -208,7 +214,8 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         ? "Erste Abfrage 100% kostenlos für Geburtshoroskop, frühere Leben oder Ouija."
         : `Erste ${n} Abfragen 100% kostenlos für frühere Leben, Ouija und Geburtshoroskop.`,
     includes2: "Unbegrenzte Lesungen früherer Leben, Akasha-Fragen und Geburtshoroskope als PDF.",
-    includes3: "Sofortige Freischaltung über Mercado Pago oder Vorgangsnummer.",
+    includes3: "Direkt als App auf Smartphone (Android / iPhone) oder Desktop installierbar.",
+    includes4: "Sofortige Freischaltung über Mercado Pago oder Vorgangsnummer.",
     payMp: "Mit Mercado Pago freischalten",
     waitingAutoTitle: "Warte auf Bestätigung...",
     waitingAutoDesc: "Lass dieses Fenster offen: Deine Lesung startet sofort automatisch nach Zahlung.",
@@ -247,60 +254,6 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
   const [creatorLoginError, setCreatorLoginError] = useState<string>("");
 
   const unlockedOnceRef = useRef<boolean>(false);
-
-  const handleExtensionPayCheckout = async () => {
-    try {
-      if (!(window as any).ExtPay) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://extensionpay.com/extpay.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-      const ExtPay = (window as any).ExtPay;
-      if (ExtPay) {
-        const extpay = ExtPay('1824');
-        extpay.openPaymentPage();
-      }
-    } catch {
-      window.open("https://extensionpay.com/h/1824", "_blank");
-    }
-  };
-
-  const handleExtensionPayVerify = async () => {
-    setIsValidatingOp(true);
-    setOpFeedback(null);
-    try {
-      if (!(window as any).ExtPay) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://extensionpay.com/extpay.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-      const ExtPay = (window as any).ExtPay;
-      if (ExtPay) {
-        const extpay = ExtPay('1824');
-        const user = await extpay.getUser();
-        if (user && user.paid) {
-          setOpFeedback({ type: "ok", msg: "¡Pago de ExtensionPay verificado con éxito! Desbloqueando..." });
-          triggerUnlockSuccess(`extpay_verified_${user.email || 'sub'}`, 'extpay_1824');
-        } else {
-          extpay.openLoginPage();
-          setOpFeedback({ type: "err", msg: "Aún no se registra pago activo. Por favor completa tu pago en ExtensionPay." });
-        }
-      }
-    } catch {
-      setOpFeedback({ type: "err", msg: "No se pudo conectar con ExtensionPay. Abriendo enlace..." });
-      window.open("https://extensionpay.com/h/1824", "_blank");
-    } finally {
-      setIsValidatingOp(false);
-    }
-  };
 
   const triggerUnlockSuccess = useCallback(
     (proof: string, approvedSessionId?: string) => {
@@ -592,6 +545,10 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
             <span>{copy.includes3}</span>
           </div>
+          <div className="flex items-start space-x-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+            <span>{copy.includes4}</span>
+          </div>
         </div>
 
         {/* Unlocked success banner */}
@@ -602,71 +559,20 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
           </div>
         ) : (
           <>
-            {/* ExtensionPay Payment & Verification Box (International Users - U$S 5.-) */}
-            <div className="p-4 rounded-2xl bg-cyan-950/50 border-2 border-cyan-400/60 shadow-[0_0_25px_rgba(34,211,238,0.25)] space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-xs sm:text-sm font-cinzel font-bold text-cyan-200">
-                  <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span>Usuarios Internacionales (U$S 5.-)</span>
-                </div>
-                <span className="px-2 py-0.5 rounded bg-cyan-900 text-cyan-200 font-mono text-[10px] font-bold">
-                  ExtensionPay
-                </span>
-              </div>
-              <p className="text-xs font-gothic text-cyan-100/90 leading-relaxed">
-                Paga de forma segura desde el exterior (U$S 5.-). Tus consultas se desbloquearán al instante tras verificar tu pago:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={handleExtensionPayCheckout}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-600 hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-500 text-slate-950 font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_22px_rgba(34,211,238,0.45)] border border-cyan-200/80 transition cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Pagar con ExtensionPay (U$S 5.-)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExtensionPayVerify}
-                  disabled={isValidatingOp}
-                  className="w-full py-3 px-3 rounded-xl bg-cyan-900/90 hover:bg-cyan-800 text-cyan-100 font-cinzel font-bold text-xs border border-cyan-400/60 transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 shadow"
-                >
-                  {isValidatingOp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-300" />}
-                  <span>Verificar Pago (U$S 5.-)</span>
-                </button>
-              </div>
-              {opFeedback && (
-                <div
-                  className={`text-[11px] font-gothic p-2.5 rounded-xl border ${
-                    opFeedback.type === "ok"
-                      ? "bg-emerald-950/70 border-emerald-500/50 text-emerald-200"
-                      : "bg-red-950/70 border-red-500/50 text-red-200"
-                  }`}
-                >
-                  {opFeedback.msg}
-                </div>
-              )}
-            </div>
-
-            {/* Alternative Payment Method: Mercado Pago (Local Users - $8.000 ARS) */}
-            <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between px-1">
-                <p className="text-[11px] font-cinzel text-purple-300/80 uppercase tracking-wider">
-                  — Argentina (Local) —
-                </p>
-                <span className="text-[11px] font-mono font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/40">
-                  $8.000 ARS
-                </span>
-              </div>
+            {/* Primary Payment Method: Mercado Pago */}
+            <div className="space-y-2.5 pt-1">
               <a
                 href={mpUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={handlePaymentClick}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_22px_rgba(245,158,11,0.45)] border border-amber-200/70 transition cursor-pointer"
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_24px_rgba(245,158,11,0.45)] border border-amber-200/70 transition cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>Pagar con Mercado Pago ($8.000 ARS)</span>
+                <span>
+                  {copy.payMp}
+                  {cfg.passPriceArs.trim() ? ` (${cfg.passPriceArs.trim()})` : ""}
+                </span>
                 <ExternalLink className="w-3.5 h-3.5 opacity-90" />
               </a>
             </div>

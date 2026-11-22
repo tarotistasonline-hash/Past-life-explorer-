@@ -11,11 +11,13 @@ import { clearAllGrimorio } from "../lib/grimorioStorage";
 import { AdminConfigModal } from "./AdminConfigModal";
 import { AdminUnlockModal } from "./AdminUnlockModal";
 import { FeedbackModal } from "./FeedbackModal";
+import { PWAInstallButton } from "./PWAInstallButton";
 
 interface AtmosphereControlsProps {
   fogOn: boolean;
   setFogOn: (on: boolean) => void;
   onOpenKabbalah?: () => void;
+  onOpenPaywall?: () => void;
   visitsStats: VisitsStats | null;
 }
 
@@ -23,6 +25,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   fogOn,
   setFogOn,
   onOpenKabbalah,
+  onOpenPaywall,
   visitsStats,
 }) => {
   const { t, language } = useLanguage();
@@ -208,6 +211,9 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
               <span className="hidden lg:inline text-[11px] font-cinzel font-semibold">Misión Cábala</span>
             </button>
           )}
+
+          {/* Install PWA App Button */}
+          <PWAInstallButton onOpenPaywall={onOpenPaywall} />
 
           {/* Audio Soft Ambient Music */}
           <button

@@ -10,6 +10,7 @@ import { NatalChartSection, NatalRequestPayload } from "./components/NatalChartS
 import { KabbalahMissionSection } from "./components/KabbalahMissionSection";
 import { CrystalBallLoader } from "./components/CrystalBallLoader";
 import { StarfieldBackground } from "./components/StarfieldBackground";
+import { OfflineIndicator } from "./components/OfflineIndicator";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
 import { ShieldAlert, Eye, Sparkles, Radio, Compass, Layers, Globe, ExternalLink, Orbit, Antenna } from "lucide-react";
@@ -672,8 +673,8 @@ export default function App() {
           if (!ran) {
             setPaymentSuccessBanner(
               language === "en"
-                ? "Access unlocked automatically! You now have unlimited past-life readings and questions."
-                : "¡Acceso desbloqueado automáticamente! Ya puedes realizar lecturas y preguntas ilimitadas."
+                ? "Access unlocked automatically! Unlimited readings and App Installation are now active."
+                : "¡Acceso desbloqueado automáticamente! Ya puedes realizar lecturas ilimitadas e instalar la App en tu dispositivo."
             );
             setTimeout(() => setPaymentSuccessBanner(""), 7000);
           }
@@ -819,6 +820,7 @@ export default function App() {
             document.getElementById("kabbalah-mission-section")?.scrollIntoView({ behavior: "smooth" });
           }, 50);
         }}
+        onOpenPaywall={() => setIsPaywallOpen(true)}
         visitsStats={visitsStats}
       />
 
@@ -1172,6 +1174,9 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Offline Status Indicator */}
+      <OfflineIndicator />
     </div>
   );
 }
