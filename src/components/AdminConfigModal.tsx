@@ -161,7 +161,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
         type: "ok",
         msg:
           customSuccessMsg ||
-          "¡Guardado! Tu link de Mercado Pago y los límites de consultas ya están activos en la página.",
+          "¡Guardado! Tus links de Mercado Pago, PayPal (USD/EUR/GBP) y límites de consultas ya están activos en la página.",
       });
       setTimeout(() => setSaveStatus(null), 6000);
       return true;
@@ -786,7 +786,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                     }}
                     className="flex-1 min-w-[200px] py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-[11px] font-cinzel font-bold transition cursor-pointer disabled:opacity-60 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                   >
-                    {isSavingCloud ? "Guardando..." : "Guardar Link de Mercado Pago"}
+                    {isSavingCloud ? "Guardando..." : "Guardar Configuración (Mercado Pago y PayPal)"}
                   </button>
                 </div>
 

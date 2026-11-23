@@ -54,6 +54,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&family=Cinzel:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      (function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) {
+              var r = regs[i];
+              var sw = r.active || r.waiting || r.installing;
+              if (sw && sw.scriptURL && (sw.scriptURL.indexOf('dev-sw') !== -1 || sw.scriptURL.indexOf('workbox-afac4cd2') !== -1)) {
+                r.unregister();
+              }
+            }
+          }).catch(function() {});
+        }
+      })();
+    </script>
   </head>
   <body class="bg-[#080503] text-amber-100 font-serif antialiased">
     <!-- Direct preloaded welcome audio player for instant playback -->

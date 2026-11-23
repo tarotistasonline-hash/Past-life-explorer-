@@ -1,5 +1,8 @@
 {
   "mpLink": "https://mpago.la/2cv7Gii",
+  "paypalLinkUsd": "https://www.paypal.me/margsaft/5",
+  "paypalLinkEur": "https://www.paypal.me/margsaft/5EUR",
+  "paypalLinkGbp": "https://www.paypal.me/margsaft/5GBP",
   "paywallEnabled": true,
   "freeConsultationsLimit": 1,
   "passPriceArs": "$6.000 ARS",

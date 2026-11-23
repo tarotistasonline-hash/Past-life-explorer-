@@ -6,7 +6,16 @@ import { LanguageProvider } from "./context/LanguageContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./index.css";
 
-registerSW({ immediate: true });
+try {
+  registerSW({
+    immediate: true,
+    onRegisterError(error) {
+      console.warn("ServiceWorker registration skipped or failed:", error);
+    },
+  });
+} catch (e) {
+  console.warn("Could not register ServiceWorker:", e);
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

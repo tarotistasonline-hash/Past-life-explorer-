@@ -51,7 +51,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
 
         <div className="space-y-1 text-[11px] text-purple-300/80 font-gothic">
           <p>
-            Ingresa con tu correo de propietario para administrar el link de Mercado Pago y las opciones de voz.
+            Ingresa con tu correo de propietario para administrar Mercado Pago, PayPal y las opciones de voz.
           </p>
         </div>
 

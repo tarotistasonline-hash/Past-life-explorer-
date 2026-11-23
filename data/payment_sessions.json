@@ -32,5 +32,17 @@
     "approvalProof": "8aef05a46dd6bee1d6e0330340f953331a1f9ddc7aa39556562eb08cb5868c15",
     "createdAt": "2026-11-14T15:41:13.578Z",
     "updatedAt": "2026-11-14T15:41:13.578Z"
+  },
+  {
+    "sessionId": "ps_pp_adee26e1d0159cac9e09",
+    "visitorId": "vis_test_check",
+    "provider": "auto",
+    "status": "approved",
+    "pendingType": "pass",
+    "refCode": "PP-CODE",
+    "approvalProof": "7e10c9c89f9519e9733309d5c44c82bd9b4ffe591b4148ec17a031f996a2c9e1",
+    "paymentRef": "paypal_unlock_code",
+    "createdAt": "2026-11-23T12:08:18.511Z",
+    "updatedAt": "2026-11-23T12:08:18.511Z"
   }
 ]

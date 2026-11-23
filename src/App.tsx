@@ -13,7 +13,7 @@ import { StarfieldBackground } from "./components/StarfieldBackground";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, Compass, Layers, Globe, ExternalLink, Orbit, Antenna } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, Compass, Layers, Globe, Lock, Orbit, Antenna } from "lucide-react";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
 import {
@@ -1066,7 +1066,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Consultation Limit & Automatic Unlock Modal (Mercado Pago) */}
+      {/* Unified Unlock Panel Modal (Mercado Pago & PayPal) */}
       <ConsultationPaywallModal
         isOpen={isPaywallOpen}
         onClose={() => setIsPaywallOpen(false)}
@@ -1077,77 +1077,53 @@ export default function App() {
         }}
       />
 
-      {/* Visible Payment Banner (Mercado Pago) */}
+      {/* Consolidated Unlock Panel Banner */}
       {monetizationCfg.paywallEnabled && (
         <section
-          aria-label="Medio de pago"
-          className="w-full max-w-4xl mt-6 bg-[#0f0918]/90 border border-amber-500/35 rounded-2xl p-4 backdrop-blur-md shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 z-20 text-xs font-gothic"
+          aria-label="Panel de Desbloqueo"
+          className="w-full max-w-4xl mt-6 bg-[#0f0918]/90 border border-amber-500/35 rounded-2xl p-4 sm:p-5 backdrop-blur-md shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-20 text-xs font-gothic"
         >
           {isCreatorOrAdmin ? (
             <>
               <div className="space-y-1">
-                <span className="font-cinzel font-bold text-amber-200 block">
-                  Modo Creador activo • Consultas ilimitadas
+                <span className="font-cinzel font-bold text-sm text-amber-200 block">
+                  Modo Creador activo · Panel de Desbloqueo
                 </span>
-                <p className="text-purple-300/80 text-[11px]">
-                  Tienes acceso completo sin cobro. Tus visitantes ven el pase de Mercado Pago tras {monetizationCfg.freeConsultationsLimit}{" "}
+                <p className="text-purple-300/85 text-xs leading-relaxed">
+                  Tienes acceso completo sin cobro. Tus visitantes ven las opciones de Mercado Pago (Argentina) y PayPal (USD / EUR / GBP) dentro del Panel de Desbloqueo tras{" "}
+                  {monetizationCfg.freeConsultationsLimit}{" "}
                   {monetizationCfg.freeConsultationsLimit === 1 ? "consulta gratuita" : "consultas gratuitas"}.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                <a
-                  href={getEffectiveMpUrl(monetizationCfg)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
-                >
-                  <span>
-                    Desbloquear con Mercado Pago{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
-                  </span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setIsPaywallOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-amber-500/40 text-amber-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
-                >
-                  Ver Panel de Desbloqueo
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsPaywallOpen(true)}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-xs transition shadow-[0_0_16px_rgba(245,158,11,0.35)] flex items-center justify-center space-x-2 cursor-pointer shrink-0"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Abrir Panel de Desbloqueo</span>
+              </button>
             </>
           ) : (
             <>
               <div className="space-y-1">
-                <span className="font-cinzel font-bold text-amber-200 block">
-                  Desbloquear consultas ilimitadas e instalación de App
+                <span className="font-cinzel font-bold text-sm text-amber-200 block">
+                  Panel de Desbloqueo · Consultas ilimitadas e instalación de App
                 </span>
-                <p className="text-purple-300/80 text-[11px]">
+                <p className="text-purple-300/85 text-xs leading-relaxed">
                   {monetizationCfg.freeConsultationsLimit === 1
-                    ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea con Mercado Pago (Argentina) o PayPal (USD / EUR):"
-                    : `Primeras ${monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea con Mercado Pago (Argentina) o PayPal (USD / EUR):`}
+                    ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea el acceso completo con Mercado Pago o PayPal (USD / EUR / GBP)."
+                    : `Primeras ${monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea el acceso completo con Mercado Pago o PayPal (USD / EUR / GBP).`}
                 </p>
               </div>
-
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                <a
-                  href={getEffectiveMpUrl(monetizationCfg)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
-                >
-                  <span>
-                    Mercado Pago{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
-                  </span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setIsPaywallOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-sky-950/90 hover:bg-sky-900 border border-sky-400/55 text-sky-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
-                >
-                  PayPal (USD / EUR) / Código
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsPaywallOpen(true)}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-xs transition shadow-[0_0_18px_rgba(245,158,11,0.4)] flex items-center justify-center space-x-2 cursor-pointer shrink-0"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Desbloqueo</span>
+              </button>
             </>
           )}
         </section>

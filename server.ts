@@ -27,7 +27,11 @@ import { buildLocalNatalReading } from "./src/lib/natalChart.ts";
 import { calculateKabbalahProfile, buildLocalKabbalahReading } from "./src/lib/kabbalah.ts";
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT =
+  Number(process.env.DEFAULT_APP_PORT) ||
+  (process.env.PORT && (!process.env.NGINX_PORT || process.env.PORT !== process.env.NGINX_PORT)
+    ? Number(process.env.PORT)
+    : 3000);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -2412,10 +2416,19 @@ async function startServer() {
         try {
           const result = await vite.transformRequest("/@vite/client");
           if (result && typeof result.code === "string") {
-            const patched = result.code.replace(
-              /transport\.connect\(createHMRHandler\(handleMessage\)\);/g,
-              "/* HMR disabled: WebSocket connection skipped */"
-            );
+            const patched = result.code
+              .replace(
+                /transport\.connect\(createHMRHandler\(handleMessage\)\);/g,
+                "/* HMR disabled: WebSocket connection skipped */"
+              )
+              .replace(
+                /throw new Error\("send was called before connect"\);/g,
+                "return; /* HMR disabled: send skipped */"
+              )
+              .replace(
+                /throw new Error\("invoke was called before connect"\);/g,
+                "return undefined; /* HMR disabled: invoke skipped */"
+              );
             res.setHeader("Content-Type", "application/javascript; charset=utf-8");
             res.setHeader("Cache-Control", "no-cache");
             return res.send(patched);
@@ -2426,11 +2439,74 @@ async function startServer() {
         return next();
       });
     }
+
+    // Clean self-destroying service worker for any clients with lingering dev-sw registrations
+    app.get(["/dev-sw.js", "/dev-sw.js*", "/workbox-*.js"], (_req, res) => {
+      res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      return res.send(
+        "self.addEventListener('install', () => { self.skipWaiting(); });\n" +
+        "self.addEventListener('activate', (e) => {\n" +
+        "  e.waitUntil(\n" +
+        "    caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))\n" +
+        "      .then(() => self.registration.unregister())\n" +
+        "      .then(() => self.clients.matchAll())\n" +
+        "      .then((clients) => clients.forEach((c) => { try { c.navigate(c.url); } catch(e){} }))\n" +
+        "  );\n" +
+        "});"
+      );
+    });
+    // Serve valid Web App Manifest in dev mode when VitePWA devOptions is disabled
+    app.get("/manifest.webmanifest", (_req, res) => {
+      const distManifest = path.join(process.cwd(), "dist", "manifest.webmanifest");
+      res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache");
+      if (fs.existsSync(distManifest)) {
+        return res.sendFile(distManifest);
+      }
+      return res.json({
+        id: "/",
+        name: "Tabla Ouija & Oráculo Akáshico",
+        short_name: "Tabla Ouija",
+        description:
+          "Portal místico interactivo con Tabla Ouija, Oráculo Akáshico, Tarot Diario, Carta Natal y Misión de Vida según la Cábala.",
+        theme_color: "#0c0817",
+        background_color: "#080503",
+        display: "standalone",
+        orientation: "any",
+        scope: "/",
+        start_url: "/",
+        lang: "es",
+        categories: ["lifestyle", "entertainment", "education"],
+        icons: [
+          { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/pwa-maskable-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+      });
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.use(
+      express.static(distPath, {
+        setHeaders: (res, filePath) => {
+          if (
+            filePath.endsWith("index.html") ||
+            filePath.endsWith("sw.js") ||
+            filePath.endsWith("registerSW.js")
+          ) {
+            res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+          } else if (filePath.endsWith("manifest.webmanifest")) {
+            res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+            res.setHeader("Cache-Control", "no-cache");
+          }
+        },
+      })
+    );
+    app.get("*", (_req, res) => {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
