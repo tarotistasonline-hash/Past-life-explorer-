@@ -53,8 +53,8 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ onOpenPaywal
       return;
     }
     if (isInstallable) {
-      await install();
-      return;
+      const ok = await install();
+      if (ok) return;
     }
     setShowGuideModal(true);
   };
@@ -215,8 +215,8 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ onOpenPaywal
                 <p>
                   <strong>{isEs ? "En Android (Chrome):" : "On Android (Chrome):"}</strong>{" "}
                   {isEs
-                    ? "Toca el menú de 3 puntos (⋮) arriba a la derecha y elige «Instalar aplicación» o «Agregar a la pantalla principal»."
-                    : "Tap the 3-dot menu (⋮) and choose «Install app» or «Add to Home screen»."}
+                    ? "Abre la página directamente en Google Chrome (no dentro de una vista embebida), toca el menú de 3 puntos (⋮) arriba a la derecha y elige «Instalar aplicación» o «Agregar a la pantalla principal»."
+                    : "Open directly in Google Chrome, tap the 3-dot menu (⋮), and choose «Install app» or «Add to Home screen»."}
                 </p>
                 <p>
                   <strong>{isEs ? "En PC / Mac (Chrome o Edge):" : "On Desktop (Chrome or Edge):"}</strong>{" "}
@@ -224,12 +224,17 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ onOpenPaywal
                     ? "Haz clic en el ícono de Instalar (pantalla con flecha) en el extremo derecho de la barra de direcciones, o en el menú (⋮) → «Guardar y compartir» → «Instalar aplicación»."
                     : "Click the Install icon in the address bar or open browser menu → «Install app»."}
                 </p>
+                <p className="text-[11px] text-purple-300/80">
+                  {isEs
+                    ? "Consejo: si acabas de desinstalar la app o ves «No se puede instalar», recarga la página una vez en Chrome desde el enlace público publicado (ais-pre-...) e inténtalo de nuevo."
+                    : "Tip: if you just uninstalled the app or see an install error, reload the published link once in Chrome and try again."}
+                </p>
                 {typeof window !== "undefined" && window.self !== window.top && (
                   <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200 space-y-2">
                     <p>
                       {isEs
-                        ? "Si estás viendo la app dentro de una vista previa embebida, ábrela en su propia pestaña para que el navegador habilite la instalación directa:"
-                        : "If viewing inside an embedded preview, open the app directly in a new tab to trigger browser install:"}
+                        ? "Estás viendo la app dentro de una vista previa embebida. Ábrela en su propia pestaña para que el navegador habilite la instalación:"
+                        : "You are viewing inside an embedded preview. Open the app directly in a new tab to enable browser installation:"}
                     </p>
                     <a
                       href={window.location.href}

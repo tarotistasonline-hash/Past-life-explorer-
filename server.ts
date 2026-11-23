@@ -2456,6 +2456,16 @@ async function startServer() {
         "});"
       );
     });
+    // Lightweight pass-through Service Worker in dev mode for PWA installability without caching Vite modules
+    app.get("/sw.js", (_req, res) => {
+      res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      return res.send(
+        "self.addEventListener('install', () => { self.skipWaiting(); });\n" +
+        "self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });\n" +
+        "self.addEventListener('fetch', () => {});"
+      );
+    });
     // Serve valid Web App Manifest in dev mode when VitePWA devOptions is disabled
     app.get("/manifest.webmanifest", (_req, res) => {
       const distManifest = path.join(process.cwd(), "dist", "manifest.webmanifest");

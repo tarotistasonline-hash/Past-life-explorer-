@@ -55,7 +55,7 @@ export default defineConfig(() => {
         },
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,woff,woff2}'],
+          globPatterns: ['**/*.{js,css,html,woff,woff2}'],
           globIgnores: ['**/aistudio/**', '**/google*.html', '**/realrank*'],
           navigateFallback: null,
           cleanupOutdatedCaches: true,
@@ -71,6 +71,20 @@ export default defineConfig(() => {
                 expiration: {
                   maxEntries: 10,
                   maxAgeSeconds: 60 * 60 * 24 * 7,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /\.(?:png|jpg|jpeg|svg|ico|webp)$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'images-cache',
+                expiration: {
+                  maxEntries: 40,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
@@ -111,6 +125,19 @@ export default defineConfig(() => {
           enabled: false,
         },
       }),
+      {
+        name: 'inject-dev-manifest',
+        apply: 'serve',
+        transformIndexHtml() {
+          return [
+            {
+              tag: 'link',
+              attrs: { rel: 'manifest', href: '/manifest.webmanifest' },
+              injectTo: 'head',
+            },
+          ];
+        },
+      },
     ],
     resolve: {
       alias: {
