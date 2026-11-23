@@ -13,7 +13,8 @@ import { StarfieldBackground } from "./components/StarfieldBackground";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, Compass, Layers, Globe, Lock, Orbit, Antenna } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, ArrowUpRight } from "lucide-react";
+import { PortalModuleModal, PortalPanelId } from "./components/PortalModuleModal";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
 import {
@@ -75,7 +76,7 @@ const getInitialVisitsStats = (): VisitsStats => {
 
 export default function App() {
   const { t, language, setLanguage, options } = useLanguage();
-  const [activeMainSection, setActiveMainSection] = useState<"ALL" | "OUIJA" | "TAROT" | "NATAL" | "CABALA" | "ANTENA">("ALL");
+  const [activePortalPanel, setActivePortalPanel] = useState<PortalPanelId | null>(null);
   const [mode, setMode] = useState<BoardMode>("IDLE");
   const [spelledWord, setSpelledWord] = useState("");
   const [activeChar, setActiveChar] = useState("");
@@ -446,7 +447,7 @@ export default function App() {
       const adminBypass = isAdminSession() || isAuthorizedAdmin();
       audio.fadeOutForSelection();
       audio.stopSpeech();
-      setActiveMainSection("OUIJA");
+      setActivePortalPanel(null);
       setIsLoading(true);
       setErrorMsg("");
       setSeekerName(data.name || "Buscador");
@@ -490,7 +491,7 @@ export default function App() {
       const adminBypass = isAdminSession() || isAuthorizedAdmin();
       audio.fadeOutForSelection();
       audio.stopSpeech();
-      setActiveMainSection("OUIJA");
+      setActivePortalPanel(null);
       setIsLoading(true);
       setErrorMsg("");
       setSeekerName(name);
@@ -573,7 +574,7 @@ export default function App() {
     } else if (queued.type === "spirit-question") {
       executeGeneralConsult(queued.question, queued.name);
     } else if (queued.type === "natal-chart") {
-      setActiveMainSection((prev) => (prev === "ALL" ? "ALL" : "NATAL"));
+      setActivePortalPanel("NATAL");
       setPendingNatalExecution({ id: queued.id, data: queued.data });
     }
     return true;
@@ -749,13 +750,13 @@ export default function App() {
   };
 
   const handleSendCardToOuija = (cardName: string) => {
-    setActiveMainSection("OUIJA");
+    setActivePortalPanel(null);
     setPrefilledOuijaQuestion(`${t("askCardMessage")} ${cardName}?`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSendNatalToOuija = (query: string) => {
-    setActiveMainSection("OUIJA");
+    setActivePortalPanel(null);
     setPrefilledOuijaQuestion(query);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -814,34 +815,18 @@ export default function App() {
       <AtmosphereControls
         fogOn={fogOn}
         setFogOn={setFogOn}
-        onOpenKabbalah={() => {
-          setActiveMainSection("CABALA");
-          setTimeout(() => {
-            document.getElementById("kabbalah-mission-section")?.scrollIntoView({ behavior: "smooth" });
-          }, 50);
-        }}
+        onOpenKabbalah={() => setActivePortalPanel("CABALA")}
         onOpenPaywall={() => setIsPaywallOpen(true)}
         visitsStats={visitsStats}
       />
 
       {/* Portal Main Navigation Switcher */}
-      <nav aria-label="Navegación del Portal Místico" className="w-full max-w-4xl flex items-center justify-center gap-1 sm:gap-2 mb-3 z-20 overflow-x-auto py-1 px-2 bg-black/40 border border-purple-900/40 rounded-2xl backdrop-blur-md">
+      <nav aria-label="Navegación del Portal Místico" className="w-full max-w-4xl flex items-center justify-center gap-1.5 sm:gap-2 mb-3 z-20 overflow-x-auto py-1.5 px-2.5 bg-black/40 border border-purple-900/40 rounded-2xl backdrop-blur-md">
         <button
-          onClick={() => setActiveMainSection("ALL")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
-            activeMainSection === "ALL"
-              ? "bg-purple-900/80 text-purple-100 border border-purple-500/60 shadow-md"
-              : "text-purple-400 hover:text-purple-200"
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>{t("navAll")}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveMainSection("OUIJA")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
-            activeMainSection === "OUIJA"
+          type="button"
+          onClick={() => setActivePortalPanel(null)}
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+            activePortalPanel === null
               ? "bg-purple-900/80 text-purple-100 border border-purple-500/60 shadow-md"
               : "text-purple-400 hover:text-purple-200"
           }`}
@@ -851,11 +836,12 @@ export default function App() {
         </button>
 
         <button
-          onClick={() => setActiveMainSection("TAROT")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
-            activeMainSection === "TAROT"
+          type="button"
+          onClick={() => setActivePortalPanel("TAROT")}
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+            activePortalPanel === "TAROT"
               ? "bg-gradient-to-r from-violet-600 to-purple-700 text-white border border-violet-300/60 shadow-md"
-              : "text-violet-300 hover:text-violet-100"
+              : "text-violet-300 hover:text-violet-100 hover:bg-purple-950/50"
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-violet-200" />
@@ -863,11 +849,12 @@ export default function App() {
         </button>
 
         <button
-          onClick={() => setActiveMainSection("NATAL")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
-            activeMainSection === "NATAL"
+          type="button"
+          onClick={() => setActivePortalPanel("NATAL")}
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+            activePortalPanel === "NATAL"
               ? "bg-purple-900/80 text-purple-100 border border-amber-400/60 shadow-md"
-              : "text-amber-200/90 hover:text-amber-100"
+              : "text-amber-200/90 hover:text-amber-100 hover:bg-purple-950/50"
           }`}
         >
           <Orbit className="w-3.5 h-3.5 text-amber-300" />
@@ -875,32 +862,10 @@ export default function App() {
         </button>
 
         <button
-          onClick={() => {
-            setActiveMainSection("ANTENA");
-            setTimeout(() => {
-              document.getElementById("antena-dimensional-section")?.scrollIntoView({ behavior: "smooth" });
-            }, 50);
-          }}
-          title="Ver Portal de Antena Dimensional"
-          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
-            activeMainSection === "ANTENA"
-              ? "bg-cyan-950/90 text-cyan-200 border border-cyan-400/80 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
-              : "text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40 border border-cyan-500/35"
-          }`}
-        >
-          <Antenna className="w-3.5 h-3.5 text-cyan-300" />
-          <span>Antena Dimensional</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveMainSection("CABALA");
-            setTimeout(() => {
-              document.getElementById("kabbalah-mission-section")?.scrollIntoView({ behavior: "smooth" });
-            }, 50);
-          }}
-          className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
-            activeMainSection === "CABALA"
+          type="button"
+          onClick={() => setActivePortalPanel("CABALA")}
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+            activePortalPanel === "CABALA"
               ? "bg-amber-950/85 text-amber-100 border border-amber-400/75 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
               : "text-amber-200/90 hover:text-amber-100 hover:bg-amber-950/35 border border-amber-500/35"
           }`}
@@ -908,6 +873,20 @@ export default function App() {
         >
           <Compass className="w-3.5 h-3.5 text-amber-300" />
           <span>Misión Cábala</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActivePortalPanel("ANTENA")}
+          title="Abrir Panel de Antena Dimensional"
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+            activePortalPanel === "ANTENA"
+              ? "bg-cyan-950/90 text-cyan-200 border border-cyan-400/80 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
+              : "text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40 border border-cyan-500/35"
+          }`}
+        >
+          <Antenna className="w-3.5 h-3.5 text-cyan-300" />
+          <span>Antena Dimensional</span>
         </button>
       </nav>
 
@@ -921,88 +900,255 @@ export default function App() {
           </div>
         )}
 
-        {/* Section: Ouija Board & Oracle (Shown if ALL or OUIJA) */}
-        {(activeMainSection === "ALL" || activeMainSection === "OUIJA") && (
-          <div className="w-full flex flex-col items-center space-y-6 animate-fade-in">
-            {/* Physical Ouija Board Component */}
-            <OuijaBoard
-              mode={mode}
-              spelledWord={spelledWord}
-              onSpellingComplete={handleSpellingComplete}
-              activeChar={activeChar}
-              setActiveChar={setActiveChar}
-            />
+        {/* Section: Ouija Board & Oracle (Compact Main View) */}
+        <div className="w-full flex flex-col items-center space-y-6 animate-fade-in">
+          {/* Physical Ouija Board Component */}
+          <OuijaBoard
+            mode={mode}
+            spelledWord={spelledWord}
+            onSpellingComplete={handleSpellingComplete}
+            activeChar={activeChar}
+            setActiveChar={setActiveChar}
+          />
 
-            {/* General Spirit Message Card (If Spirit Query) */}
-            {currentSpiritResponse && mode === "REVEALED" && (
-              <div className="w-full max-w-2xl bg-[#0f0918]/95 border border-purple-500/50 rounded-2xl p-5 sm:p-6 backdrop-blur-md shadow-2xl text-center space-y-3 animate-word-emerge">
-                <div className="text-xs uppercase tracking-[0.2em] text-purple-300 font-cinzel font-semibold animate-rune-breath">
-                  <span>{t("channeledMessageTitle")}</span>
-                </div>
+          {/* General Spirit Message Card (If Spirit Query) */}
+          {currentSpiritResponse && mode === "REVEALED" && (
+            <div className="w-full max-w-2xl bg-[#0f0918]/95 border border-purple-500/50 rounded-2xl p-5 sm:p-6 backdrop-blur-md shadow-2xl text-center space-y-3 animate-word-emerge">
+              <div className="text-xs uppercase tracking-[0.2em] text-purple-300 font-cinzel font-semibold animate-rune-breath">
+                <span>{t("channeledMessageTitle")}</span>
+              </div>
 
-                <div className="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-purple-100 to-amber-300 animate-spectral-shimmer py-1 font-cinzel">
-                  "{currentSpiritResponse.spelledWord}"
-                </div>
+              <div className="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-purple-100 to-amber-300 animate-spectral-shimmer py-1 font-cinzel">
+                "{currentSpiritResponse.spelledWord}"
+              </div>
 
-                <p className="text-sm sm:text-base text-purple-200/90 leading-relaxed italic font-gothic animate-fade-in">
-                  {currentSpiritResponse.spiritMessage}
+              <p className="text-sm sm:text-base text-purple-200/90 leading-relaxed italic font-gothic animate-fade-in">
+                {currentSpiritResponse.spiritMessage}
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    audio.stopSpeech();
+                    setMode("IDLE");
+                    setCurrentSpiritResponse(null);
+                  }}
+                  className="px-6 py-2.5 bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-700/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition cursor-pointer shadow-lg"
+                >
+                  {t("makeAnotherConsultation")}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* When Oracle is processing: Custom Glowing & Flickering Crystal Ball Animation */}
+          {isLoading && (
+            <div className="w-full max-w-2xl bg-[#0c0717]/95 border border-purple-500/60 rounded-3xl p-5 sm:p-7 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.35)] text-center animate-fade-in relative overflow-hidden">
+              <div className="absolute -top-16 -left-16 w-44 h-44 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-16 -right-16 w-44 h-44 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+
+              <CrystalBallLoader
+                variant="full"
+                size="md"
+                text="El oráculo contempla las visiones en la bola de cristal..."
+                subtext="Canalizando los Registros Akáshicos y los ecos del tiempo..."
+              />
+            </div>
+          )}
+
+          {/* Form Inputs (Lectura de Vida Pasada y Consulta Akáshica) */}
+          <SpiritOracleForm
+            onPastLifeConsult={handlePastLifeConsult}
+            onGeneralConsult={handleGeneralConsult}
+            isLoading={isLoading}
+            externalPreFillQuery={prefilledOuijaQuestion}
+            isPaywallEnabled={monetizationCfg.paywallEnabled}
+            freeLimit={monetizationCfg.freeConsultationsLimit}
+            remainingFree={remainingFree}
+            isPassUnlocked={isPassUnlocked}
+            isCreatorUnlimited={isCreatorOrAdmin}
+            onOpenPaywall={() => setIsPaywallOpen(true)}
+            mpLink={getEffectiveMpUrl(monetizationCfg)}
+            passPriceArs={monetizationCfg.passPriceArs}
+          />
+        </div>
+
+        {/* Compact Launcher Grid for Other Dedicated Panels */}
+        {(() => {
+          const launcherCopy =
+            language === "en"
+              ? {
+                  heading: "Other Portal Panels",
+                  sub: "Open Tarot, Natal Chart, Kabbalah, or Antenna in its own panel to keep the screen compact.",
+                  tarotDesc: "Daily arcana, 3-card karmic spread, and 22 voice-guided cards.",
+                  natalDesc: "Planetary wheel, Sun, Moon, Ascendant, voice, and PDF export.",
+                  cabalaTitle: "Kabbalah Mission",
+                  cabalaDesc: "Tree of Life, natal Sephira, Gematria, and spiritual Tikkun.",
+                  antenaTitle: "Dimensional Antenna",
+                  antenaDesc: "Interstellar frequency and cosmic consciousness portal.",
+                }
+              : language === "pt"
+              ? {
+                  heading: "Outros Painéis do Portal",
+                  sub: "Abra Tarot, Mapa Astral, Cabala ou Antena em seu próprio painel para manter a tela compacta.",
+                  tarotDesc: "Arcano do dia, tiragem de 3 cartas e 22 arcanos com voz.",
+                  natalDesc: "Roda planetária, Sol, Lua, Ascendente, voz e PDF.",
+                  cabalaTitle: "Missão Cabala",
+                  cabalaDesc: "Árvore da Vida, Sefirá natal, Gematria e Tikkun.",
+                  antenaTitle: "Antena Dimensional",
+                  antenaDesc: "Portal de frequência interestelar e contato cósmico.",
+                }
+              : language === "fr"
+              ? {
+                  heading: "Autres Panneaux du Portail",
+                  sub: "Ouvrez Tarot, Thème Natal, Kabbale ou Antenne dans un panneau dédié pour garder l'écran compact.",
+                  tarotDesc: "Arcane du jour, tirage à 3 cartes et 22 arcanes avec voix.",
+                  natalDesc: "Roue planétaire, Soleil, Lune, Ascendant, voix et PDF.",
+                  cabalaTitle: "Mission Kabbale",
+                  cabalaDesc: "Arbre de Vie, Sephira natale, Guématrie et Tikkoun.",
+                  antenaTitle: "Antenne Dimensionnelle",
+                  antenaDesc: "Portail de fréquence interstellaire et contact cosmique.",
+                }
+              : language === "it"
+              ? {
+                  heading: "Altri Pannelli del Portale",
+                  sub: "Apri Tarocchi, Tema Natale, Kabbalah o Antenna in un pannello dedicato per mantenere la schermata compatta.",
+                  tarotDesc: "Arcano del giorno, stesa a 3 carte e 22 arcani con voce.",
+                  natalDesc: "Ruota planetaria, Sole, Luna, Ascendente, voce e PDF.",
+                  cabalaTitle: "Missione Kabbalah",
+                  cabalaDesc: "Albero della Vita, Sefira natale, Gematria e Tikkun.",
+                  antenaTitle: "Antenna Dimensionale",
+                  antenaDesc: "Portale di frequenza interstellare e contatto cosmico.",
+                }
+              : language === "de"
+              ? {
+                  heading: "Weitere Portal-Panels",
+                  sub: "Öffne Tarot, Geburtshoroskop, Kabbala oder Antenne im eigenen Panel für eine kompakte Ansicht.",
+                  tarotDesc: "Tagesarkana, 3-Karten-Legung und 22 Arkana mit Stimme.",
+                  natalDesc: "Planetenrad, Sonne, Mond, Aszendent, Stimme und PDF.",
+                  cabalaTitle: "Kabbala-Mission",
+                  cabalaDesc: "Lebensbaum, Geburts-Sephira, Gematrie und Tikkun.",
+                  antenaTitle: "Dimensionale Antenne",
+                  antenaDesc: "Interstellares Frequenzportal und kosmischer Kontakt.",
+                }
+              : {
+                  heading: "Otros Paneles del Portal",
+                  sub: "Abre Tarot, Carta Natal, Cábala o Antena en su propio panel para mantener la pantalla compacta.",
+                  tarotDesc: "Arcano del día, tirada de 3 cartas y 22 arcanos con voz.",
+                  natalDesc: "Rueda planetaria, Sol, Luna, Ascendente y PDF.",
+                  cabalaTitle: "Misión Cábala",
+                  cabalaDesc: "Árbol de la Vida, Sefirá natal, Gematría y Tikkún.",
+                  antenaTitle: "Antena Dimensional",
+                  antenaDesc: "Portal de frecuencia interestelar y contacto cósmico.",
+                };
+
+          return (
+            <section
+              aria-label={launcherCopy.heading}
+              className="w-full max-w-4xl border-t border-purple-900/40 pt-5 space-y-3"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
+                <h2 className="font-cinzel font-bold text-sm text-amber-200 tracking-wide">
+                  {launcherCopy.heading}
+                </h2>
+                <p className="text-xs font-gothic text-purple-300/75">
+                  {launcherCopy.sub}
                 </p>
-
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                  <button
-                    onClick={() => {
-                      audio.stopSpeech();
-                      setMode("IDLE");
-                      setCurrentSpiritResponse(null);
-                    }}
-                    className="px-6 py-2.5 bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-700/60 rounded-xl text-xs uppercase font-cinzel font-semibold tracking-wide transition cursor-pointer shadow-lg"
-                  >
-                    {t("makeAnotherConsultation")}
-                  </button>
-                </div>
               </div>
-            )}
 
-            {/* When Oracle is processing: Custom Glowing & Flickering Crystal Ball Animation */}
-            {isLoading && (
-              <div className="w-full max-w-2xl bg-[#0c0717]/95 border border-purple-500/60 rounded-3xl p-5 sm:p-7 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.35)] text-center animate-fade-in relative overflow-hidden">
-                <div className="absolute -top-16 -left-16 w-44 h-44 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-16 -right-16 w-44 h-44 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActivePortalPanel("TAROT")}
+                  className="group text-left p-4 rounded-2xl bg-[#100820]/90 hover:bg-[#180d2f] border border-violet-500/40 hover:border-violet-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <Sparkles className="w-5 h-5 text-violet-300" />
+                    <ArrowUpRight className="w-4 h-4 text-violet-400/70 group-hover:text-violet-200 transition" />
+                  </div>
+                  <div>
+                    <div className="font-cinzel font-bold text-sm text-purple-100">
+                      {t("navTarot")}
+                    </div>
+                    <p className="text-xs font-gothic text-purple-300/80 mt-0.5 leading-snug">
+                      {launcherCopy.tarotDesc}
+                    </p>
+                  </div>
+                </button>
 
-                <CrystalBallLoader
-                  variant="full"
-                  size="md"
-                  text="El oráculo contempla las visiones en la bola de cristal..."
-                  subtext="Canalizando los Registros Akáshicos y los ecos del tiempo..."
-                />
+                <button
+                  type="button"
+                  onClick={() => setActivePortalPanel("NATAL")}
+                  className="group text-left p-4 rounded-2xl bg-[#100820]/90 hover:bg-[#180d2f] border border-amber-500/40 hover:border-amber-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <Orbit className="w-5 h-5 text-amber-300" />
+                    <ArrowUpRight className="w-4 h-4 text-amber-400/70 group-hover:text-amber-200 transition" />
+                  </div>
+                  <div>
+                    <div className="font-cinzel font-bold text-sm text-amber-100">
+                      {t("navNatal")}
+                    </div>
+                    <p className="text-xs font-gothic text-purple-300/80 mt-0.5 leading-snug">
+                      {launcherCopy.natalDesc}
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActivePortalPanel("CABALA")}
+                  className="group text-left p-4 rounded-2xl bg-[#100820]/90 hover:bg-[#180d2f] border border-amber-500/40 hover:border-amber-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <Compass className="w-5 h-5 text-amber-300" />
+                    <ArrowUpRight className="w-4 h-4 text-amber-400/70 group-hover:text-amber-200 transition" />
+                  </div>
+                  <div>
+                    <div className="font-cinzel font-bold text-sm text-amber-100">
+                      {launcherCopy.cabalaTitle}
+                    </div>
+                    <p className="text-xs font-gothic text-purple-300/80 mt-0.5 leading-snug">
+                      {launcherCopy.cabalaDesc}
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActivePortalPanel("ANTENA")}
+                  className="group text-left p-4 rounded-2xl bg-[#0a1420]/90 hover:bg-[#0e1d2f] border border-cyan-500/40 hover:border-cyan-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <Antenna className="w-5 h-5 text-cyan-300" />
+                    <ArrowUpRight className="w-4 h-4 text-cyan-400/70 group-hover:text-cyan-200 transition" />
+                  </div>
+                  <div>
+                    <div className="font-cinzel font-bold text-sm text-cyan-100">
+                      {launcherCopy.antenaTitle}
+                    </div>
+                    <p className="text-xs font-gothic text-cyan-200/75 mt-0.5 leading-snug">
+                      {launcherCopy.antenaDesc}
+                    </p>
+                  </div>
+                </button>
               </div>
-            )}
+            </section>
+          );
+        })()}
+      </main>
 
-            {/* Form Inputs (Lectura de Vida Pasada y Consulta Akáshica) */}
-            <SpiritOracleForm
-              onPastLifeConsult={handlePastLifeConsult}
-              onGeneralConsult={handleGeneralConsult}
-              isLoading={isLoading}
-              externalPreFillQuery={prefilledOuijaQuestion}
-              isPaywallEnabled={monetizationCfg.paywallEnabled}
-              freeLimit={monetizationCfg.freeConsultationsLimit}
-              remainingFree={remainingFree}
-              isPassUnlocked={isPassUnlocked}
-              isCreatorUnlimited={isCreatorOrAdmin}
-              onOpenPaywall={() => setIsPaywallOpen(true)}
-              mpLink={getEffectiveMpUrl(monetizationCfg)}
-              passPriceArs={monetizationCfg.passPriceArs}
-            />
-          </div>
-        )}
-
-        {/* Section: Daily Tarot Card / Arcano del Día (Shown if ALL or TAROT) */}
-        {(activeMainSection === "ALL" || activeMainSection === "TAROT") && (
+      {/* Dedicated Overlay Panels for Tarot, Natal Chart, Kabbalah, and Antena */}
+      <PortalModuleModal
+        activePanel={activePortalPanel}
+        onSelectPanel={(panel) => setActivePortalPanel(panel)}
+        onClose={() => setActivePortalPanel(null)}
+      >
+        {activePortalPanel === "TAROT" && (
           <DailyTarotCard onSendToOuija={handleSendCardToOuija} />
         )}
 
-        {/* Section: Natal Chart / Carta Natal (Shown if ALL or NATAL) */}
-        {(activeMainSection === "ALL" || activeMainSection === "NATAL") && (
+        {activePortalPanel === "NATAL" && (
           <NatalChartSection
             onSendToOuija={handleSendNatalToOuija}
             isPaywallEnabled={monetizationCfg.paywallEnabled}
@@ -1034,16 +1180,12 @@ export default function App() {
           />
         )}
 
-        {/* Section: Misión de Vida según la Cábala (Árbol de la Vida) */}
-        {(activeMainSection === "ALL" || activeMainSection === "CABALA") && (
+        {activePortalPanel === "CABALA" && (
           <KabbalahMissionSection onSendToOuija={handleSendNatalToOuija} />
         )}
 
-        {/* Section: Antena Dimensional (External Interstellar Contact Portal) */}
-        {(activeMainSection === "ALL" || activeMainSection === "ANTENA") && (
-          <AntenaDimensionalPanel />
-        )}
-      </main>
+        {activePortalPanel === "ANTENA" && <AntenaDimensionalPanel />}
+      </PortalModuleModal>
 
       {/* Past Life Revelation Modal */}
       {isModalOpen && currentPastLife && (

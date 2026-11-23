@@ -1,8 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="108" fill="#0c0817" />
-  <circle cx="256" cy="256" r="196" stroke="#d4af37" stroke-width="8" />
-  <path d="M256 128 C312 128 352 170 352 224 C352 292 284 368 256 392 C228 368 160 292 160 224 C160 170 200 128 256 128 Z" stroke="#f5d07a" stroke-width="8" fill="#160f29" />
-  <ellipse cx="256" cy="240" rx="54" ry="30" stroke="#f5d07a" stroke-width="6" />
-  <circle cx="256" cy="240" r="15" fill="#f5d07a" />
-  <path d="M256 76 L264 96 L284 104 L264 112 L256 132 L248 112 L228 104 L248 96 Z" fill="#f5d07a" />
+  <defs>
+    <radialGradient id="goldAura" cx="50%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="#ffd56b" stop-opacity="0.34" />
+      <stop offset="65%" stop-color="#b87318" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#050614" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="brightGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff0a8" />
+      <stop offset="50%" stop-color="#ffd257" />
+      <stop offset="100%" stop-color="#e59b1f" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="#040514" />
+  <circle cx="256" cy="256" r="220" fill="url(#goldAura)" />
+  <circle cx="256" cy="256" r="196" stroke="url(#brightGold)" stroke-width="11" />
+  <path d="M256 128 C312 128 352 170 352 224 C352 292 284 368 256 392 C228 368 160 292 160 224 C160 170 200 128 256 128 Z" stroke="url(#brightGold)" stroke-width="10" fill="#181024" />
+  <ellipse cx="256" cy="240" rx="54" ry="30" stroke="#ffe48f" stroke-width="7" />
+  <circle cx="256" cy="240" r="16" fill="#ffe48f" />
+  <path d="M256 76 L264 96 L284 104 L264 112 L256 132 L248 112 L228 104 L248 96 Z" fill="#fff0a8" />
 </svg>
