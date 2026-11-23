@@ -13,6 +13,8 @@ import {
   ExternalLink,
   RotateCcw,
   Stars,
+  KeyRound,
+  Globe,
 } from "lucide-react";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
@@ -104,6 +106,11 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
   const ADMIN_RETURN_TOKEN_KEY = "ouija_admin_auto_return_token_v1";
 
   const [formCfg, setFormCfg] = useState<MonetizationConfig>(cloudConfig);
+  const [paypalUnlockCodeInput, setPaypalUnlockCodeInput] = useState<string>("");
+  const [paypalCodeConfigured, setPaypalCodeConfigured] = useState<boolean>(false);
+  const [paypalCodeEnvConfigured, setPaypalCodeEnvConfigured] = useState<boolean>(false);
+  const [paypalCodeSaving, setPaypalCodeSaving] = useState<boolean>(false);
+  const [paypalCodeMsg, setPaypalCodeMsg] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [autoReturnToken, setAutoReturnToken] = useState<string>(() => {
     try {
       const existing = localStorage.getItem(ADMIN_RETURN_TOKEN_KEY);
@@ -124,6 +131,19 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
   useEffect(() => {
     setFormCfg(cloudConfig);
   }, [cloudConfig]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch("/api/payments/capabilities", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((caps) => {
+        if (caps) {
+          setPaypalCodeConfigured(Boolean(caps.paypalUnlockCodeConfigured));
+          setPaypalCodeEnvConfigured(Boolean(caps.paypalUnlockEnvConfigured));
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -448,11 +468,11 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-amber-300">
                 <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>Desbloqueo de Consultas (Mercado Pago)</span>
+                <span>Desbloqueo de Consultas (Mercado Pago + PayPal)</span>
               </div>
               <span className="text-[10px] px-2.5 py-1 rounded-full bg-sky-950/80 border border-sky-500/50 text-sky-300 font-cinzel flex items-center space-x-1">
                 <Check className="w-3 h-3" />
-                <span>Solo Mercado Pago</span>
+                <span>Mercado Pago + PayPal</span>
               </span>
             </div>
 
@@ -481,6 +501,150 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                 placeholder="https://mpago.la/2cv7Gii"
                 className="w-full px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-800 text-xs text-purple-100 placeholder-purple-400/40 focus:outline-none focus:border-amber-400"
               />
+            </div>
+
+            {/* PayPal Internacional Links & Unlock Code */}
+            <div className="p-3 rounded-xl bg-sky-950/30 border border-sky-500/35 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center space-x-1.5 text-[11px] font-cinzel font-bold text-sky-200">
+                  <Globe className="w-3.5 h-3.5 text-sky-300" />
+                  <span>Links PayPal Internacional (USD / EUR / GBP)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/payments/capabilities", { cache: "no-store" });
+                      if (res.ok) {
+                        const caps = await res.json();
+                        setPaypalCodeConfigured(Boolean(caps.paypalUnlockCodeConfigured));
+                        setPaypalCodeEnvConfigured(Boolean(caps.paypalUnlockEnvConfigured));
+                      }
+                    } catch {
+                      // ignore
+                    }
+                  }}
+                  className="text-[10px] font-cinzel text-sky-300 hover:underline cursor-pointer"
+                >
+                  Actualizar estado
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <label className="text-[10px] font-cinzel text-sky-300/90 block mb-0.5">USD (Dólares)</label>
+                  <input
+                    type="text"
+                    value={formCfg.paypalLinkUsd}
+                    onChange={(e) => setFormCfg({ ...formCfg, paypalLinkUsd: e.target.value })}
+                    placeholder="https://www.paypal.me/margsaft/5"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950/70 border border-sky-800/60 text-[11px] text-sky-100 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-cinzel text-sky-300/90 block mb-0.5">EUR (Euros)</label>
+                  <input
+                    type="text"
+                    value={formCfg.paypalLinkEur}
+                    onChange={(e) => setFormCfg({ ...formCfg, paypalLinkEur: e.target.value })}
+                    placeholder="https://www.paypal.me/margsaft/5EUR"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950/70 border border-sky-800/60 text-[11px] text-sky-100 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-cinzel text-sky-300/90 block mb-0.5">GBP (Libras UK)</label>
+                  <input
+                    type="text"
+                    value={formCfg.paypalLinkGbp}
+                    onChange={(e) => setFormCfg({ ...formCfg, paypalLinkGbp: e.target.value })}
+                    placeholder="https://www.paypal.me/margsaft/5GBP"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950/70 border border-sky-800/60 text-[11px] text-sky-100 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-sky-500/20 space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center space-x-1.5 text-[11px] font-cinzel font-bold text-amber-200">
+                    <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Código Secreto de Desbloqueo PayPal</span>
+                  </div>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono border ${
+                      paypalCodeEnvConfigured
+                        ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-200"
+                        : paypalCodeConfigured
+                        ? "bg-sky-950/80 border-sky-400/50 text-sky-200"
+                        : "bg-amber-950/80 border-amber-500/50 text-amber-200"
+                    }`}
+                  >
+                    {paypalCodeEnvConfigured
+                      ? "✓ Activo vía Secrets"
+                      : paypalCodeConfigured
+                      ? "✓ Activo y cifrado"
+                      : "Pendiente de guardar"}
+                  </span>
+                </div>
+                <p className="text-[10px] font-gothic text-sky-100/80 leading-relaxed">
+                  Guarda aquí el código numérico o clave secreta que entregas al recibir el aviso de pago por PayPal (se cifra de forma segura en el servidor).
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={paypalUnlockCodeInput}
+                    onChange={(e) => setPaypalUnlockCodeInput(e.target.value)}
+                    placeholder="Ingresa tu código de desbloqueo..."
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950/75 border border-sky-500/45 text-xs font-mono text-sky-100 placeholder:text-sky-300/40 focus:outline-none focus:border-sky-300"
+                  />
+                  <button
+                    type="button"
+                    disabled={paypalCodeSaving}
+                    onClick={async () => {
+                      triggerHaptic(HAPTIC_PATTERNS.click);
+                      const clean = paypalUnlockCodeInput.trim();
+                      if (clean.length < 3) {
+                        setPaypalCodeMsg({ type: "err", msg: "El código debe tener al menos 3 caracteres." });
+                        return;
+                      }
+                      setPaypalCodeSaving(true);
+                      setPaypalCodeMsg(null);
+                      try {
+                        const res = await fetch("/api/payments/set-unlock-code", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "x-admin-email": OWNER_EMAIL,
+                          },
+                          body: JSON.stringify({ code: clean }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data?.ok) {
+                          setPaypalCodeConfigured(true);
+                          setPaypalUnlockCodeInput("");
+                          setPaypalCodeMsg({
+                            type: "ok",
+                            msg: "✓ Código guardado y cifrado en el servidor. Ya puedes desbloquear pagos de PayPal con él.",
+                          });
+                        } else {
+                          setPaypalCodeMsg({ type: "err", msg: data?.error || "No se pudo guardar el código." });
+                        }
+                      } catch {
+                        setPaypalCodeMsg({ type: "err", msg: "Error de conexión al guardar el código." });
+                      } finally {
+                        setPaypalCodeSaving(false);
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-cinzel font-bold text-[11px] transition cursor-pointer disabled:opacity-60 shrink-0"
+                  >
+                    {paypalCodeSaving ? "Guardando..." : "Guardar Código"}
+                  </button>
+                </div>
+                {paypalCodeMsg && (
+                  <p className={`text-[11px] font-gothic ${paypalCodeMsg.type === "ok" ? "text-emerald-300" : "text-rose-300"}`}>
+                    {paypalCodeMsg.msg}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Free Limit & Paywall Config (Past Lives + Questions) */}

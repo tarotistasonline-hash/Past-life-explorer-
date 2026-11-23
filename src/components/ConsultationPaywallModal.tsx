@@ -9,12 +9,17 @@ import {
   Loader2,
   RefreshCw,
   KeyRound,
+  Globe,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import { SupportedLanguage } from "../types";
 import {
   useMonetizationConfig,
   getEffectiveMpUrl,
+  DEFAULT_PAYPAL_USD_LINK,
+  DEFAULT_PAYPAL_EUR_LINK,
+  DEFAULT_PAYPAL_GBP_LINK,
+  normalizePayPalUrl,
   getFreeConsultationsUsed,
   getOrCreateVisitorId,
   setActivePaymentSessionId,
@@ -75,7 +80,7 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         : `Primeras ${n} consultas 100% gratuitas en vidas pasadas, tabla ouija y carta natal.`,
     includes2: "Lecturas ilimitadas de vidas pasadas, preguntas akáshicas y cartas natales con PDF.",
     includes3: "Instalación directa como App en tu celular (Android / iPhone) o computadora.",
-    includes4: "Desbloqueo inmediato con Mercado Pago o número de operación.",
+    includes4: "Desbloqueo inmediato con Mercado Pago (Argentina) o PayPal (USD/EUR + código).",
     payMp: "Desbloquear con Mercado Pago",
     waitingAutoTitle: "Esperando confirmación automática...",
     waitingAutoDesc: "No cierres esta ventana: apenas finalices el pago se desbloqueará y ejecutará tu lectura.",
@@ -103,7 +108,7 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         : `First ${n} consultations 100% free for past lives, Ouija, and natal charts.`,
     includes2: "Unlimited past-life readings, Akashic questions, and natal charts with PDF export.",
     includes3: "Installable as a standalone App on Android, iPhone, or desktop.",
-    includes4: "Instant unlock via Mercado Pago or operation number.",
+    includes4: "Instant unlock via Mercado Pago or PayPal (USD/EUR + unlock code).",
     payMp: "Unlock with Mercado Pago",
     waitingAutoTitle: "Waiting for automatic confirmation...",
     waitingAutoDesc: "Keep this window open: your reading will unlock automatically once paid.",
@@ -131,7 +136,7 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         : `Primeiras ${n} consultas 100% gratuitas em vidas passadas, Ouija e mapa astral.`,
     includes2: "Leituras ilimitadas de vidas passadas, perguntas akáshicas e mapas astrais com PDF.",
     includes3: "Instalação como App no celular (Android / iPhone) ou computador.",
-    includes4: "Desbloqueio instantâneo via Mercado Pago ou número de operação.",
+    includes4: "Desbloqueio imediato via Mercado Pago ou PayPal (USD/EUR + código).",
     payMp: "Desbloquear com Mercado Pago",
     waitingAutoTitle: "Aguardando confirmação automática...",
     waitingAutoDesc: "Mantenha esta janela aberta: sua leitura começará automaticamente após o pagamento.",
@@ -159,7 +164,7 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         : `${n} premières consultations 100% gratuites pour vies antérieures, Ouija et thème natal.`,
     includes2: "Lectures illimitées de vies antérieures, questions akashiques et thèmes natals en PDF.",
     includes3: "Installation directe en tant qu'application sur mobile ou ordinateur.",
-    includes4: "Déblocage instantané via Mercado Pago ou numéro d'opération.",
+    includes4: "Déblocage instantané via Mercado Pago ou PayPal (USD/EUR + code).",
     payMp: "Débloquer avec Mercado Pago",
     waitingAutoTitle: "En attente de confirmation...",
     waitingAutoDesc: "Gardez cette fenêtre ouverte : votre lecture démarrera automatiquement dès validation.",
@@ -187,7 +192,7 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         : `Primi ${n} consulti 100% gratuiti per vite passate, Ouija e tema natale.`,
     includes2: "Letture illimitate delle vite passate, domande akashiche e temi natali in PDF.",
     includes3: "Installabile come App dedicata su cellulare (Android / iPhone) o PC.",
-    includes4: "Sblocco istantaneo tramite Mercado Pago o numero di operazione.",
+    includes4: "Sblocco istantaneo tramite Mercado Pago o PayPal (USD/EUR + codice).",
     payMp: "Sblocca con Mercado Pago",
     waitingAutoTitle: "In attesa di conferma...",
     waitingAutoDesc: "Tieni aperta questa finestra: la lettura inizierà automaticamente dopo il pagamento.",
@@ -215,7 +220,7 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
         : `Erste ${n} Abfragen 100% kostenlos für frühere Leben, Ouija und Geburtshoroskop.`,
     includes2: "Unbegrenzte Lesungen früherer Leben, Akasha-Fragen und Geburtshoroskope als PDF.",
     includes3: "Direkt als App auf Smartphone (Android / iPhone) oder Desktop installierbar.",
-    includes4: "Sofortige Freischaltung über Mercado Pago oder Vorgangsnummer.",
+    includes4: "Sofortige Freischaltung über Mercado Pago oder PayPal (USD/EUR + Code).",
     payMp: "Mit Mercado Pago freischalten",
     waitingAutoTitle: "Warte auf Bestätigung...",
     waitingAutoDesc: "Lass dieses Fenster offen: Deine Lesung startet sofort automatisch nach Zahlung.",
@@ -243,10 +248,18 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [unlockedDone, setUnlockedDone] = useState<boolean>(false);
 
-  // Manual operation number state
+  // Manual operation number state (Mercado Pago)
   const [operationNumber, setOperationNumber] = useState<string>("");
   const [isValidatingOp, setIsValidatingOp] = useState<boolean>(false);
   const [opFeedback, setOpFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+
+  // PayPal currency & unlock code state
+  const [paypalCurrency, setPaypalCurrency] = useState<"USD" | "EUR" | "GBP">(() =>
+    language === "fr" || language === "it" || language === "de" ? "EUR" : "USD"
+  );
+  const [paypalCode, setPaypalCode] = useState<string>("");
+  const [isValidatingPaypalCode, setIsValidatingPaypalCode] = useState<boolean>(false);
+  const [paypalFeedback, setPaypalFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
   // Creator quick-unlock state
   const [showCreatorLogin, setShowCreatorLogin] = useState<boolean>(false);
@@ -281,6 +294,8 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
     setAwaitingPayment(false);
     setOperationNumber("");
     setOpFeedback(null);
+    setPaypalCode("");
+    setPaypalFeedback(null);
     setShowCreatorLogin(false);
     setCreatorEmailInput("");
     setCreatorLoginError("");
@@ -404,6 +419,85 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
       setOpFeedback({ type: "err", msg: "Error de conexión al validar la operación con Mercado Pago." });
     } finally {
       setIsValidatingOp(false);
+    }
+  };
+
+  // PayPal Unlock Code verification handler (server-verified)
+  const handleValidatePaypalCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    triggerHaptic(HAPTIC_PATTERNS.click);
+    const cleanCode = paypalCode.trim();
+    if (!cleanCode || cleanCode.length < 2) {
+      setPaypalFeedback({
+        type: "err",
+        msg:
+          language === "en"
+            ? "Please enter the unlock code received after your PayPal payment."
+            : "Por favor ingresa el código de desbloqueo recibido tras confirmar tu pago en PayPal.",
+      });
+      return;
+    }
+
+    setIsValidatingPaypalCode(true);
+    setPaypalFeedback(null);
+    try {
+      const visitorId = getOrCreateVisitorId();
+      const res = await fetch("/api/payments/verify-unlock-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: cleanCode,
+          sessionId,
+          visitorId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.approved && data?.approvalProof) {
+        setPaypalFeedback({
+          type: "ok",
+          msg:
+            language === "en"
+              ? "Code verified! Unlocking unlimited readings & app install..."
+              : "¡Código verificado! Desbloqueando lecturas ilimitadas e instalación...",
+        });
+        setTimeout(() => {
+          triggerUnlockSuccess(data.approvalProof, data.sessionId);
+        }, 500);
+      } else if (data?.reason === "rate_limited" || res.status === 429) {
+        setPaypalFeedback({
+          type: "err",
+          msg:
+            language === "en"
+              ? "Too many incorrect attempts. Please wait a few minutes and try again."
+              : "Demasiados intentos incorrectos. Espera unos minutos e intenta nuevamente.",
+        });
+      } else if (data?.reason === "unlock_code_not_configured") {
+        setPaypalFeedback({
+          type: "err",
+          msg:
+            language === "en"
+              ? "The site owner has not activated the PayPal unlock code in the Creator Panel yet."
+              : "El creador aún no activó el código de desbloqueo en el Panel del Creador (botón RA).",
+        });
+      } else {
+        setPaypalFeedback({
+          type: "err",
+          msg:
+            language === "en"
+              ? "Invalid code. Check the unlock code sent after your PayPal payment confirmation."
+              : "Código incorrecto. Verifica el código enviado tras confirmarse tu pago por PayPal.",
+        });
+      }
+    } catch {
+      setPaypalFeedback({
+        type: "err",
+        msg:
+          language === "en"
+            ? "Connection error verifying code. Please try again."
+            : "Error de conexión al validar el código. Intenta nuevamente.",
+      });
+    } finally {
+      setIsValidatingPaypalCode(false);
     }
   };
 
@@ -559,8 +653,18 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
           </div>
         ) : (
           <>
-            {/* Primary Payment Method: Mercado Pago */}
-            <div className="space-y-2.5 pt-1">
+            {/* Primary Payment Method: Mercado Pago (Argentina) */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[11px] font-cinzel text-amber-200/90 uppercase tracking-wider">
+                  🇦🇷 Argentina • Mercado Pago
+                </p>
+                {cfg.passPriceArs.trim() && (
+                  <span className="text-[11px] font-mono font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/40">
+                    {cfg.passPriceArs.trim()}
+                  </span>
+                )}
+              </div>
               <a
                 href={mpUrl}
                 target="_blank"
@@ -575,6 +679,117 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
                 </span>
                 <ExternalLink className="w-3.5 h-3.5 opacity-90" />
               </a>
+            </div>
+
+            {/* International Payment Method: PayPal.me (USD / EUR / GBP) + Unlock Code */}
+            <div className="p-3.5 rounded-2xl bg-sky-950/35 border border-sky-400/45 shadow-[0_0_24px_rgba(56,189,248,0.16)] space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-sky-200">
+                  <Globe className="w-4 h-4 text-sky-300 shrink-0" />
+                  <span>
+                    {language === "en"
+                      ? "International • PayPal"
+                      : language === "pt"
+                      ? "Internacional • PayPal"
+                      : language === "fr"
+                      ? "International • PayPal"
+                      : language === "it"
+                      ? "Internazionale • PayPal"
+                      : language === "de"
+                      ? "International • PayPal"
+                      : "Internacional (Exterior) • PayPal"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {(
+                    [
+                      { id: "USD", label: "USD $5" },
+                      { id: "EUR", label: "EUR €5" },
+                      { id: "GBP", label: "GBP £5" },
+                    ] as const
+                  ).map((cur) => (
+                    <button
+                      key={cur.id}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic(HAPTIC_PATTERNS.click);
+                        setPaypalCurrency(cur.id);
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition cursor-pointer border ${
+                        paypalCurrency === cur.id
+                          ? "bg-sky-400 text-slate-950 border-sky-200 shadow-sm"
+                          : "bg-sky-950/70 text-sky-200/80 border-sky-700/50 hover:bg-sky-900/60"
+                      }`}
+                    >
+                      {cur.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <a
+                href={
+                  paypalCurrency === "EUR"
+                    ? normalizePayPalUrl(cfg.paypalLinkEur, DEFAULT_PAYPAL_EUR_LINK)
+                    : paypalCurrency === "GBP"
+                    ? normalizePayPalUrl(cfg.paypalLinkGbp, DEFAULT_PAYPAL_GBP_LINK)
+                    : normalizePayPalUrl(cfg.paypalLinkUsd, DEFAULT_PAYPAL_USD_LINK)
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => triggerHaptic(HAPTIC_PATTERNS.click)}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 hover:from-sky-300 hover:via-blue-400 hover:to-indigo-400 text-slate-950 font-cinzel font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(56,189,248,0.35)] border border-sky-200/80 transition cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>
+                  {language === "en"
+                    ? `Pay with PayPal (${paypalCurrency === "EUR" ? "€5 EUR" : paypalCurrency === "GBP" ? "£5 GBP" : "$5 USD"})`
+                    : `Pagar con PayPal (${paypalCurrency === "EUR" ? "€5 EUR" : paypalCurrency === "GBP" ? "£5 GBP" : "$5 USD"})`}
+                </span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-90" />
+              </a>
+
+              <form onSubmit={handleValidatePaypalCode} className="space-y-2 pt-1 border-t border-sky-500/20">
+                <p className="text-[11px] font-gothic text-sky-100/85 leading-relaxed">
+                  {language === "en"
+                    ? "Once your PayPal payment is confirmed, enter your unlock code here:"
+                    : "Cuando recibas la confirmación tras abonar por PayPal, ingresa tu código de desbloqueo aquí:"}
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={paypalCode}
+                    onChange={(e) => setPaypalCode(e.target.value)}
+                    placeholder={language === "en" ? "Unlock code..." : "Código de desbloqueo..."}
+                    className="flex-1 px-3 py-2 bg-slate-950/75 border border-sky-500/45 rounded-xl text-sky-100 placeholder-sky-300/40 text-xs font-mono focus:outline-none focus:border-sky-300"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isValidatingPaypalCode}
+                    className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-cinzel font-bold text-xs transition cursor-pointer disabled:opacity-60 shadow flex items-center space-x-1 shrink-0"
+                  >
+                    {isValidatingPaypalCode ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <span>{language === "en" ? "Unlock" : "Desbloquear"}</span>
+                    )}
+                  </button>
+                </div>
+
+                {paypalFeedback && (
+                  <div
+                    className={`text-[11px] font-gothic p-2 rounded-xl border ${
+                      paypalFeedback.type === "ok"
+                        ? "bg-emerald-950/70 border-emerald-500/50 text-emerald-200"
+                        : "bg-red-950/70 border-red-500/50 text-red-200"
+                    }`}
+                  >
+                    {paypalFeedback.msg}
+                  </div>
+                )}
+              </form>
             </div>
 
             {/* Manual Operation Number Validation Field */}

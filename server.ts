@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import express from "express";
+import http from "http";
 import crypto from "crypto";
 import path from "path";
 import fs from "fs";
@@ -1498,9 +1499,17 @@ function normalizeOrigin(rawOrigin: unknown, req: express.Request): string {
 }
 
 const MONETIZATION_FILE = path.join(VISITS_DATA_DIR, "monetization.json");
+const PAYPAL_UNLOCK_HASH_FILE = path.join(VISITS_DATA_DIR, "paypal_unlock_hash.json");
+
+const DEFAULT_PAYPAL_USD_LINK = "https://www.paypal.me/margsaft/5";
+const DEFAULT_PAYPAL_EUR_LINK = "https://www.paypal.me/margsaft/5EUR";
+const DEFAULT_PAYPAL_GBP_LINK = "https://www.paypal.me/margsaft/5GBP";
 
 interface ServerMonetizationConfig {
   mpLink: string;
+  paypalLinkUsd: string;
+  paypalLinkEur: string;
+  paypalLinkGbp: string;
   paywallEnabled: boolean;
   freeConsultationsLimit: number;
   passPriceArs: string;
@@ -1510,6 +1519,9 @@ interface ServerMonetizationConfig {
 
 const DEFAULT_SERVER_MONETIZATION: ServerMonetizationConfig = {
   mpLink: "https://mpago.la/2cv7Gii",
+  paypalLinkUsd: DEFAULT_PAYPAL_USD_LINK,
+  paypalLinkEur: DEFAULT_PAYPAL_EUR_LINK,
+  paypalLinkGbp: DEFAULT_PAYPAL_GBP_LINK,
   paywallEnabled: true,
   freeConsultationsLimit: 1,
   passPriceArs: "$6.000 ARS",
@@ -1529,12 +1541,130 @@ function sanitizeServerMpUrl(raw: unknown): string {
   return DEFAULT_SERVER_MONETIZATION.mpLink;
 }
 
+function sanitizeServerPayPalUrl(raw: unknown, fallback: string): string {
+  if (typeof raw !== "string") return fallback;
+  const trimmed = raw.trim().replace(/\s+/g, "");
+  if (!trimmed) return fallback;
+  let candidate = trimmed;
+  if (/^http:\/\//i.test(candidate)) {
+    candidate = "https://" + candidate.slice(7);
+  } else if (/^(www\.)?(paypal\.me|paypal\.com)\//i.test(candidate)) {
+    candidate = `https://${candidate}`;
+  }
+  try {
+    const parsed = new URL(candidate);
+    if (
+      parsed.protocol === "https:" &&
+      /^(www\.)?(paypal\.me|paypal\.com)$/i.test(parsed.hostname)
+    ) {
+      return parsed.toString().slice(0, 300);
+    }
+  } catch {
+    // invalid URL
+  }
+  return fallback;
+}
+
+interface StoredUnlockCodeHash {
+  salt: string;
+  hash: string;
+  updatedAt: string;
+}
+
+function readUnlockCodeHashFile(): StoredUnlockCodeHash | null {
+  try {
+    if (!fs.existsSync(PAYPAL_UNLOCK_HASH_FILE)) return null;
+    const raw = JSON.parse(fs.readFileSync(PAYPAL_UNLOCK_HASH_FILE, "utf-8"));
+    if (
+      typeof raw?.salt === "string" &&
+      /^[a-f0-9]{32}$/i.test(raw.salt) &&
+      typeof raw?.hash === "string" &&
+      /^[a-f0-9]{128}$/i.test(raw.hash)
+    ) {
+      return {
+        salt: raw.salt,
+        hash: raw.hash,
+        updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : new Date().toISOString(),
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeUnlockCodeHashFile(plainCode: string): StoredUnlockCodeHash {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(plainCode.trim(), salt, 64).toString("hex");
+  const record: StoredUnlockCodeHash = {
+    salt,
+    hash,
+    updatedAt: new Date().toISOString(),
+  };
+  if (!fs.existsSync(VISITS_DATA_DIR)) {
+    fs.mkdirSync(VISITS_DATA_DIR, { recursive: true });
+  }
+  fs.writeFileSync(PAYPAL_UNLOCK_HASH_FILE, JSON.stringify(record, null, 2), "utf-8");
+  return record;
+}
+
+function getEnvPayPalUnlockCode(): string {
+  return (process.env.PAYPAL_UNLOCK_CODE || "").trim();
+}
+
+function hasPayPalUnlockCodeConfigured(): boolean {
+  return Boolean(getEnvPayPalUnlockCode()) || Boolean(readUnlockCodeHashFile());
+}
+
+function verifySubmittedPayPalUnlockCode(candidate: string): boolean {
+  const clean = candidate.trim();
+  if (clean.length < 2 || clean.length > 64) return false;
+
+  const envCode = getEnvPayPalUnlockCode();
+  if (envCode) {
+    const a = crypto.createHash("sha256").update(clean).digest();
+    const b = crypto.createHash("sha256").update(envCode).digest();
+    return crypto.timingSafeEqual(a, b);
+  }
+
+  const stored = readUnlockCodeHashFile();
+  if (!stored) return false;
+  const derived = crypto.scryptSync(clean, stored.salt, 64);
+  const expected = Buffer.from(stored.hash, "hex");
+  if (derived.length !== expected.length) return false;
+  return crypto.timingSafeEqual(derived, expected);
+}
+
+const unlockCodeAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkUnlockCodeRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = unlockCodeAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    return true;
+  }
+  return entry.count < 8;
+}
+
+function recordUnlockCodeFailure(key: string): void {
+  const now = Date.now();
+  const entry = unlockCodeAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    unlockCodeAttempts.set(key, { count: 1, resetAt: now + 10 * 60 * 1000 });
+  } else {
+    entry.count += 1;
+  }
+}
+
 function readLocalMonetizationFile(): ServerMonetizationConfig | null {
   try {
     if (!fs.existsSync(MONETIZATION_FILE)) return null;
     const raw = JSON.parse(fs.readFileSync(MONETIZATION_FILE, "utf-8"));
     return {
       mpLink: sanitizeServerMpUrl(raw.mpLink),
+      paypalLinkUsd: sanitizeServerPayPalUrl(raw.paypalLinkUsd, DEFAULT_PAYPAL_USD_LINK),
+      paypalLinkEur: sanitizeServerPayPalUrl(raw.paypalLinkEur, DEFAULT_PAYPAL_EUR_LINK),
+      paypalLinkGbp: sanitizeServerPayPalUrl(raw.paypalLinkGbp, DEFAULT_PAYPAL_GBP_LINK),
       paywallEnabled: typeof raw.paywallEnabled === "boolean" ? raw.paywallEnabled : true,
       freeConsultationsLimit:
         typeof raw.freeConsultationsLimit === "number"
@@ -1580,6 +1710,9 @@ app.post("/api/monetization", async (req, res) => {
     const existing = await readMonetizationConfigServer();
     const nextCfg: ServerMonetizationConfig = {
       mpLink: sanitizeServerMpUrl(body.mpLink ?? existing.mpLink),
+      paypalLinkUsd: sanitizeServerPayPalUrl(body.paypalLinkUsd ?? existing.paypalLinkUsd, DEFAULT_PAYPAL_USD_LINK),
+      paypalLinkEur: sanitizeServerPayPalUrl(body.paypalLinkEur ?? existing.paypalLinkEur, DEFAULT_PAYPAL_EUR_LINK),
+      paypalLinkGbp: sanitizeServerPayPalUrl(body.paypalLinkGbp ?? existing.paypalLinkGbp, DEFAULT_PAYPAL_GBP_LINK),
       paywallEnabled:
         typeof body.paywallEnabled === "boolean" ? body.paywallEnabled : existing.paywallEnabled,
       freeConsultationsLimit:
@@ -1607,7 +1740,7 @@ app.post("/api/monetization", async (req, res) => {
     return res.json(nextCfg);
   } catch (e) {
     console.error("Error saving /api/monetization:", e);
-    return res.status(500).json({ error: "No se pudo guardar la configuración de Mercado Pago" });
+    return res.status(500).json({ error: "No se pudo guardar la configuración de pagos" });
   }
 });
 
@@ -1711,12 +1844,15 @@ async function approvePaymentSession(
   return session;
 }
 
-// Payment capabilities (Mercado Pago real API + Checkout Pro status)
+// Payment capabilities (Mercado Pago real API + Checkout Pro status + PayPal unlock code status)
 app.get("/api/payments/capabilities", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   const hasToken = Boolean(getMercadoPagoAccessToken());
   res.json({
     mpCheckoutProReady: hasToken,
     mpApiVerificationReady: hasToken,
+    paypalUnlockCodeConfigured: hasPayPalUnlockCodeConfigured(),
+    paypalUnlockEnvConfigured: Boolean(getEnvPayPalUnlockCode()),
   });
 });
 
@@ -2136,13 +2272,160 @@ app.post("/api/payments/verify-operation", async (req, res) => {
   }
 });
 
+// Configure or bootstrap PayPal Unlock Code (stored hashed with scrypt on server; env var overrides)
+app.post("/api/payments/set-unlock-code", (req, res) => {
+  try {
+    const adminHeader = String(req.headers["x-admin-email"] || "").trim().toLowerCase();
+    const isAdminReq = adminHeader === "tarotistasonline@gmail.com";
+    const alreadyConfigured = hasPayPalUnlockCodeConfigured();
+
+    if (alreadyConfigured && !isAdminReq) {
+      return res.status(403).json({ ok: false, error: "No autorizado" });
+    }
+
+    const rawCode = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+    if (rawCode.length < 3 || rawCode.length > 64) {
+      return res.status(400).json({
+        ok: false,
+        error: "El código debe tener entre 3 y 64 caracteres.",
+      });
+    }
+
+    writeUnlockCodeHashFile(rawCode);
+    return res.json({
+      ok: true,
+      paypalUnlockCodeConfigured: true,
+      paypalUnlockEnvConfigured: Boolean(getEnvPayPalUnlockCode()),
+    });
+  } catch (e) {
+    console.error("Error in /api/payments/set-unlock-code:", e);
+    return res.status(500).json({ ok: false, error: "Error guardando código en el servidor." });
+  }
+});
+
+// Verify PayPal Unlock Code (server-side constant-time / scrypt verification + rate limit)
+app.post("/api/payments/verify-unlock-code", async (req, res) => {
+  try {
+    const { code, sessionId, visitorId } = req.body || {};
+    const cleanCode = typeof code === "string" ? code.trim() : "";
+    const cleanVisitor = sanitizeIdParam(visitorId, 4, 128) || "vis_paypal_code";
+    const clientIp =
+      String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "ip_unknown")
+        .split(",")[0]
+        .trim()
+        .slice(0, 64);
+    const rateKey = `${clientIp}:${cleanVisitor}`;
+
+    if (!checkUnlockCodeRateLimit(rateKey)) {
+      return res.status(429).json({
+        approved: false,
+        reason: "rate_limited",
+      });
+    }
+
+    if (!hasPayPalUnlockCodeConfigured()) {
+      return res.json({
+        approved: false,
+        reason: "unlock_code_not_configured",
+      });
+    }
+
+    if (!cleanCode || cleanCode.length < 2 || !verifySubmittedPayPalUnlockCode(cleanCode)) {
+      recordUnlockCodeFailure(rateKey);
+      return res.json({
+        approved: false,
+        reason: "invalid_code",
+      });
+    }
+
+    unlockCodeAttempts.delete(rateKey);
+
+    const cleanSessionId = sanitizeIdParam(sessionId, 8, 128);
+    if (cleanSessionId) {
+      const approved = await approvePaymentSession(cleanSessionId, "auto", "paypal_unlock_code");
+      if (approved) {
+        return res.json({
+          approved: true,
+          sessionId: approved.sessionId,
+          approvalProof: approved.approvalProof,
+        });
+      }
+    }
+
+    const newSessionId = `ps_pp_${crypto.randomBytes(10).toString("hex")}`;
+    const nowIso = new Date().toISOString();
+    const session: ServerPaymentSession = {
+      sessionId: newSessionId,
+      visitorId: cleanVisitor,
+      provider: "auto",
+      status: "approved",
+      pendingType: "pass",
+      refCode: "PP-CODE",
+      approvalProof: signApprovalProof(newSessionId, cleanVisitor, "auto"),
+      paymentRef: "paypal_unlock_code",
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    paymentSessions.set(newSessionId, session);
+    savePaymentSessionsDisk();
+    return res.json({
+      approved: true,
+      sessionId: session.sessionId,
+      approvalProof: session.approvalProof,
+    });
+  } catch (e) {
+    console.error("Error in /api/payments/verify-unlock-code:", e);
+    return res.status(500).json({ approved: false });
+  }
+});
+
 // Vite Integration
 async function startServer() {
+  const httpServer = http.createServer(app);
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+      },
       appType: "spa",
+      plugins: [
+        {
+          name: "attach-hmr-to-http-server",
+          config(userConfig) {
+            if (userConfig.server?.hmr !== false) {
+              return {
+                server: {
+                  hmr: {
+                    ...(typeof userConfig.server?.hmr === "object" ? userConfig.server.hmr : {}),
+                    server: httpServer,
+                  },
+                },
+              };
+            }
+          },
+        },
+      ],
     });
+    if (process.env.DISABLE_HMR === "true") {
+      app.get("/@vite/client", async (_req, res, next) => {
+        try {
+          const result = await vite.transformRequest("/@vite/client");
+          if (result && typeof result.code === "string") {
+            const patched = result.code.replace(
+              /transport\.connect\(createHMRHandler\(handleMessage\)\);/g,
+              "/* HMR disabled: WebSocket connection skipped */"
+            );
+            res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+            res.setHeader("Cache-Control", "no-cache");
+            return res.send(patched);
+          }
+        } catch {
+          // fall through to vite.middlewares
+        }
+        return next();
+      });
+    }
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
@@ -2152,7 +2435,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

@@ -1119,12 +1119,12 @@ export default function App() {
             <>
               <div className="space-y-1">
                 <span className="font-cinzel font-bold text-amber-200 block">
-                  Desbloquear consultas ilimitadas
+                  Desbloquear consultas ilimitadas e instalación de App
                 </span>
                 <p className="text-purple-300/80 text-[11px]">
                   {monetizationCfg.freeConsultationsLimit === 1
-                    ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea ilimitado con Mercado Pago:"
-                    : `Primeras ${monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea con Mercado Pago:`}
+                    ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea con Mercado Pago (Argentina) o PayPal (USD / EUR):"
+                    : `Primeras ${monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea con Mercado Pago (Argentina) o PayPal (USD / EUR):`}
                 </p>
               </div>
 
@@ -1136,16 +1136,16 @@ export default function App() {
                   className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[11px] transition shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1"
                 >
                   <span>
-                    Desbloquear con Mercado Pago{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
+                    Mercado Pago{monetizationCfg.passPriceArs.trim() ? ` (${monetizationCfg.passPriceArs.trim()})` : ""}
                   </span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
                 <button
                   type="button"
                   onClick={() => setIsPaywallOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-amber-500/40 text-amber-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-sky-950/90 hover:bg-sky-900 border border-sky-400/55 text-sky-200 font-cinzel font-bold text-[11px] transition shadow cursor-pointer"
                 >
-                  Ver Pase / Ingresar Comprobante
+                  PayPal (USD / EUR) / Código
                 </button>
               </div>
             </>

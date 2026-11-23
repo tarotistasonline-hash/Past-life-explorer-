@@ -2,8 +2,15 @@ import { useState, useEffect } from "react";
 
 export const DEFAULT_MP_LINK = "https://mpago.la/2cv7Gii";
 
+export const DEFAULT_PAYPAL_USD_LINK = "https://www.paypal.me/margsaft/5";
+export const DEFAULT_PAYPAL_EUR_LINK = "https://www.paypal.me/margsaft/5EUR";
+export const DEFAULT_PAYPAL_GBP_LINK = "https://www.paypal.me/margsaft/5GBP";
+
 export interface MonetizationConfig {
   mpLink: string;
+  paypalLinkUsd: string;
+  paypalLinkEur: string;
+  paypalLinkGbp: string;
   paywallEnabled: boolean;
   freeConsultationsLimit: number;
   passPriceArs: string;
@@ -13,6 +20,9 @@ export interface MonetizationConfig {
 
 export const DEFAULT_MONETIZATION_CONFIG: MonetizationConfig = {
   mpLink: DEFAULT_MP_LINK,
+  paypalLinkUsd: DEFAULT_PAYPAL_USD_LINK,
+  paypalLinkEur: DEFAULT_PAYPAL_EUR_LINK,
+  paypalLinkGbp: DEFAULT_PAYPAL_GBP_LINK,
   paywallEnabled: true,
   freeConsultationsLimit: 1,
   passPriceArs: "$8.000 ARS",
@@ -56,7 +66,7 @@ export type PendingConsultation =
       createdAt: number;
     };
 
-const LOCAL_FALLBACK_KEY = "ouija_monetization_cache_v9";
+const LOCAL_FALLBACK_KEY = "ouija_monetization_cache_v10";
 const FREE_USED_KEY = "ouija_free_consultations_used_v1";
 const PASS_UNLOCKED_KEY = "ouija_pass_unlocked_hash_v1";
 const PASS_UNLOCKED_PROOF_KEY = "ouija_pass_unlocked_proof_v2";
@@ -89,6 +99,29 @@ export function normalizeHttpsUrl(raw: string): string {
   return "";
 }
 
+export function normalizePayPalUrl(raw: string, fallback: string): string {
+  const trimmed = (raw || "").trim().replace(/\s+/g, "");
+  if (!trimmed) return fallback;
+  let candidate = trimmed;
+  if (/^http:\/\//i.test(candidate)) {
+    candidate = "https://" + candidate.slice(7);
+  } else if (/^(www\.)?(paypal\.me|paypal\.com)\//i.test(candidate)) {
+    candidate = `https://${candidate}`;
+  }
+  try {
+    const parsed = new URL(candidate);
+    if (
+      parsed.protocol === "https:" &&
+      /^(www\.)?(paypal\.me|paypal\.com)$/i.test(parsed.hostname)
+    ) {
+      return parsed.toString().slice(0, 300);
+    }
+  } catch {
+    // invalid URL
+  }
+  return fallback;
+}
+
 export function normalizeHash(raw: unknown): string {
   if (typeof raw !== "string") return "";
   const cleaned = raw.trim().toLowerCase();
@@ -108,6 +141,18 @@ export function sanitizeMonetizationConfig(input: Partial<MonetizationConfig>): 
 
   return {
     mpLink: normalizeHttpsUrl(input.mpLink ?? DEFAULT_MP_LINK) || DEFAULT_MP_LINK,
+    paypalLinkUsd: normalizePayPalUrl(
+      input.paypalLinkUsd ?? DEFAULT_PAYPAL_USD_LINK,
+      DEFAULT_PAYPAL_USD_LINK
+    ),
+    paypalLinkEur: normalizePayPalUrl(
+      input.paypalLinkEur ?? DEFAULT_PAYPAL_EUR_LINK,
+      DEFAULT_PAYPAL_EUR_LINK
+    ),
+    paypalLinkGbp: normalizePayPalUrl(
+      input.paypalLinkGbp ?? DEFAULT_PAYPAL_GBP_LINK,
+      DEFAULT_PAYPAL_GBP_LINK
+    ),
     paywallEnabled: typeof input.paywallEnabled === "boolean" ? input.paywallEnabled : true,
     freeConsultationsLimit: clampedLimit,
     passPriceArs: (typeof input.passPriceArs === "string" ? input.passPriceArs : "").trim().slice(0, 32),

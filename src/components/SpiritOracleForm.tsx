@@ -506,25 +506,34 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
                     ? `Kostenlose Abfragen übrig: ${remainingFree} von ${freeLimit}`
                     : `Free consultations remaining: ${remainingFree} of ${freeLimit}`}
                 </span>
-                <a
-                  href={mpLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => onOpenPaywall?.()}
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)]"
-                >
-                  {language === "es"
-                    ? `Desbloquear con Mercado Pago${passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}`
-                    : language === "pt"
-                    ? "Desbloquear com Mercado Pago"
-                    : language === "fr"
-                    ? "Débloquer avec Mercado Pago"
-                    : language === "it"
-                    ? "Sblocca con Mercado Pago"
-                    : language === "de"
-                    ? "Mit Mercado Pago freischalten"
-                    : "Unlock with Mercado Pago"}
-                </a>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={mpLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => onOpenPaywall?.()}
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)]"
+                  >
+                    {language === "es"
+                      ? `Desbloquear con Mercado Pago${passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}`
+                      : language === "pt"
+                      ? "Desbloquear com Mercado Pago"
+                      : language === "fr"
+                      ? "Débloquer avec Mercado Pago"
+                      : language === "it"
+                      ? "Sblocca con Mercado Pago"
+                      : language === "de"
+                      ? "Mit Mercado Pago freischalten"
+                      : "Unlock with Mercado Pago"}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => onOpenPaywall?.()}
+                    className="px-3 py-2 rounded-xl bg-sky-950/85 hover:bg-sky-900 border border-sky-400/50 text-sky-200 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer"
+                  >
+                    {language === "en" ? "PayPal (USD/EUR) / Code" : "PayPal (USD/EUR) / Código"}
+                  </button>
+                </div>
               </>
             ) : (
               <>
@@ -544,25 +553,34 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
                       : `Free consultations used (${freeLimit}/${freeLimit})`}
                   </span>
                 </span>
-                <a
-                  href={mpLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => onOpenPaywall?.()}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_18px_rgba(245,158,11,0.45)]"
-                >
-                  {language === "es"
-                    ? `Desbloquear con Mercado Pago${passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}`
-                    : language === "pt"
-                    ? "Desbloquear com Mercado Pago"
-                    : language === "fr"
-                    ? "Débloquer avec Mercado Pago"
-                    : language === "it"
-                    ? "Sblocca con Mercado Pago"
-                    : language === "de"
-                    ? "Mit Mercado Pago freischalten"
-                    : "Unlock with Mercado Pago"}
-                </a>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={mpLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => onOpenPaywall?.()}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_18px_rgba(245,158,11,0.45)]"
+                  >
+                    {language === "es"
+                      ? `Desbloquear con Mercado Pago${passPriceArs.trim() ? ` (${passPriceArs.trim()})` : ""}`
+                      : language === "pt"
+                      ? "Desbloquear com Mercado Pago"
+                      : language === "fr"
+                      ? "Débloquer avec Mercado Pago"
+                      : language === "it"
+                      ? "Sblocca con Mercado Pago"
+                      : language === "de"
+                      ? "Mit Mercado Pago freischalten"
+                      : "Unlock with Mercado Pago"}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => onOpenPaywall?.()}
+                    className="px-3.5 py-2 rounded-xl bg-sky-950/85 hover:bg-sky-900 border border-sky-400/50 text-sky-200 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer"
+                  >
+                    {language === "en" ? "PayPal (USD/EUR) / Code" : "PayPal (USD/EUR) / Código"}
+                  </button>
+                </div>
               </>
             )}
           </div>
