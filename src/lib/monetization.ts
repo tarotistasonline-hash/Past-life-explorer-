@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getAdminAuthHeaders } from "./adminTracking";
 
 export const DEFAULT_MP_LINK = "https://mpago.la/2cv7Gii";
 
@@ -486,34 +487,25 @@ export async function saveMonetizationConfig(
   input: Partial<MonetizationConfig>
 ): Promise<MonetizationConfig> {
   const clean = sanitizeMonetizationConfig(input);
-  try {
-    const res = await fetch("/api/monetization", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-email": "tarotistasonline@gmail.com",
-      },
-      body: JSON.stringify(clean),
-    });
-    const finalCfg = res.ok
-      ? sanitizeMonetizationConfig(await res.json())
-      : clean;
-    currentConfig = finalCfg;
-    try {
-      localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(finalCfg));
-    } catch {
-      // ignore
-    }
-    notifyAll();
-    return finalCfg;
-  } catch {
-    currentConfig = clean;
-    try {
-      localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(clean));
-    } catch {
-      // ignore
-    }
-    notifyAll();
-    return clean;
+  const authHeaders = await getAdminAuthHeaders();
+  const res = await fetch("/api/monetization", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+    body: JSON.stringify(clean),
+  });
+  if (!res.ok) {
+    throw new Error("No autorizado para guardar la configuración.");
   }
+  const finalCfg = sanitizeMonetizationConfig(await res.json());
+  currentConfig = finalCfg;
+  try {
+    localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(finalCfg));
+  } catch {
+    // ignore
+  }
+  notifyAll();
+  return finalCfg;
 }

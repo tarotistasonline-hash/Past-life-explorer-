@@ -11,10 +11,11 @@ import {
   doc,
   getDocFromServer,
   setDoc,
-  updateDoc,
   runTransaction,
   type Firestore,
 } from "firebase/firestore";
+import { initializeApp as initAdminApp, getApps as getAdminApps, getApp as getAdminApp } from "firebase-admin/app";
+import { getAuth as getAdminAuth, type Auth as AdminAuth } from "firebase-admin/auth";
 import { MAJOR_ARCANA, getUniversalArcanaForDate, drawPersonalArcana } from "./src/lib/tarotData.ts";
 import {
   buildStrictSpiritQuestionPrompt,
@@ -132,17 +133,40 @@ function saveVisitsData() {
   }
 }
 
-// Initialize Firebase Firestore for permanent cross-restart persistence
+// Initialize Firebase Firestore & Auth token verifier
+const OWNER_EMAIL = "tarotistasonline@gmail.com";
 let firestoreDb: Firestore | null = null;
+let adminAuth: AdminAuth | null = null;
 try {
   const fbConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(fbConfigPath)) {
     const fbConfig = JSON.parse(fs.readFileSync(fbConfigPath, "utf-8"));
     const fbApp = getFirebaseApps().length > 0 ? getFirebaseApps()[0] : initFirebaseApp(fbConfig);
     firestoreDb = getFirestore(fbApp, fbConfig.firestoreDatabaseId);
+    const adminApp = getAdminApps().length > 0 ? getAdminApp() : initAdminApp({ projectId: fbConfig.projectId });
+    adminAuth = getAdminAuth(adminApp);
   }
 } catch (e) {
-  console.warn("Could not initialize Firestore in server:", e);
+  console.warn("Could not initialize Firebase in server:", e);
+}
+
+async function verifyAdminBearerToken(req?: express.Request): Promise<boolean> {
+  if (!req || !adminAuth) return false;
+  const authHeader = req.headers?.authorization;
+  if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
+    return false;
+  }
+  const idToken = authHeader.slice("Bearer ".length).trim();
+  if (!idToken || idToken.length > 8192) return false;
+  try {
+    const decoded = await adminAuth.verifyIdToken(idToken);
+    return (
+      decoded.email?.toLowerCase() === OWNER_EMAIL &&
+      decoded.email_verified === true
+    );
+  } catch {
+    return false;
+  }
 }
 
 interface PortalMetricsPayload {
@@ -294,9 +318,9 @@ async function recordVisitInFirestore(rawVisitorId: unknown) {
     const current = metricsSnap.data();
     const isNewUnique = Boolean(visitorRef && visitorSnap && !visitorSnap.exists());
 
-    const nextTotalVisits = (Number(current.totalVisits) || 0) + 1;
-    const nextTodayVisits = current.todayKey === todayKey ? (Number(current.todayVisits) || 0) + 1 : 1;
-    const nextUnique = (Number(current.uniqueVisitorsCount) || 0) + (isNewUnique ? 1 : 0);
+    const nextTotalVisits = Math.trunc(Number(current.totalVisits) || 0) + 1;
+    const nextTodayVisits = current.todayKey === todayKey ? Math.trunc(Number(current.todayVisits) || 0) + 1 : 1;
+    const nextUnique = Math.trunc(Number(current.uniqueVisitorsCount) || 0) + (isNewUnique ? 1 : 0);
 
     if (isNewUnique && visitorRef && cleanVisitorId) {
       tx.set(visitorRef, {
@@ -344,12 +368,8 @@ app.get("/api/visits", async (req, res) => {
 app.post("/api/visits/hit", async (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   const { visitorId, isAdmin } = req.body || {};
-  const adminEmail = String(req.headers["x-admin-email"] || "").trim().toLowerCase();
-  const isExcluded = Boolean(
-    isAdmin ||
-      req.headers["x-admin-exclude"] === "true" ||
-      adminEmail === "tarotistasonline@gmail.com"
-  );
+  const wantsExclude = Boolean(isAdmin || req.headers["x-admin-exclude"] === "true");
+  const isExcluded = wantsExclude ? await verifyAdminBearerToken(req) : false;
   const todayKey = getTodayKey();
   const onlineVisitors = touchOnlineVisitor(visitorId, isExcluded);
 
@@ -401,12 +421,8 @@ app.post("/api/visits/heartbeat", express.text({ type: "*/*" }), async (req, res
     }
   }
   const { visitorId, isAdmin, leave } = payload || {};
-  const adminEmail = String(req.headers["x-admin-email"] || "").trim().toLowerCase();
-  const isExcluded = Boolean(
-    isAdmin ||
-      req.headers["x-admin-exclude"] === "true" ||
-      adminEmail === "tarotistasonline@gmail.com"
-  );
+  const wantsExclude = Boolean(isAdmin || req.headers["x-admin-exclude"] === "true");
+  const isExcluded = wantsExclude ? await verifyAdminBearerToken(req) : false;
 
   const onlineVisitors = touchOnlineVisitor(visitorId, isExcluded, Boolean(leave));
   if (leave) {
@@ -421,10 +437,10 @@ app.post("/api/visits/heartbeat", express.text({ type: "*/*" }), async (req, res
   });
 });
 
-// Helper to record consultations (skips admin/creator test calls)
-function incrementConsultation(req?: express.Request) {
-  const isExcluded = Boolean(req?.body?.isAdmin || req?.headers?.["x-admin-exclude"] === "true");
-  if (isExcluded) return;
+// Helper to record consultations (skips verified admin/creator test calls)
+async function incrementConsultation(req?: express.Request) {
+  const wantsExclude = Boolean(req?.body?.isAdmin || req?.headers?.["x-admin-exclude"] === "true");
+  if (wantsExclude && (await verifyAdminBearerToken(req))) return;
 
   visitsState.totalConsultations = (visitsState.totalConsultations || 0) + 1;
   visitsState.lastUpdated = new Date().toISOString();
@@ -440,7 +456,7 @@ function incrementConsultation(req?: express.Request) {
           if (!snap.exists()) return;
           const current = snap.data();
           tx.update(metricsRef, {
-            totalConsultations: (Number(current.totalConsultations) || 0) + 1,
+            totalConsultations: Math.trunc(Number(current.totalConsultations) || 0) + 1,
             lastUpdated: new Date().toISOString(),
           });
         })
@@ -1706,8 +1722,7 @@ app.get("/api/monetization", async (_req, res) => {
 
 app.post("/api/monetization", async (req, res) => {
   try {
-    const adminHeader = String(req.headers["x-admin-email"] || "").trim().toLowerCase();
-    if (adminHeader !== "tarotistasonline@gmail.com") {
+    if (!(await verifyAdminBearerToken(req))) {
       return res.status(403).json({ error: "No autorizado" });
     }
     const body = req.body || {};
@@ -1767,64 +1782,12 @@ function broadcastSseApproval(session: ServerPaymentSession) {
   }
 }
 
-async function syncPaymentSessionToFirestore(session: ServerPaymentSession, isCreate: boolean) {
-  if (!firestoreDb) return;
-  const ref = doc(firestoreDb, "payment_sessions", session.sessionId);
-  try {
-    if (isCreate) {
-      await setDoc(ref, {
-        sessionId: session.sessionId,
-        visitorId: session.visitorId,
-        provider: session.provider,
-        status: session.status,
-        pendingType: session.pendingType,
-        refCode: session.refCode,
-        approvalProof: session.approvalProof,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
-      });
-    } else {
-      await updateDoc(ref, {
-        status: session.status,
-        provider: session.provider,
-        approvalProof: session.approvalProof,
-        updatedAt: session.updatedAt,
-      });
-    }
-  } catch (e) {
-    console.warn("Could not sync payment_sessions to Firestore:", e);
-  }
-}
-
 async function approvePaymentSession(
   sessionId: string,
   provider: "mercadopago" | "auto",
   paymentRef?: string
 ): Promise<ServerPaymentSession | null> {
-  let session = paymentSessions.get(sessionId);
-
-  if (!session && firestoreDb) {
-    try {
-      const snap = await getDocFromServer(doc(firestoreDb, "payment_sessions", sessionId));
-      if (snap.exists()) {
-        const d = snap.data();
-        session = {
-          sessionId: String(d.sessionId),
-          visitorId: String(d.visitorId),
-          provider: d.provider === "mercadopago" || d.provider === "auto" ? d.provider : provider,
-          status: (d.status as "pending" | "approved") || "pending",
-          pendingType: (d.pendingType as "past-life" | "spirit-question" | "pass") || "pass",
-          refCode: String(d.refCode || "AK-AUTO"),
-          approvalProof: String(d.approvalProof || ""),
-          createdAt: String(d.createdAt || new Date().toISOString()),
-          updatedAt: String(d.updatedAt || new Date().toISOString()),
-        };
-        paymentSessions.set(sessionId, session);
-      }
-    } catch {
-      // ignore
-    }
-  }
+  const session = paymentSessions.get(sessionId);
 
   if (!session) return null;
 
@@ -1842,7 +1805,6 @@ async function approvePaymentSession(
 
   paymentSessions.set(session.sessionId, session);
   savePaymentSessionsDisk();
-  await syncPaymentSessionToFirestore(session, false);
   broadcastSseApproval(session);
 
   return session;
@@ -1886,7 +1848,6 @@ app.post("/api/payments/create-session", async (req, res) => {
 
     paymentSessions.set(sessionId, session);
     savePaymentSessionsDisk();
-    syncPaymentSessionToFirestore(session, true).catch(() => {});
 
     const cfg = await readMonetizationConfigServer();
     let mpUrl = cfg.mpLink || "https://mpago.la/2cv7Gii";
@@ -2009,18 +1970,7 @@ app.get("/api/payments/session/:sessionId", async (req, res) => {
     return res.status(400).json({ error: "Invalid sessionId" });
   }
 
-  let session = paymentSessions.get(sessionId);
-  if (!session && firestoreDb) {
-    try {
-      const snap = await getDocFromServer(doc(firestoreDb, "payment_sessions", sessionId));
-      if (snap.exists()) {
-        session = snap.data() as ServerPaymentSession;
-        paymentSessions.set(sessionId, session);
-      }
-    } catch {
-      // ignore
-    }
-  }
+  const session = paymentSessions.get(sessionId);
 
   if (!session) {
     return res.status(404).json({ error: "Session not found" });
@@ -2276,14 +2226,10 @@ app.post("/api/payments/verify-operation", async (req, res) => {
   }
 });
 
-// Configure or bootstrap PayPal Unlock Code (stored hashed with scrypt on server; env var overrides)
-app.post("/api/payments/set-unlock-code", (req, res) => {
+// Configure PayPal Unlock Code (strictly admin-only; stored hashed with scrypt on server; env var overrides)
+app.post("/api/payments/set-unlock-code", async (req, res) => {
   try {
-    const adminHeader = String(req.headers["x-admin-email"] || "").trim().toLowerCase();
-    const isAdminReq = adminHeader === "tarotistasonline@gmail.com";
-    const alreadyConfigured = hasPayPalUnlockCodeConfigured();
-
-    if (alreadyConfigured && !isAdminReq) {
+    if (!(await verifyAdminBearerToken(req))) {
       return res.status(403).json({ ok: false, error: "No autorizado" });
     }
 

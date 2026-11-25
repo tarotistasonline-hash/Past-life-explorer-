@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
-import { X, Sparkles, Orbit, Compass, Antenna, Hand, ArrowLeft } from "lucide-react";
+import { X, Sparkles, Orbit, Compass, Antenna, Hand, ScanFace, ArrowLeft } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 
-export type PortalPanelId = "TAROT" | "NATAL" | "CABALA" | "ANTENA" | "QUIROLOGIA";
+export type PortalPanelId = "TAROT" | "NATAL" | "CABALA" | "ANTENA" | "QUIROLOGIA" | "RASGOS";
 
 interface PortalModuleModalProps {
   activePanel: PortalPanelId | null;
@@ -19,6 +19,7 @@ const MODAL_TITLES: Record<
     CABALA: string;
     ANTENA: string;
     QUIROLOGIA: string;
+    RASGOS: string;
     backToOuija: string;
     close: string;
   }
@@ -26,54 +27,60 @@ const MODAL_TITLES: Record<
   es: {
     TAROT: "Tarot & Arcanos",
     NATAL: "Carta Natal",
-    CABALA: "Misión Cábala",
+    CABALA: "Kabalah",
     ANTENA: "Antena Dimensional",
-    QUIROLOGIA: "Quirología Mística",
+    QUIROLOGIA: "Tus manos hablan",
+    RASGOS: "Tus rasgos expresan",
     backToOuija: "Volver a la Tabla Ouija",
     close: "Cerrar panel",
   },
   en: {
     TAROT: "Tarot & Arcana",
     NATAL: "Natal Chart",
-    CABALA: "Kabbalah Mission",
+    CABALA: "Kabalah",
     ANTENA: "Dimensional Antenna",
-    QUIROLOGIA: "Mystical Palmistry",
+    QUIROLOGIA: "Your Hands Speak",
+    RASGOS: "Your Features Express",
     backToOuija: "Back to Ouija Board",
     close: "Close panel",
   },
   pt: {
     TAROT: "Tarot & Arcanos",
     NATAL: "Mapa Natal",
-    CABALA: "Missão Cabala",
+    CABALA: "Kabalah",
     ANTENA: "Antena Dimensional",
-    QUIROLOGIA: "Quirologia Mística",
+    QUIROLOGIA: "Suas mãos falam",
+    RASGOS: "Seus traços expressam",
     backToOuija: "Voltar ao Tabuleiro Ouija",
     close: "Fechar painel",
   },
   fr: {
     TAROT: "Tarot & Arcanes",
     NATAL: "Thème Natal",
-    CABALA: "Mission Kabbale",
+    CABALA: "Kabalah",
     ANTENA: "Antenne Dimensionnelle",
-    QUIROLOGIA: "Chiromancie Mystique",
+    QUIROLOGIA: "Vos mains parlent",
+    RASGOS: "Vos traits expriment",
     backToOuija: "Retour à la Planche Ouija",
     close: "Fermer le panneau",
   },
   it: {
     TAROT: "Tarocchi & Arcani",
     NATAL: "Tema Natale",
-    CABALA: "Missione Kabbalah",
+    CABALA: "Kabalah",
     ANTENA: "Antenna Dimensionale",
-    QUIROLOGIA: "Quirologia Mistica",
+    QUIROLOGIA: "Le tue mani parlano",
+    RASGOS: "I tuoi tratti esprimono",
     backToOuija: "Torna alla Tavola Ouija",
     close: "Chiudi pannello",
   },
   de: {
     TAROT: "Tarot & Arkana",
     NATAL: "Geburtshoroskop",
-    CABALA: "Kabbala-Mission",
+    CABALA: "Kabalah",
     ANTENA: "Dimensionale Antenne",
-    QUIROLOGIA: "Mystische Quirologie",
+    QUIROLOGIA: "Deine Hände sprechen",
+    RASGOS: "Deine Züge drücken aus",
     backToOuija: "Zurück zum Ouija-Brett",
     close: "Panel schließen",
   },
@@ -143,6 +150,13 @@ export const PortalModuleModal: React.FC<PortalModuleModalProps> = ({
       icon: <Hand className="w-3.5 h-3.5 text-rose-300" />,
       activeClass: "bg-rose-950/85 text-rose-100 border-rose-400/75 shadow-md",
       inactiveClass: "text-rose-300/85 hover:text-rose-100 border-rose-500/25 hover:bg-rose-950/40",
+    },
+    {
+      id: "RASGOS",
+      label: copy.RASGOS,
+      icon: <ScanFace className="w-3.5 h-3.5 text-blue-300" />,
+      activeClass: "bg-blue-950/85 text-blue-100 border-blue-400/75 shadow-md",
+      inactiveClass: "text-blue-300/85 hover:text-blue-100 border-blue-500/25 hover:bg-blue-950/40",
     },
     {
       id: "ANTENA",

@@ -30,7 +30,7 @@ import {
   PendingConsultation,
 } from "../lib/monetization";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
-import { authorizeAdmin } from "../lib/adminTracking";
+import { signInOwnerWithGoogle } from "../lib/adminTracking";
 
 interface ConsultationPaywallModalProps {
   isOpen: boolean;
@@ -261,9 +261,9 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
   const [isValidatingPaypalCode, setIsValidatingPaypalCode] = useState<boolean>(false);
   const [paypalFeedback, setPaypalFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
-  // Creator quick-unlock state
+  // Creator Google-verified unlock state
   const [showCreatorLogin, setShowCreatorLogin] = useState<boolean>(false);
-  const [creatorEmailInput, setCreatorEmailInput] = useState<string>("");
+  const [isCreatorSigningIn, setIsCreatorSigningIn] = useState<boolean>(false);
   const [creatorLoginError, setCreatorLoginError] = useState<string>("");
 
   const unlockedOnceRef = useRef<boolean>(false);
@@ -297,7 +297,7 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
     setPaypalCode("");
     setPaypalFeedback(null);
     setShowCreatorLogin(false);
-    setCreatorEmailInput("");
+    setIsCreatorSigningIn(false);
     setCreatorLoginError("");
 
     setPaywallModalHeartbeat();
@@ -893,50 +893,46 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
                 ¿Eres el creador del sitio? Activar consultas ilimitadas de propietario
               </button>
             ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  triggerHaptic(HAPTIC_PATTERNS.click);
-                  if (authorizeAdmin(creatorEmailInput)) {
-                    setCreatorLoginError("");
-                    setShowCreatorLogin(false);
-                    setCreatorEmailInput("");
-                    onUnlocked?.();
-                    onClose();
-                  } else {
-                    setCreatorLoginError("Correo no autorizado. Ingresa el correo del creador del sitio.");
-                  }
-                }}
-                className="p-3 rounded-2xl bg-amber-950/30 border border-amber-500/35 space-y-2"
-              >
+              <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-500/35 space-y-2">
                 <p className="text-[11px] font-cinzel font-semibold text-amber-200">
-                  Acceso Exclusivo del Creador
+                  Acceso Exclusivo del Creador (Google)
                 </p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="email"
-                    value={creatorEmailInput}
-                    onChange={(e) => {
-                      setCreatorEmailInput(e.target.value);
-                      if (creatorLoginError) setCreatorLoginError("");
-                    }}
-                    placeholder="Ingresa tu correo de propietario..."
-                    className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/60 border border-amber-500/40 text-xs font-gothic text-amber-100 placeholder:text-amber-300/40 focus:outline-none focus:border-amber-400"
-                    autoFocus
-                  />
-                  <button
-                    type="submit"
-                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 text-[11px] font-cinzel font-bold transition cursor-pointer shrink-0"
-                  >
-                    Activar
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={isCreatorSigningIn}
+                  onClick={async () => {
+                    triggerHaptic(HAPTIC_PATTERNS.click);
+                    setCreatorLoginError("");
+                    setIsCreatorSigningIn(true);
+                    const result = await signInOwnerWithGoogle();
+                    setIsCreatorSigningIn(false);
+                    if (result.ok) {
+                      setShowCreatorLogin(false);
+                      onUnlocked?.();
+                      onClose();
+                    } else {
+                      setCreatorLoginError(
+                        result.error || "No se pudo verificar la cuenta del propietario."
+                      );
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-60 text-neutral-950 text-[11px] font-cinzel font-bold transition cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {isCreatorSigningIn ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Verificando con Google...</span>
+                    </>
+                  ) : (
+                    <span>Ingresar con Google (Propietario)</span>
+                  )}
+                </button>
                 {creatorLoginError && (
                   <p className="text-[11px] font-gothic text-rose-300">
                     {creatorLoginError}
                   </p>
                 )}
-              </form>
+              </div>
             )}
           </div>
         )}

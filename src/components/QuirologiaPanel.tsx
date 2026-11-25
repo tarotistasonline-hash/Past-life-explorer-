@@ -18,7 +18,7 @@ interface QuiroCopy {
 const COPY: Record<SupportedLanguage, QuiroCopy> = {
   es: {
     eyebrow: "Quiromancia Astral • Lectura de Manos",
-    title: "Quirología Mística",
+    title: "Tus manos hablan",
     description:
       "Descubre los secretos ocultos en las líneas de tus manos, montes planetarios y geometría astral. Explora el mapa de tu destino grabado en tus palmas.",
     cta: "Iniciar Lectura de Manos",
@@ -26,7 +26,7 @@ const COPY: Record<SupportedLanguage, QuiroCopy> = {
   },
   en: {
     eyebrow: "Astral Palmistry • Hand Reading",
-    title: "Mystical Palmistry",
+    title: "Your Hands Speak",
     description:
       "Discover the hidden secrets within the lines of your hands, planetary mounts, and astral geometry. Explore the map of your destiny written in your palms.",
     cta: "Start Palm Reading",
@@ -34,7 +34,7 @@ const COPY: Record<SupportedLanguage, QuiroCopy> = {
   },
   pt: {
     eyebrow: "Quiromancia Astral • Leitura de Mãos",
-    title: "Quirologia Mística",
+    title: "Suas mãos falam",
     description:
       "Descubra os segredos ocultos nas linhas de suas mãos, montes planetários e geometria astral. Explore o mapa do seu destino gravado em suas palmas.",
     cta: "Iniciar Leitura de Mãos",
@@ -42,7 +42,7 @@ const COPY: Record<SupportedLanguage, QuiroCopy> = {
   },
   fr: {
     eyebrow: "Chiromancie Astrale • Lecture des Mains",
-    title: "Quirologie Mystique",
+    title: "Vos mains parlent",
     description:
       "Découvrez les secrets cachés dans les lignes de vos mains, monts planétaires et géométrie astrale. Explorez la carte de votre destin gravée dans vos paumes.",
     cta: "Commencer la Lecture de Main",
@@ -50,15 +50,15 @@ const COPY: Record<SupportedLanguage, QuiroCopy> = {
   },
   it: {
     eyebrow: "Chiromanzia Astrale • Lettura della Mano",
-    title: "Quirologia Mistica",
+    title: "Le tue mani parlano",
     description:
       "Scopri i segreti nascosti nelle linee delle tue mani, monti planetari e geometria astrale. Esplora la mappa del tuo destino scritta nei tuoi palmi.",
     cta: "Inizia Lettura della Mano",
     badge: "Linee Astrali Attive • Chiromanzia",
   },
   de: {
-    eyebrow: "Astrale Hand Leser • Handlesen",
-    title: "Mystische Quirologie",
+    eyebrow: "Astrale Handlesekunst • Handlesen",
+    title: "Deine Hände sprechen",
     description:
       "Entdecke die verborgenen Geheimnisse in den Linien deiner Hände, Planetenberge und astralischen Geometrie. Erforsche die Karte deines Schicksals.",
     cta: "Handlesung Starten",
@@ -86,7 +86,7 @@ export const QuirologiaPanel: React.FC = () => {
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <img
           src={imgSrc}
-          alt="Quirología Mística - Lectura de Manos"
+          alt="Tus manos hablan - Lectura de Manos"
           onError={() => setImgSrc(FALLBACK_BG_IMAGE)}
           className="w-full h-full object-cover object-[center_30%] filter brightness-95 contrast-105 saturate-110 transition-transform duration-700 ease-out group-hover:scale-105"
         />

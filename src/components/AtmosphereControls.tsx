@@ -5,7 +5,7 @@ import { VisitsStats } from "../types";
 import { useLanguage } from "../context/LanguageContext";
 import { LanguageSelector } from "./LanguageSelector";
 import { MoonPhaseWidget } from "./MoonPhaseWidget";
-import { isAdminSession, setAdminSession, isAuthorizedAdmin } from "../lib/adminTracking";
+import { isAdminSession, setAdminSession, isAuthorizedAdmin, subscribeAdminAuth } from "../lib/adminTracking";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { clearAllGrimorio } from "../lib/grimorioStorage";
 import { AdminConfigModal } from "./AdminConfigModal";
@@ -95,11 +95,20 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
   };
 
   useEffect(() => {
-    const handleAuthChange = (e: any) => {
-      setIsAdminAuthorized(isAuthorizedAdmin());
+    const handleAuthChange = () => {
+      const ok = isAuthorizedAdmin();
+      setIsAdminAuthorized(ok);
+      setIsCreatorMode(ok && isAdminSession());
     };
+    const unsubscribeFirebase = subscribeAdminAuth((ok) => {
+      setIsAdminAuthorized(ok);
+      setIsCreatorMode(ok && isAdminSession());
+    });
     window.addEventListener("ouija-admin-auth-change", handleAuthChange);
-    return () => window.removeEventListener("ouija-admin-auth-change", handleAuthChange);
+    return () => {
+      unsubscribeFirebase();
+      window.removeEventListener("ouija-admin-auth-change", handleAuthChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -200,15 +209,15 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
           {/* Moon Phase Real-time Widget */}
           <MoonPhaseWidget />
 
-          {/* Misión de Vida según la Cábala Trigger */}
+          {/* Kabalah Trigger */}
           {onOpenKabbalah && (
             <button
               onClick={onOpenKabbalah}
-              title="Abrir Misión de Vida según la Cábala (Árbol de la Vida)"
+              title="Abrir Kabalah (Árbol de la Vida)"
               className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-emerald-500/50 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-200 flex items-center space-x-1.5 transition cursor-pointer shadow-sm whitespace-nowrap shrink-0"
             >
               <Compass className="w-3.5 h-3.5 text-emerald-300" />
-              <span className="hidden lg:inline text-[11px] font-cinzel font-semibold">Misión Cábala</span>
+              <span className="hidden lg:inline text-[11px] font-cinzel font-semibold">Kabalah</span>
             </button>
           )}
 
@@ -307,7 +316,7 @@ export const AtmosphereControls: React.FC<AtmosphereControlsProps> = ({
               setHistoryClearedBanner(false);
               setShowClearHistoryModal(true);
             }}
-            title="Limpiar historial guardado (Codex, Misión Cábala, Carta Natal y Buzón)"
+            title="Limpiar historial guardado (Codex, Kabalah, Carta Natal y Buzón)"
             className="p-2 sm:px-3 sm:py-1.5 bg-red-950/35 hover:bg-red-900/55 border border-red-800/45 rounded-xl text-red-200 font-medium flex items-center space-x-1 transition cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5 text-red-300" />

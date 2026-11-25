@@ -35,7 +35,7 @@ import { NatalWheelSvg } from "./NatalWheelSvg";
 import { useLanguage } from "../context/LanguageContext";
 import { audio } from "../lib/audio";
 import { downloadParchmentImage } from "../lib/parchmentExport";
-import { getAdminHeaders } from "../lib/adminTracking";
+import { getAdminAuthHeaders, isAdminSession } from "../lib/adminTracking";
 import natalChartBgImg from "../assets/images/natal_chart_bg_1795566263288.jpg";
 
 export interface NatalRequestPayload {
@@ -368,16 +368,18 @@ export const NatalChartSection: React.FC<NatalChartSectionProps> = ({
       try {
         const controller = new AbortController();
         const timer = window.setTimeout(() => controller.abort(), 9000);
+        const authHeaders = isAdminSession() ? await getAdminAuthHeaders() : {};
         const res = await fetch("/api/natal-chart/interpret", {
           method: "POST",
           signal: controller.signal,
           headers: {
             "Content-Type": "application/json",
-            ...getAdminHeaders(),
+            ...authHeaders,
           },
           body: JSON.stringify({
             chart: computed,
             language,
+            isAdmin: isAdminSession(),
           }),
         });
         window.clearTimeout(timer);

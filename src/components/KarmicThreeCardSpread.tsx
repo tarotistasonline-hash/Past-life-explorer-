@@ -7,7 +7,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { saveSpreadToGrimorio } from "../lib/grimorioStorage";
 import { copyMysticShareText, downloadParchmentImage } from "../lib/parchmentExport";
-import { getAdminHeaders, isAdminSession } from "../lib/adminTracking";
+import { getAdminAuthHeaders, isAdminSession } from "../lib/adminTracking";
 import { getCoherentKarmicSpreadFallback } from "../lib/oracleCoherence";
 import {
   Sparkles,
@@ -67,11 +67,12 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
 
     // Request AI Synthesis or fallback
     try {
+      const authHeaders = isAdminSession() ? await getAdminAuthHeaders() : {};
       const res = await fetch("/api/tarot/karmic-spread", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getAdminHeaders(),
+          ...authHeaders,
         },
         body: JSON.stringify({
           seekerName: seekerName || "Buscador",

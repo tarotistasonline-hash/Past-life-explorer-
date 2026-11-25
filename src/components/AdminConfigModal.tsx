@@ -20,7 +20,7 @@ import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { VisitsStats } from "../types";
-import { deauthorizeAdmin } from "../lib/adminTracking";
+import { deauthorizeAdmin, getAdminAuthHeaders } from "../lib/adminTracking";
 import { CANONICAL_PUBLIC_URL } from "../lib/constants";
 import {
   useMonetizationConfig,
@@ -609,11 +609,12 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
                       setPaypalCodeSaving(true);
                       setPaypalCodeMsg(null);
                       try {
+                        const authHeaders = await getAdminAuthHeaders();
                         const res = await fetch("/api/payments/set-unlock-code", {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
-                            "x-admin-email": OWNER_EMAIL,
+                            ...authHeaders,
                           },
                           body: JSON.stringify({ code: clean }),
                         });
@@ -892,7 +893,7 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
             </div>
 
             <div className="text-[11px] text-purple-300/70 pt-1 border-t border-purple-900/40">
-              💡 Para ingresar a este panel: Haz clic en el botón circular <strong className="text-amber-300">RA</strong> arriba a la izquierda e inicia sesión con <strong className="text-amber-300">{OWNER_EMAIL}</strong>.
+              💡 Para ingresar a este panel: Haz clic en el botón circular <strong className="text-amber-300">RA</strong> arriba a la izquierda e inicia sesión con tu cuenta de Google <strong className="text-amber-300">{OWNER_EMAIL}</strong>.
             </div>
           </div>
         </div>

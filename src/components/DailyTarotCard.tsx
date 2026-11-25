@@ -7,7 +7,7 @@ import { DeckShuffleAnimation } from "./DeckShuffleAnimation";
 import { KarmicThreeCardSpread } from "./KarmicThreeCardSpread";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
-import { isAdminSession, getAdminHeaders } from "../lib/adminTracking";
+import { isAdminSession, getAdminAuthHeaders } from "../lib/adminTracking";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { downloadParchmentImage, copyMysticShareText } from "../lib/parchmentExport";
 import { getCoherentTarotDrawFallback } from "../lib/oracleCoherence";
@@ -275,11 +275,12 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     audio.playFullDeckShuffle();
 
     try {
+      const authHeaders = isAdminSession() ? await getAdminAuthHeaders() : {};
       const res = await fetch("/api/tarot/draw", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getAdminHeaders(),
+          ...authHeaders,
         },
         body: JSON.stringify({
           seekerName: personalName || "Buscador",

@@ -5,6 +5,7 @@ import { SpiritOracleForm } from "./components/SpiritOracleForm";
 import { PastLifeModal } from "./components/PastLifeModal";
 import { AntenaDimensionalPanel } from "./components/AntenaDimensionalPanel";
 import { QuirologiaPanel } from "./components/QuirologiaPanel";
+import { TusRasgosPanel } from "./components/TusRasgosPanel";
 import { AtmosphereControls } from "./components/AtmosphereControls";
 import { DailyTarotCard } from "./components/DailyTarotCard";
 import { NatalChartSection, NatalRequestPayload } from "./components/NatalChartSection";
@@ -14,10 +15,10 @@ import { StarfieldBackground } from "./components/StarfieldBackground";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, Hand, ArrowUpRight } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, Hand, ScanFace, ArrowUpRight } from "lucide-react";
 import { PortalModuleModal, PortalPanelId } from "./components/PortalModuleModal";
 import { audio } from "./lib/audio";
-import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
+import { isAdminSession, getAdminAuthHeaders, isAuthorizedAdmin, subscribeAdminAuth } from "./lib/adminTracking";
 import {
   useMonetizationConfig,
   canPerformConsultation,
@@ -102,10 +103,12 @@ export default function App() {
 
   useEffect(() => {
     const bump = () => setAllowanceTick((v) => v + 1);
+    const unsubscribeAuth = subscribeAdminAuth(() => bump());
     window.addEventListener("ouija_consultation_allowance_changed", bump);
     window.addEventListener("ouija-creator-mode-change", bump);
     window.addEventListener("ouija-admin-auth-change", bump);
     return () => {
+      unsubscribeAuth();
       window.removeEventListener("ouija_consultation_allowance_changed", bump);
       window.removeEventListener("ouija-creator-mode-change", bump);
       window.removeEventListener("ouija-admin-auth-change", bump);
@@ -113,7 +116,7 @@ export default function App() {
   }, []);
 
   void allowanceTick;
-  const isCreatorOrAdmin = isAdminSession() || isAuthorizedAdmin();
+  const isCreatorOrAdmin = isAuthorizedAdmin();
   const isPassUnlocked = isConsultationPassUnlocked(monetizationCfg);
   const remainingFree = getRemainingFreeConsultations(monetizationCfg);
 
@@ -246,20 +249,21 @@ export default function App() {
         // ignore storage restrictions
       }
 
-      const isAdmin = isAdminSession() || isAuthorizedAdmin();
+      const isAdmin = isAuthorizedAdmin() && isAdminSession();
 
       try {
         const isNewSession = !sessionStorage.getItem("ouija_session_logged");
         if (isNewSession) {
           sessionStorage.setItem("ouija_session_logged", "true");
         }
+        const authHeaders = isAdmin ? await getAdminAuthHeaders() : {};
 
         const res = await fetch("/api/visits/hit", {
           method: "POST",
           cache: "no-store",
           headers: {
             "Content-Type": "application/json",
-            ...getAdminHeaders(),
+            ...authHeaders,
           },
           body: JSON.stringify({
             visitorId,
@@ -296,10 +300,10 @@ export default function App() {
               tx.set(visitorRef, { visitorId, firstSeenAt: nowIso });
             }
             tx.update(metricsRef, {
-              totalVisits: (Number(current.totalVisits) || 0) + 1,
-              todayVisits: current.todayKey === todayKey ? (Number(current.todayVisits) || 0) + 1 : 1,
+              totalVisits: Math.trunc(Number(current.totalVisits) || 0) + 1,
+              todayVisits: current.todayKey === todayKey ? Math.trunc(Number(current.todayVisits) || 0) + 1 : 1,
               todayKey,
-              uniqueVisitorsCount: (Number(current.uniqueVisitorsCount) || 0) + (isNewUnique ? 1 : 0),
+              uniqueVisitorsCount: Math.trunc(Number(current.uniqueVisitorsCount) || 0) + (isNewUnique ? 1 : 0),
               lastUpdated: nowIso,
             });
           });
@@ -316,7 +320,7 @@ export default function App() {
 
     const sendHeartbeat = async (leave = false) => {
       const visitorId = getOrCreateVisitorId();
-      const isAdmin = isAdminSession() || isAuthorizedAdmin();
+      const isAdmin = isAuthorizedAdmin() && isAdminSession();
       if (leave && typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
         try {
           const blob = new Blob(
@@ -330,13 +334,14 @@ export default function App() {
         }
       }
       try {
+        const authHeaders = isAdmin ? await getAdminAuthHeaders() : {};
         const res = await fetch("/api/visits/heartbeat", {
           method: "POST",
           cache: "no-store",
           keepalive: leave,
           headers: {
             "Content-Type": "application/json",
-            ...getAdminHeaders(),
+            ...authHeaders,
           },
           body: JSON.stringify({ visitorId, isAdmin, leave }),
         });
@@ -445,7 +450,8 @@ export default function App() {
       focusQuery: string;
       feeling: string;
     }) => {
-      const adminBypass = isAdminSession() || isAuthorizedAdmin();
+      const adminBypass = isAuthorizedAdmin();
+      const adminExclude = adminBypass && isAdminSession();
       audio.fadeOutForSelection();
       audio.stopSpeech();
       setActivePortalPanel(null);
@@ -455,13 +461,14 @@ export default function App() {
       setCurrentSpiritResponse(null);
 
       try {
+        const authHeaders = adminExclude ? await getAdminAuthHeaders() : {};
         const res = await fetch("/api/ouija/past-life", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...getAdminHeaders(),
+            ...authHeaders,
           },
-          body: JSON.stringify({ ...data, lang: language, isAdmin: isAdminSession() }),
+          body: JSON.stringify({ ...data, lang: language, isAdmin: adminExclude }),
         });
 
         if (!res.ok) {
@@ -489,7 +496,8 @@ export default function App() {
   // Execute Spirit Oracle Question API call
   const executeGeneralConsult = useCallback(
     async (question: string, name: string) => {
-      const adminBypass = isAdminSession() || isAuthorizedAdmin();
+      const adminBypass = isAuthorizedAdmin();
+      const adminExclude = adminBypass && isAdminSession();
       audio.fadeOutForSelection();
       audio.stopSpeech();
       setActivePortalPanel(null);
@@ -499,13 +507,14 @@ export default function App() {
       setCurrentPastLife(null);
 
       try {
+        const authHeaders = adminExclude ? await getAdminAuthHeaders() : {};
         const res = await fetch("/api/ouija/spirit-question", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...getAdminHeaders(),
+            ...authHeaders,
           },
-          body: JSON.stringify({ question, seekerName: name, lang: language, isAdmin: isAdminSession() }),
+          body: JSON.stringify({ question, seekerName: name, lang: language, isAdmin: adminExclude }),
         });
 
         if (!res.ok) {
@@ -822,7 +831,7 @@ export default function App() {
       />
 
       {/* Portal Main Navigation Switcher */}
-      <nav aria-label="Navegación del Portal Místico" className="w-full max-w-4xl flex items-center justify-center gap-1.5 sm:gap-2 mb-3 z-20 overflow-x-auto py-1.5 px-2.5 bg-black/40 border border-purple-900/40 rounded-2xl backdrop-blur-md">
+      <nav aria-label="Navegación del Portal Místico" className="w-full max-w-5xl flex items-center justify-start lg:justify-center lg:flex-wrap gap-1.5 sm:gap-2 mb-3 z-20 overflow-x-auto py-1.5 px-2.5 bg-black/40 border border-purple-900/40 rounded-2xl backdrop-blur-md">
         <button
           type="button"
           onClick={() => setActivePortalPanel(null)}
@@ -870,16 +879,16 @@ export default function App() {
               ? "bg-emerald-950/85 text-emerald-100 border-emerald-400/75 shadow-[0_0_15px_rgba(16,185,129,0.35)]"
               : "text-emerald-300 hover:text-emerald-100 hover:bg-emerald-950/40 border-emerald-500/35"
           }`}
-          title="Tu Misión de Vida según la Cábala (Árbol de la Vida)"
+          title="Kabalah — Tu Misión de Vida (Árbol de la Vida)"
         >
           <Compass className="w-3.5 h-3.5 text-emerald-300" />
-          <span>Misión Cábala</span>
+          <span>Kabalah</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActivePortalPanel("QUIROLOGIA")}
-          title="Abrir Panel de Quirología Mística"
+          title="Abrir Panel Tus manos hablan"
           className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === "QUIROLOGIA"
               ? "bg-rose-950/85 text-rose-100 border-rose-400/80 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
@@ -887,7 +896,21 @@ export default function App() {
           }`}
         >
           <Hand className="w-3.5 h-3.5 text-rose-300" />
-          <span>Quirología</span>
+          <span>Tus manos hablan</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActivePortalPanel("RASGOS")}
+          title="Abrir Panel Tus rasgos expresan"
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
+            activePortalPanel === "RASGOS"
+              ? "bg-blue-950/85 text-blue-100 border-blue-400/80 shadow-[0_0_15px_rgba(59,130,246,0.4)]"
+              : "text-blue-300 hover:text-blue-100 hover:bg-blue-950/40 border-blue-500/35"
+          }`}
+        >
+          <ScanFace className="w-3.5 h-3.5 text-blue-300" />
+          <span>Tus rasgos expresan</span>
         </button>
 
         <button
@@ -994,77 +1017,89 @@ export default function App() {
             language === "en"
               ? {
                   heading: "Other Portal Panels",
-                  sub: "Open Tarot, Natal Chart, Kabbalah, Palmistry, or Antenna in its own panel to keep the screen compact.",
+                  sub: "Open Tarot, Natal Chart, Kabalah, Your Hands Speak, Facial Traits, or Antenna in its own panel to keep the screen compact.",
                   tarotDesc: "Daily arcana, 3-card karmic spread, and 22 voice-guided cards.",
                   natalDesc: "Planetary wheel, Sun, Moon, Ascendant, voice, and PDF export.",
-                  cabalaTitle: "Kabbalah Mission",
+                  cabalaTitle: "Kabalah",
                   cabalaDesc: "Tree of Life, natal Sephira, Gematria, and spiritual Tikkun.",
-                  quirologiaTitle: "Mystical Palmistry",
+                  quirologiaTitle: "Your Hands Speak",
                   quirologiaDesc: "Hand reading, astral lines and planetary mounts.",
+                  rasgosTitle: "Your Features Express",
+                  rasgosDesc: "Facial physiognomy, gaze essence and energetic traits.",
                   antenaTitle: "Dimensional Antenna",
                   antenaDesc: "Interstellar frequency and cosmic consciousness portal.",
                 }
               : language === "pt"
               ? {
                   heading: "Outros Painéis do Portal",
-                  sub: "Abra Tarot, Mapa Astral, Cabala, Quirologia ou Antena em seu próprio painel para manter a tela compacta.",
+                  sub: "Abra Tarot, Mapa Astral, Kabalah, Suas Mãos Falam, Traços ou Antena em seu próprio painel para manter a tela compacta.",
                   tarotDesc: "Arcano do dia, tiragem de 3 cartas e 22 arcanos com voz.",
                   natalDesc: "Roda planetária, Sol, Lua, Ascendente, voz e PDF.",
-                  cabalaTitle: "Missão Cabala",
+                  cabalaTitle: "Kabalah",
                   cabalaDesc: "Árvore da Vida, Sefirá natal, Gematria e Tikkun.",
-                  quirologiaTitle: "Quirologia Mística",
+                  quirologiaTitle: "Suas mãos falam",
                   quirologiaDesc: "Leitura de mãos, linhas astrais e montes planetários.",
+                  rasgosTitle: "Seus traços expressam",
+                  rasgosDesc: "Fisiognomia facial, essência do olhar e vibração.",
                   antenaTitle: "Antena Dimensional",
                   antenaDesc: "Portal de frequência interestelar e contato cósmico.",
                 }
               : language === "fr"
               ? {
                   heading: "Autres Panneaux du Portail",
-                  sub: "Ouvrez Tarot, Thème Natal, Kabbale, Chiromancie ou Antenne dans un panneau dédié pour garder l'écran compact.",
+                  sub: "Ouvrez Tarot, Thème Natal, Kabalah, Vos Mains Parlent, Traits ou Antenne dans un panneau dédié pour garder l'écran compact.",
                   tarotDesc: "Arcane du jour, tirage à 3 cartes et 22 arcanes avec voix.",
                   natalDesc: "Roue planétaire, Soleil, Lune, Ascendant, voix et PDF.",
-                  cabalaTitle: "Mission Kabbale",
+                  cabalaTitle: "Kabalah",
                   cabalaDesc: "Arbre de Vie, Sephira natale, Guématrie et Tikkoun.",
-                  quirologiaTitle: "Chiromancie Mystique",
+                  quirologiaTitle: "Vos mains parlent",
                   quirologiaDesc: "Lecture des mains, lignes astrales et monts planétaires.",
+                  rasgosTitle: "Vos traits expriment",
+                  rasgosDesc: "Physiognomonie faciale, essence du regard et vibration.",
                   antenaTitle: "Antenne Dimensionnelle",
                   antenaDesc: "Portail de fréquence interstellaire et contact cosmique.",
                 }
               : language === "it"
               ? {
                   heading: "Altri Pannelli del Portale",
-                  sub: "Apri Tarocchi, Tema Natale, Kabbalah, Quirologia o Antenna in un pannello dedicato per mantenere la schermata compatta.",
+                  sub: "Apri Tarocchi, Tema Natale, Kabalah, Le Tue Mani Parlano, Tratti o Antenna in un pannello dedicato per mantenere la schermata compatta.",
                   tarotDesc: "Arcano del giorno, stesa a 3 carte e 22 arcani con voce.",
                   natalDesc: "Ruota planetaria, Sole, Luna, Ascendente, voce e PDF.",
-                  cabalaTitle: "Missione Kabbalah",
+                  cabalaTitle: "Kabalah",
                   cabalaDesc: "Albero della Vita, Sefira natale, Gematria e Tikkun.",
-                  quirologiaTitle: "Quirologia Mistica",
+                  quirologiaTitle: "Le tue mani parlano",
                   quirologiaDesc: "Lettura della mano, linee astrali e monti planetari.",
+                  rasgosTitle: "I tuoi tratti esprimono",
+                  rasgosDesc: "Fisiognomica del viso, essenza dello sguardo e vibrazione.",
                   antenaTitle: "Antenna Dimensionale",
                   antenaDesc: "Portale di frequenza interstellare e contatto cosmico.",
                 }
               : language === "de"
               ? {
                   heading: "Weitere Portal-Panels",
-                  sub: "Öffne Tarot, Geburtshoroskop, Kabbala, Quirologie oder Antenne im eigenen Panel für eine kompakte Ansicht.",
+                  sub: "Öffne Tarot, Geburtshoroskop, Kabalah, Deine Hände Sprechen, Züge oder Antenne im eigenen Panel für eine kompakte Ansicht.",
                   tarotDesc: "Tagesarkana, 3-Karten-Legung und 22 Arkana mit Stimme.",
                   natalDesc: "Planetenrad, Sonne, Mond, Aszendent, Stimme und PDF.",
-                  cabalaTitle: "Kabbala-Mission",
+                  cabalaTitle: "Kabalah",
                   cabalaDesc: "Lebensbaum, Geburts-Sephira, Gematrie und Tikkun.",
-                  quirologiaTitle: "Mystische Quirologie",
+                  quirologiaTitle: "Deine Hände sprechen",
                   quirologiaDesc: "Handlesen, astrale Linien und Planetenberge.",
+                  rasgosTitle: "Deine Züge drücken aus",
+                  rasgosDesc: "Physiognomie des Gesichts, Ausstrahlung und Energie.",
                   antenaTitle: "Dimensionale Antenne",
                   antenaDesc: "Interstellares Frequenzportal und kosmischer Kontakt.",
                 }
               : {
                   heading: "Otros Paneles del Portal",
-                  sub: "Abre Tarot, Carta Natal, Cábala, Quirología o Antena en su propio panel para mantener la pantalla compacta.",
+                  sub: "Abre Tarot, Carta Natal, Kabalah, Tus manos hablan, Tus rasgos expresan o Antena en su propio panel para mantener la pantalla compacta.",
                   tarotDesc: "Arcano del día, tirada de 3 cartas y 22 arcanos con voz.",
                   natalDesc: "Rueda planetaria, Sol, Luna, Ascendente y PDF.",
-                  cabalaTitle: "Misión Cábala",
+                  cabalaTitle: "Kabalah",
                   cabalaDesc: "Árbol de la Vida, Sefirá natal, Gematría y Tikkún.",
-                  quirologiaTitle: "Quirología Mística",
+                  quirologiaTitle: "Tus manos hablan",
                   quirologiaDesc: "Lectura de manos, líneas astrales y montes planetarios.",
+                  rasgosTitle: "Tus rasgos expresan",
+                  rasgosDesc: "Fisiognomía mística, esencia de tu mirada y vibración.",
                   antenaTitle: "Antena Dimensional",
                   antenaDesc: "Portal de frecuencia interestelar y contacto cósmico.",
                 };
@@ -1083,7 +1118,7 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("TAROT")}
@@ -1162,6 +1197,25 @@ export default function App() {
 
                 <button
                   type="button"
+                  onClick={() => setActivePortalPanel("RASGOS")}
+                  className="group text-left p-4 rounded-2xl bg-[#071024]/90 hover:bg-[#0c1a38] border border-blue-500/40 hover:border-blue-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <ScanFace className="w-5 h-5 text-blue-300" />
+                    <ArrowUpRight className="w-4 h-4 text-blue-400/70 group-hover:text-blue-200 transition" />
+                  </div>
+                  <div>
+                    <div className="font-cinzel font-bold text-sm text-blue-200">
+                      {launcherCopy.rasgosTitle}
+                    </div>
+                    <p className="text-xs font-gothic text-blue-100/75 mt-0.5 leading-snug">
+                      {launcherCopy.rasgosDesc}
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setActivePortalPanel("ANTENA")}
                   className="group text-left p-4 rounded-2xl bg-[#0a1420]/90 hover:bg-[#0e1d2f] border border-cyan-500/40 hover:border-cyan-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
                 >
@@ -1231,6 +1285,8 @@ export default function App() {
         )}
 
         {activePortalPanel === "QUIROLOGIA" && <QuirologiaPanel />}
+
+        {activePortalPanel === "RASGOS" && <TusRasgosPanel />}
 
         {activePortalPanel === "ANTENA" && <AntenaDimensionalPanel />}
       </PortalModuleModal>

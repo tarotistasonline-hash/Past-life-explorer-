@@ -106,57 +106,6 @@ service cloud.firestore {
       && data.updatedAt is timestamp;
     }
 
-    function isValidPaymentSession(data) {
-      return data.keys().hasAll([
-        'sessionId',
-        'visitorId',
-        'provider',
-        'status',
-        'pendingType',
-        'refCode',
-        'approvalProof',
-        'createdAt',
-        'updatedAt'
-      ])
-      && data.keys().hasOnly([
-        'sessionId',
-        'visitorId',
-        'provider',
-        'status',
-        'pendingType',
-        'refCode',
-        'approvalProof',
-        'createdAt',
-        'updatedAt'
-      ])
-      && isValidId(data.sessionId)
-      && data.sessionId.size() >= 8
-      && isValidId(data.visitorId)
-      && data.visitorId.size() >= 4
-      && data.provider is string
-      && data.provider.size() <= 32
-      && data.provider in ['mercadopago', 'auto']
-      && data.status is string
-      && data.status.size() <= 16
-      && data.status in ['pending', 'approved']
-      && data.pendingType is string
-      && data.pendingType.size() <= 32
-      && data.pendingType in ['past-life', 'spirit-question', 'pass']
-      && data.refCode is string
-      && data.refCode.size() >= 4
-      && data.refCode.size() <= 32
-      && data.refCode.matches('^[a-zA-Z0-9_\\-]+$')
-      && data.approvalProof is string
-      && data.approvalProof.size() <= 64
-      && (data.approvalProof == '' || data.approvalProof.matches('^[a-f0-9]{64}$'))
-      && data.createdAt is string
-      && data.createdAt.size() >= 10
-      && data.createdAt.size() <= 64
-      && data.updatedAt is string
-      && data.updatedAt.size() >= 10
-      && data.updatedAt.size() <= 64;
-    }
-
     // Boot connection check endpoint
     match /test/connection {
       allow get: if true;
@@ -244,45 +193,15 @@ service cloud.firestore {
           'passPriceArs',
           'passAmountArs',
           'autoReturnTokenHash',
-          'updatedAt',
-          'kofiLink',
-          'passPriceUsd',
-          'passMpLink',
-          'unlockCodeHash'
+          'updatedAt'
         ]);
       allow delete: if false;
     }
 
-    // Ephemeral real-time payment sessions (single-doc get by unguessable sessionId, terminal lock once approved)
+    // Payment sessions are managed authoritatively on the server; block all client mutations/listings
     match /payment_sessions/{sessionId} {
-      allow get: if isValidId(sessionId) && sessionId.size() >= 8;
-      allow list: if false;
-      allow create: if isValidId(sessionId)
-        && sessionId.size() >= 8
-        && !exists(/databases/$(database)/documents/payment_sessions/$(sessionId))
-        && isValidPaymentSession(incoming())
-        && incoming().sessionId == sessionId
-        && incoming().status == 'pending'
-        && incoming().approvalProof == '';
-      allow update: if isValidId(sessionId)
-        && sessionId.size() >= 8
-        && isValidPaymentSession(incoming())
-        && incoming().sessionId == existing().sessionId
-        && incoming().visitorId == existing().visitorId
-        && incoming().createdAt == existing().createdAt
-        && incoming().pendingType == existing().pendingType
-        && incoming().refCode == existing().refCode
-        && existing().status == 'pending'
-        && incoming().status == 'approved'
-        && incoming().approvalProof.size() == 64
-        && incoming().approvalProof.matches('^[a-f0-9]{64}$')
-        && incoming().diff(existing()).affectedKeys().hasOnly([
-          'status',
-          'provider',
-          'approvalProof',
-          'updatedAt'
-        ]);
-      allow delete: if false;
+      allow get: if isAdmin();
+      allow list, create, update, delete: if false;
     }
   }
 }
