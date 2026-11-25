@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
-import { X, Sparkles, Orbit, Compass, Antenna, ArrowLeft } from "lucide-react";
+import { X, Sparkles, Orbit, Compass, Antenna, Hand, ArrowLeft } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 
-export type PortalPanelId = "TAROT" | "NATAL" | "CABALA" | "ANTENA";
+export type PortalPanelId = "TAROT" | "NATAL" | "CABALA" | "ANTENA" | "QUIROLOGIA";
 
 interface PortalModuleModalProps {
   activePanel: PortalPanelId | null;
@@ -18,6 +18,7 @@ const MODAL_TITLES: Record<
     NATAL: string;
     CABALA: string;
     ANTENA: string;
+    QUIROLOGIA: string;
     backToOuija: string;
     close: string;
   }
@@ -27,6 +28,7 @@ const MODAL_TITLES: Record<
     NATAL: "Carta Natal",
     CABALA: "Misión Cábala",
     ANTENA: "Antena Dimensional",
+    QUIROLOGIA: "Quirología Mística",
     backToOuija: "Volver a la Tabla Ouija",
     close: "Cerrar panel",
   },
@@ -35,6 +37,7 @@ const MODAL_TITLES: Record<
     NATAL: "Natal Chart",
     CABALA: "Kabbalah Mission",
     ANTENA: "Dimensional Antenna",
+    QUIROLOGIA: "Mystical Palmistry",
     backToOuija: "Back to Ouija Board",
     close: "Close panel",
   },
@@ -43,6 +46,7 @@ const MODAL_TITLES: Record<
     NATAL: "Mapa Natal",
     CABALA: "Missão Cabala",
     ANTENA: "Antena Dimensional",
+    QUIROLOGIA: "Quirologia Mística",
     backToOuija: "Voltar ao Tabuleiro Ouija",
     close: "Fechar painel",
   },
@@ -51,6 +55,7 @@ const MODAL_TITLES: Record<
     NATAL: "Thème Natal",
     CABALA: "Mission Kabbale",
     ANTENA: "Antenne Dimensionnelle",
+    QUIROLOGIA: "Chiromancie Mystique",
     backToOuija: "Retour à la Planche Ouija",
     close: "Fermer le panneau",
   },
@@ -59,6 +64,7 @@ const MODAL_TITLES: Record<
     NATAL: "Tema Natale",
     CABALA: "Missione Kabbalah",
     ANTENA: "Antenna Dimensionale",
+    QUIROLOGIA: "Quirologia Mistica",
     backToOuija: "Torna alla Tavola Ouija",
     close: "Chiudi pannello",
   },
@@ -67,6 +73,7 @@ const MODAL_TITLES: Record<
     NATAL: "Geburtshoroskop",
     CABALA: "Kabbala-Mission",
     ANTENA: "Dimensionale Antenne",
+    QUIROLOGIA: "Mystische Quirologie",
     backToOuija: "Zurück zum Ouija-Brett",
     close: "Panel schließen",
   },
@@ -129,6 +136,13 @@ export const PortalModuleModal: React.FC<PortalModuleModalProps> = ({
       icon: <Compass className="w-3.5 h-3.5 text-amber-300" />,
       activeClass: "bg-amber-950/85 text-amber-100 border-amber-400/70 shadow-md",
       inactiveClass: "text-amber-200/75 hover:text-amber-100 border-transparent hover:bg-purple-950/60",
+    },
+    {
+      id: "QUIROLOGIA",
+      label: copy.QUIROLOGIA,
+      icon: <Hand className="w-3.5 h-3.5 text-amber-300" />,
+      activeClass: "bg-amber-950/85 text-amber-100 border-amber-400/70 shadow-md",
+      inactiveClass: "text-amber-200/75 hover:text-amber-100 border-transparent hover:bg-amber-950/40",
     },
     {
       id: "ANTENA",

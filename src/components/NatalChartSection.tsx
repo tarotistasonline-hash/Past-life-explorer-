@@ -36,6 +36,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { audio } from "../lib/audio";
 import { downloadParchmentImage } from "../lib/parchmentExport";
 import { getAdminHeaders } from "../lib/adminTracking";
+import natalChartBgImg from "../assets/images/natal_chart_bg_1795566263288.jpg";
 
 export interface NatalRequestPayload {
   name: string;
@@ -518,8 +519,19 @@ export const NatalChartSection: React.FC<NatalChartSectionProps> = ({
   return (
     <section
       aria-label={t("natalTitle")}
-      className="w-full max-w-4xl bg-[#0c0716]/95 border border-purple-700/45 rounded-2xl p-4 sm:p-6 shadow-[0_0_40px_rgba(88,28,135,0.28)] backdrop-blur-md space-y-6"
+      className="w-full max-w-4xl bg-[#0c0716]/95 border border-purple-700/45 rounded-2xl p-4 sm:p-6 shadow-[0_0_40px_rgba(88,28,135,0.28)] backdrop-blur-md space-y-6 relative overflow-hidden"
     >
+      {/* Background Photo layer */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-2xl">
+        <img
+          src={natalChartBgImg}
+          alt="Carta Natal - Rueda Astrológica"
+          className="w-full h-full object-cover object-center filter brightness-85 contrast-105 saturate-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0716]/95 via-[#0c0716]/70 to-[#0c0716]/60" />
+      </div>
+
+      <div className="relative z-10 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-900/50 pb-4">
         <div className="flex items-start gap-3">
@@ -1325,6 +1337,7 @@ export const NatalChartSection: React.FC<NatalChartSectionProps> = ({
           </div>
         </div>
       )}
+      </div>
     </section>
   );
 };

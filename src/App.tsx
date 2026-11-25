@@ -4,6 +4,7 @@ import { OuijaBoard } from "./components/OuijaBoard";
 import { SpiritOracleForm } from "./components/SpiritOracleForm";
 import { PastLifeModal } from "./components/PastLifeModal";
 import { AntenaDimensionalPanel } from "./components/AntenaDimensionalPanel";
+import { QuirologiaPanel } from "./components/QuirologiaPanel";
 import { AtmosphereControls } from "./components/AtmosphereControls";
 import { DailyTarotCard } from "./components/DailyTarotCard";
 import { NatalChartSection, NatalRequestPayload } from "./components/NatalChartSection";
@@ -13,7 +14,7 @@ import { StarfieldBackground } from "./components/StarfieldBackground";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, ArrowUpRight } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, Hand, ArrowUpRight } from "lucide-react";
 import { PortalModuleModal, PortalPanelId } from "./components/PortalModuleModal";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminHeaders, isAuthorizedAdmin } from "./lib/adminTracking";
@@ -877,6 +878,20 @@ export default function App() {
 
         <button
           type="button"
+          onClick={() => setActivePortalPanel("QUIROLOGIA")}
+          title="Abrir Panel de Quirología Mística"
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+            activePortalPanel === "QUIROLOGIA"
+              ? "bg-amber-950/85 text-amber-100 border border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+              : "text-amber-300 hover:text-amber-100 hover:bg-amber-950/40 border border-amber-500/35"
+          }`}
+        >
+          <Hand className="w-3.5 h-3.5 text-amber-300" />
+          <span>Quirología</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActivePortalPanel("ANTENA")}
           title="Abrir Panel de Antena Dimensional"
           className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
@@ -979,65 +994,77 @@ export default function App() {
             language === "en"
               ? {
                   heading: "Other Portal Panels",
-                  sub: "Open Tarot, Natal Chart, Kabbalah, or Antenna in its own panel to keep the screen compact.",
+                  sub: "Open Tarot, Natal Chart, Kabbalah, Palmistry, or Antenna in its own panel to keep the screen compact.",
                   tarotDesc: "Daily arcana, 3-card karmic spread, and 22 voice-guided cards.",
                   natalDesc: "Planetary wheel, Sun, Moon, Ascendant, voice, and PDF export.",
                   cabalaTitle: "Kabbalah Mission",
                   cabalaDesc: "Tree of Life, natal Sephira, Gematria, and spiritual Tikkun.",
+                  quirologiaTitle: "Mystical Palmistry",
+                  quirologiaDesc: "Hand reading, astral lines and planetary mounts.",
                   antenaTitle: "Dimensional Antenna",
                   antenaDesc: "Interstellar frequency and cosmic consciousness portal.",
                 }
               : language === "pt"
               ? {
                   heading: "Outros Painéis do Portal",
-                  sub: "Abra Tarot, Mapa Astral, Cabala ou Antena em seu próprio painel para manter a tela compacta.",
+                  sub: "Abra Tarot, Mapa Astral, Cabala, Quirologia ou Antena em seu próprio painel para manter a tela compacta.",
                   tarotDesc: "Arcano do dia, tiragem de 3 cartas e 22 arcanos com voz.",
                   natalDesc: "Roda planetária, Sol, Lua, Ascendente, voz e PDF.",
                   cabalaTitle: "Missão Cabala",
                   cabalaDesc: "Árvore da Vida, Sefirá natal, Gematria e Tikkun.",
+                  quirologiaTitle: "Quirologia Mística",
+                  quirologiaDesc: "Leitura de mãos, linhas astrais e montes planetários.",
                   antenaTitle: "Antena Dimensional",
                   antenaDesc: "Portal de frequência interestelar e contato cósmico.",
                 }
               : language === "fr"
               ? {
                   heading: "Autres Panneaux du Portail",
-                  sub: "Ouvrez Tarot, Thème Natal, Kabbale ou Antenne dans un panneau dédié pour garder l'écran compact.",
+                  sub: "Ouvrez Tarot, Thème Natal, Kabbale, Chiromancie ou Antenne dans un panneau dédié pour garder l'écran compact.",
                   tarotDesc: "Arcane du jour, tirage à 3 cartes et 22 arcanes avec voix.",
                   natalDesc: "Roue planétaire, Soleil, Lune, Ascendant, voix et PDF.",
                   cabalaTitle: "Mission Kabbale",
                   cabalaDesc: "Arbre de Vie, Sephira natale, Guématrie et Tikkoun.",
+                  quirologiaTitle: "Chiromancie Mystique",
+                  quirologiaDesc: "Lecture des mains, lignes astrales et monts planétaires.",
                   antenaTitle: "Antenne Dimensionnelle",
                   antenaDesc: "Portail de fréquence interstellaire et contact cosmique.",
                 }
               : language === "it"
               ? {
                   heading: "Altri Pannelli del Portale",
-                  sub: "Apri Tarocchi, Tema Natale, Kabbalah o Antenna in un pannello dedicato per mantenere la schermata compatta.",
+                  sub: "Apri Tarocchi, Tema Natale, Kabbalah, Quirologia o Antenna in un pannello dedicato per mantenere la schermata compatta.",
                   tarotDesc: "Arcano del giorno, stesa a 3 carte e 22 arcani con voce.",
                   natalDesc: "Ruota planetaria, Sole, Luna, Ascendente, voce e PDF.",
                   cabalaTitle: "Missione Kabbalah",
                   cabalaDesc: "Albero della Vita, Sefira natale, Gematria e Tikkun.",
+                  quirologiaTitle: "Quirologia Mistica",
+                  quirologiaDesc: "Lettura della mano, linee astrali e monti planetari.",
                   antenaTitle: "Antenna Dimensionale",
                   antenaDesc: "Portale di frequenza interstellare e contatto cosmico.",
                 }
               : language === "de"
               ? {
                   heading: "Weitere Portal-Panels",
-                  sub: "Öffne Tarot, Geburtshoroskop, Kabbala oder Antenne im eigenen Panel für eine kompakte Ansicht.",
+                  sub: "Öffne Tarot, Geburtshoroskop, Kabbala, Quirologie oder Antenne im eigenen Panel für eine kompakte Ansicht.",
                   tarotDesc: "Tagesarkana, 3-Karten-Legung und 22 Arkana mit Stimme.",
                   natalDesc: "Planetenrad, Sonne, Mond, Aszendent, Stimme und PDF.",
                   cabalaTitle: "Kabbala-Mission",
                   cabalaDesc: "Lebensbaum, Geburts-Sephira, Gematrie und Tikkun.",
+                  quirologiaTitle: "Mystische Quirologie",
+                  quirologiaDesc: "Handlesen, astrale Linien und Planetenberge.",
                   antenaTitle: "Dimensionale Antenne",
                   antenaDesc: "Interstellares Frequenzportal und kosmischer Kontakt.",
                 }
               : {
                   heading: "Otros Paneles del Portal",
-                  sub: "Abre Tarot, Carta Natal, Cábala o Antena en su propio panel para mantener la pantalla compacta.",
+                  sub: "Abre Tarot, Carta Natal, Cábala, Quirología o Antena en su propio panel para mantener la pantalla compacta.",
                   tarotDesc: "Arcano del día, tirada de 3 cartas y 22 arcanos con voz.",
                   natalDesc: "Rueda planetaria, Sol, Luna, Ascendente y PDF.",
                   cabalaTitle: "Misión Cábala",
                   cabalaDesc: "Árbol de la Vida, Sefirá natal, Gematría y Tikkún.",
+                  quirologiaTitle: "Quirología Mística",
+                  quirologiaDesc: "Lectura de manos, líneas astrales y montes planetarios.",
                   antenaTitle: "Antena Dimensional",
                   antenaDesc: "Portal de frecuencia interestelar y contacto cósmico.",
                 };
@@ -1056,7 +1083,7 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("TAROT")}
@@ -1116,6 +1143,25 @@ export default function App() {
 
                 <button
                   type="button"
+                  onClick={() => setActivePortalPanel("QUIROLOGIA")}
+                  className="group text-left p-4 rounded-2xl bg-[#100820]/90 hover:bg-[#180d2f] border border-amber-500/40 hover:border-amber-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <Hand className="w-5 h-5 text-amber-300" />
+                    <ArrowUpRight className="w-4 h-4 text-amber-400/70 group-hover:text-amber-200 transition" />
+                  </div>
+                  <div>
+                    <div className="font-cinzel font-bold text-sm text-amber-100">
+                      {launcherCopy.quirologiaTitle}
+                    </div>
+                    <p className="text-xs font-gothic text-purple-300/80 mt-0.5 leading-snug">
+                      {launcherCopy.quirologiaDesc}
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setActivePortalPanel("ANTENA")}
                   className="group text-left p-4 rounded-2xl bg-[#0a1420]/90 hover:bg-[#0e1d2f] border border-cyan-500/40 hover:border-cyan-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
                 >
@@ -1138,7 +1184,7 @@ export default function App() {
         })()}
       </main>
 
-      {/* Dedicated Overlay Panels for Tarot, Natal Chart, Kabbalah, and Antena */}
+      {/* Dedicated Overlay Panels for Tarot, Natal Chart, Kabbalah, Quirologia, and Antena */}
       <PortalModuleModal
         activePanel={activePortalPanel}
         onSelectPanel={(panel) => setActivePortalPanel(panel)}
@@ -1183,6 +1229,8 @@ export default function App() {
         {activePortalPanel === "CABALA" && (
           <KabbalahMissionSection onSendToOuija={handleSendNatalToOuija} />
         )}
+
+        {activePortalPanel === "QUIROLOGIA" && <QuirologiaPanel />}
 
         {activePortalPanel === "ANTENA" && <AntenaDimensionalPanel />}
       </PortalModuleModal>

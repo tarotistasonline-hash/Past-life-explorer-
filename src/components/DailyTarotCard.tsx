@@ -11,6 +11,7 @@ import { isAdminSession, getAdminHeaders } from "../lib/adminTracking";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { downloadParchmentImage, copyMysticShareText } from "../lib/parchmentExport";
 import { getCoherentTarotDrawFallback } from "../lib/oracleCoherence";
+import tarotCardsBgImg from "../assets/images/tarot_cards_bg_1795566263632.jpg";
 import {
   Sparkles,
   Volume2,
@@ -452,6 +453,16 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
       id="daily-tarot-card-parchment"
       className="w-full max-w-4xl bg-[#0d0718]/90 border border-purple-800/50 rounded-3xl p-4 sm:p-7 backdrop-blur-xl shadow-2xl relative overflow-hidden my-4 text-purple-100"
     >
+      {/* Background Photo layer */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-3xl">
+        <img
+          src={tarotCardsBgImg}
+          alt="Tarot de Marsella - Arcanos Mayores"
+          className="w-full h-full object-cover object-center filter brightness-90 contrast-105 saturate-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0718]/95 via-[#0d0718]/70 to-[#0d0718]/60" />
+      </div>
+
       {/* Mystical Background Radiant Aura */}
       <div
         className="absolute -top-24 -right-24 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none transition-colors duration-1000"

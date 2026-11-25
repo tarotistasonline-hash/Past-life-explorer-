@@ -500,8 +500,19 @@ export const KabbalahMissionSection: React.FC<KabbalahMissionSectionProps> = ({
     <section
       id="kabbalah-mission-section"
       aria-label={copy.title}
-      className="w-full max-w-4xl rounded-3xl bg-[#0b0714]/95 border border-amber-500/35 p-5 sm:p-8 backdrop-blur-md shadow-[0_0_50px_rgba(245,158,11,0.12)] space-y-6 animate-fade-in"
+      className="w-full max-w-4xl rounded-3xl bg-[#0b0714]/95 border border-amber-500/35 p-5 sm:p-8 backdrop-blur-md shadow-[0_0_50px_rgba(245,158,11,0.12)] space-y-6 animate-fade-in relative overflow-hidden"
     >
+      {/* Background Photo layer */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-3xl">
+        <img
+          src={treeOfLifeImg}
+          alt="Árbol de la Vida - Cábala"
+          className="w-full h-full object-cover object-center filter brightness-85 contrast-105 saturate-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0714]/95 via-[#0b0714]/70 to-[#0b0714]/60" />
+      </div>
+
+      <div className="relative z-10 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-amber-500/20 pb-5">
         <div className="space-y-1.5 max-w-2xl">
@@ -946,6 +957,7 @@ export const KabbalahMissionSection: React.FC<KabbalahMissionSectionProps> = ({
             </div>
           )}
         </div>
+      </div>
       </div>
     </section>
   );
