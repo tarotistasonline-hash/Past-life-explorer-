@@ -10,6 +10,7 @@ import {
   RefreshCw,
   KeyRound,
   Globe,
+  Fingerprint,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import { SupportedLanguage } from "../types";
@@ -30,7 +31,15 @@ import {
   PendingConsultation,
 } from "../lib/monetization";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
-import { signInOwnerWithGoogle } from "../lib/adminTracking";
+import {
+  signInOwnerWithGoogle,
+  getAdminAuthCapabilities,
+  setupInitialAdminPin,
+  loginAdminWithPin,
+  loginAdminWithBiometric,
+  isBiometricSupported,
+  AdminAuthCapabilities,
+} from "../lib/adminTracking";
 
 interface ConsultationPaywallModalProps {
   isOpen: boolean;
@@ -261,10 +270,12 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
   const [isValidatingPaypalCode, setIsValidatingPaypalCode] = useState<boolean>(false);
   const [paypalFeedback, setPaypalFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
-  // Creator Google-verified unlock state
+  // Creator PIN / Biometric / Google unlock state
   const [showCreatorLogin, setShowCreatorLogin] = useState<boolean>(false);
   const [isCreatorSigningIn, setIsCreatorSigningIn] = useState<boolean>(false);
   const [creatorLoginError, setCreatorLoginError] = useState<string>("");
+  const [creatorPinInput, setCreatorPinInput] = useState<string>("");
+  const [creatorAuthCaps, setCreatorAuthCaps] = useState<AdminAuthCapabilities | null>(null);
 
   const unlockedOnceRef = useRef<boolean>(false);
 
@@ -299,6 +310,8 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
     setShowCreatorLogin(false);
     setIsCreatorSigningIn(false);
     setCreatorLoginError("");
+    setCreatorPinInput("");
+    getAdminAuthCapabilities().then(setCreatorAuthCaps);
 
     setPaywallModalHeartbeat();
     const hbInterval = setInterval(() => {
@@ -893,10 +906,88 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
                 ¿Eres el creador del sitio? Activar consultas ilimitadas de propietario
               </button>
             ) : (
-              <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-500/35 space-y-2">
+              <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-500/35 space-y-2.5">
                 <p className="text-[11px] font-cinzel font-semibold text-amber-200">
-                  Acceso Exclusivo del Creador (Google)
+                  Acceso Exclusivo del Creador
                 </p>
+
+                {creatorAuthCaps?.webauthnConfigured && isBiometricSupported() && (
+                  <button
+                    type="button"
+                    disabled={isCreatorSigningIn}
+                    onClick={async () => {
+                      triggerHaptic(HAPTIC_PATTERNS.click);
+                      setCreatorLoginError("");
+                      setIsCreatorSigningIn(true);
+                      const result = await loginAdminWithBiometric();
+                      setIsCreatorSigningIn(false);
+                      if (result.ok) {
+                        setShowCreatorLogin(false);
+                        onUnlocked?.();
+                        onClose();
+                      } else {
+                        setCreatorLoginError(result.error || "No se pudo verificar tu huella digital.");
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-emerald-600/85 hover:bg-emerald-500 disabled:opacity-60 text-white text-[11px] font-cinzel font-bold transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Fingerprint className="w-4 h-4" />
+                    <span>Ingresar con Huella Digital</span>
+                  </button>
+                )}
+
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    triggerHaptic(HAPTIC_PATTERNS.click);
+                    const cleanPin = creatorPinInput.trim();
+                    if (!/^\d{4,12}$/.test(cleanPin)) {
+                      setCreatorLoginError("El código numérico debe tener entre 4 y 12 dígitos.");
+                      return;
+                    }
+                    setCreatorLoginError("");
+                    setIsCreatorSigningIn(true);
+                    const res = creatorAuthCaps?.canSetupInitialPin
+                      ? await setupInitialAdminPin(cleanPin)
+                      : await loginAdminWithPin(cleanPin);
+                    setIsCreatorSigningIn(false);
+                    if (res.ok) {
+                      setShowCreatorLogin(false);
+                      setCreatorPinInput("");
+                      onUnlocked?.();
+                      onClose();
+                    } else {
+                      setCreatorLoginError(res.error || "Código numérico incorrecto.");
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={12}
+                    value={creatorPinInput}
+                    onChange={(e) => {
+                      setCreatorPinInput(e.target.value.replace(/\D/g, ""));
+                      if (creatorLoginError) setCreatorLoginError("");
+                    }}
+                    placeholder={
+                      creatorAuthCaps?.canSetupInitialPin
+                        ? "Crear PIN (4-12 dígitos)..."
+                        : "Código PIN de creador..."
+                    }
+                    className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/60 border border-amber-500/40 text-xs font-mono tracking-widest text-amber-100 placeholder:text-amber-300/40 placeholder:tracking-normal focus:outline-none focus:border-amber-400"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isCreatorSigningIn || creatorPinInput.length < 4}
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 text-neutral-950 text-[11px] font-cinzel font-bold transition cursor-pointer shrink-0"
+                  >
+                    {creatorAuthCaps?.canSetupInitialPin ? "Crear PIN" : "Entrar"}
+                  </button>
+                </form>
+
                 <button
                   type="button"
                   disabled={isCreatorSigningIn}
@@ -916,15 +1007,15 @@ export const ConsultationPaywallModal: React.FC<ConsultationPaywallModalProps> =
                       );
                     }
                   }}
-                  className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-60 text-neutral-950 text-[11px] font-cinzel font-bold transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full px-3 py-1.5 rounded-xl bg-purple-950/70 hover:bg-purple-900/70 border border-purple-700/50 disabled:opacity-60 text-purple-200 text-[10px] font-cinzel font-semibold transition cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   {isCreatorSigningIn ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Verificando con Google...</span>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Verificando...</span>
                     </>
                   ) : (
-                    <span>Ingresar con Google (Propietario)</span>
+                    <span>O ingresar con Google</span>
                   )}
                 </button>
                 {creatorLoginError && (

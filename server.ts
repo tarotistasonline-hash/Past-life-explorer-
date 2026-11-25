@@ -16,6 +16,13 @@ import {
 } from "firebase/firestore";
 import { initializeApp as initAdminApp, getApps as getAdminApps, getApp as getAdminApp } from "firebase-admin/app";
 import { getAuth as getAdminAuth, type Auth as AdminAuth } from "firebase-admin/auth";
+import {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+  type WebAuthnCredential,
+} from "@simplewebauthn/server";
 import { MAJOR_ARCANA, getUniversalArcanaForDate, drawPersonalArcana } from "./src/lib/tarotData.ts";
 import {
   buildStrictSpiritQuestionPrompt,
@@ -150,16 +157,111 @@ try {
   console.warn("Could not initialize Firebase in server:", e);
 }
 
+// Admin session HMAC signing key (in-memory random fallback; never written to disk)
+const ADMIN_SESSION_SECRET =
+  (process.env.ADMIN_SESSION_SECRET || "").trim() || crypto.randomBytes(32).toString("hex");
+const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const ADMIN_CREDENTIALS_FILE = path.join(VISITS_DATA_DIR, "admin_credentials.json");
+
+interface StoredWebAuthnCred {
+  id: string;
+  publicKeyBase64: string;
+  counter: number;
+  transports?: string[];
+  rpId: string;
+  label?: string;
+  createdAt: string;
+}
+
+interface AdminCredentialsStore {
+  pinSalt?: string;
+  pinHash?: string;
+  pinUpdatedAt?: string;
+  webauthnCredentials: StoredWebAuthnCred[];
+}
+
+let adminCredentialsState: AdminCredentialsStore = { webauthnCredentials: [] };
+try {
+  if (fs.existsSync(ADMIN_CREDENTIALS_FILE)) {
+    const parsed = JSON.parse(fs.readFileSync(ADMIN_CREDENTIALS_FILE, "utf-8"));
+    adminCredentialsState = {
+      pinSalt: typeof parsed.pinSalt === "string" ? parsed.pinSalt : undefined,
+      pinHash: typeof parsed.pinHash === "string" ? parsed.pinHash : undefined,
+      pinUpdatedAt: typeof parsed.pinUpdatedAt === "string" ? parsed.pinUpdatedAt : undefined,
+      webauthnCredentials: Array.isArray(parsed.webauthnCredentials) ? parsed.webauthnCredentials : [],
+    };
+  }
+} catch (e) {
+  console.warn("Could not load admin_credentials.json:", e);
+}
+
+function saveAdminCredentials() {
+  try {
+    if (!fs.existsSync(VISITS_DATA_DIR)) {
+      fs.mkdirSync(VISITS_DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(ADMIN_CREDENTIALS_FILE, JSON.stringify(adminCredentialsState, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("Could not save admin_credentials.json:", e);
+  }
+}
+
+function signAdminSessionToken(method: "pin" | "webauthn"): { token: string; expiresAt: number } {
+  const now = Date.now();
+  const expiresAt = now + ADMIN_SESSION_TTL_MS;
+  const payload = Buffer.from(
+    JSON.stringify({ role: "admin", method, iat: now, exp: expiresAt }),
+    "utf-8"
+  ).toString("base64url");
+  const sig = crypto
+    .createHmac("sha256", ADMIN_SESSION_SECRET)
+    .update(payload)
+    .digest("base64url");
+  return { token: `adm_${payload}.${sig}`, expiresAt };
+}
+
+function verifyAdminSessionToken(token: string): boolean {
+  if (!token.startsWith("adm_")) return false;
+  const body = token.slice(4);
+  const dotIdx = body.indexOf(".");
+  if (dotIdx <= 0) return false;
+  const payload = body.slice(0, dotIdx);
+  const sig = body.slice(dotIdx + 1);
+  if (!payload || !sig) return false;
+
+  const expectedSig = crypto
+    .createHmac("sha256", ADMIN_SESSION_SECRET)
+    .update(payload)
+    .digest("base64url");
+  const sigBuf = Buffer.from(sig, "utf-8");
+  const expBuf = Buffer.from(expectedSig, "utf-8");
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    return false;
+  }
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
+    return parsed?.role === "admin" && typeof parsed?.exp === "number" && Date.now() < parsed.exp;
+  } catch {
+    return false;
+  }
+}
+
 async function verifyAdminBearerToken(req?: express.Request): Promise<boolean> {
-  if (!req || !adminAuth) return false;
+  if (!req) return false;
   const authHeader = req.headers?.authorization;
   if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
     return false;
   }
-  const idToken = authHeader.slice("Bearer ".length).trim();
-  if (!idToken || idToken.length > 8192) return false;
+  const token = authHeader.slice("Bearer ".length).trim();
+  if (!token || token.length > 8192) return false;
+
+  if (token.startsWith("adm_")) {
+    return verifyAdminSessionToken(token);
+  }
+
+  if (!adminAuth) return false;
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    const decoded = await adminAuth.verifyIdToken(token);
     return (
       decoded.email?.toLowerCase() === OWNER_EMAIL &&
       decoded.email_verified === true
@@ -358,6 +460,13 @@ async function recordVisitInFirestore(rawVisitorId: unknown) {
   return updated;
 }
 
+function isBotUserAgent(rawUa: unknown): boolean {
+  if (typeof rawUa !== "string" || !rawUa.trim()) return false;
+  return /bot|crawl|spider|slurp|googlebot|bingbot|yandex|duckduckbot|baiduspider|facebookexternalhit|whatsapp|telegrambot|twitterbot|linkedinbot|lighthouse|headlesschrome|puppeteer|playwright|curl|wget|python-requests|go-http-client|uptimerobot|pingdom/i.test(
+    rawUa
+  );
+}
+
 // Visits API Endpoints (100% Real Traffic with Firestore Persistence)
 app.get("/api/visits", async (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -367,13 +476,15 @@ app.get("/api/visits", async (req, res) => {
 
 app.post("/api/visits/hit", async (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  const { visitorId, isAdmin } = req.body || {};
+  const { visitorId, isAdmin, isNewSession } = req.body || {};
+  const isBot = isBotUserAgent(req.headers["user-agent"]);
   const wantsExclude = Boolean(isAdmin || req.headers["x-admin-exclude"] === "true");
-  const isExcluded = wantsExclude ? await verifyAdminBearerToken(req) : false;
+  const isExcluded = isBot || (wantsExclude ? await verifyAdminBearerToken(req) : false);
   const todayKey = getTodayKey();
   const onlineVisitors = touchOnlineVisitor(visitorId, isExcluded);
+  const shouldCountSession = isNewSession !== false;
 
-  if (!isExcluded) {
+  if (!isExcluded && shouldCountSession) {
     try {
       const firestoreResult = await recordVisitInFirestore(visitorId);
       if (firestoreResult) {
@@ -409,7 +520,7 @@ app.post("/api/visits/hit", async (req, res) => {
   });
 });
 
-// Real-time Presence Heartbeat (tracks currently online visitors, excluding creator/admin)
+// Real-time Presence Heartbeat (tracks currently online visitors, excluding creator/admin and bots)
 app.post("/api/visits/heartbeat", express.text({ type: "*/*" }), async (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   let payload: any = req.body;
@@ -421,8 +532,9 @@ app.post("/api/visits/heartbeat", express.text({ type: "*/*" }), async (req, res
     }
   }
   const { visitorId, isAdmin, leave } = payload || {};
+  const isBot = isBotUserAgent(req.headers["user-agent"]);
   const wantsExclude = Boolean(isAdmin || req.headers["x-admin-exclude"] === "true");
-  const isExcluded = wantsExclude ? await verifyAdminBearerToken(req) : false;
+  const isExcluded = isBot || (wantsExclude ? await verifyAdminBearerToken(req) : false);
 
   const onlineVisitors = touchOnlineVisitor(visitorId, isExcluded, Boolean(leave));
   if (leave) {
@@ -2326,6 +2438,426 @@ app.post("/api/payments/verify-unlock-code", async (req, res) => {
   } catch (e) {
     console.error("Error in /api/payments/verify-unlock-code:", e);
     return res.status(500).json({ approved: false });
+  }
+});
+
+// =========================================================================
+// Creator / Owner Authentication (Numeric PIN + WebAuthn Fingerprint/Passkey)
+// =========================================================================
+
+function getAdminPinEnv(): string {
+  return (process.env.ADMIN_PIN || "").trim();
+}
+
+function hasAdminPinConfigured(): boolean {
+  return Boolean(getAdminPinEnv()) || Boolean(adminCredentialsState.pinSalt && adminCredentialsState.pinHash);
+}
+
+function hashPinWithSalt(pin: string, saltHex: string): string {
+  return crypto.scryptSync(pin, saltHex, 64).toString("hex");
+}
+
+function verifySubmittedAdminPin(candidate: string): boolean {
+  const envPin = getAdminPinEnv();
+  if (envPin) {
+    const a = crypto.createHash("sha256").update(candidate).digest();
+    const b = crypto.createHash("sha256").update(envPin).digest();
+    return crypto.timingSafeEqual(a, b);
+  }
+  if (!adminCredentialsState.pinSalt || !adminCredentialsState.pinHash) {
+    return false;
+  }
+  const derived = hashPinWithSalt(candidate, adminCredentialsState.pinSalt);
+  const a = Buffer.from(derived, "hex");
+  const b = Buffer.from(adminCredentialsState.pinHash, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+const adminPinAttempts = new Map<string, { count: number; resetAt: number }>();
+const ADMIN_PIN_MAX_ATTEMPTS = 5;
+const ADMIN_PIN_WINDOW_MS = 15 * 60 * 1000;
+
+function checkAdminPinRateLimit(ip: string): boolean {
+  const rec = adminPinAttempts.get(ip);
+  const now = Date.now();
+  if (!rec || now > rec.resetAt) {
+    adminPinAttempts.delete(ip);
+    return true;
+  }
+  return rec.count < ADMIN_PIN_MAX_ATTEMPTS;
+}
+
+function recordAdminPinFailure(ip: string) {
+  const now = Date.now();
+  const rec = adminPinAttempts.get(ip);
+  if (!rec || now > rec.resetAt) {
+    adminPinAttempts.set(ip, { count: 1, resetAt: now + ADMIN_PIN_WINDOW_MS });
+  } else {
+    rec.count += 1;
+  }
+}
+
+function getClientIpKey(req: express.Request): string {
+  return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "ip_unknown")
+    .split(",")[0]
+    .trim()
+    .slice(0, 64);
+}
+
+function getWebAuthnContext(req: express.Request): { rpID: string; expectedOrigin: string } | null {
+  const rawHost = String(req.headers["x-forwarded-host"] || req.headers.host || "")
+    .split(",")[0]
+    .trim();
+  if (!rawHost || !/^[a-zA-Z0-9.-]+(?::\d{1,5})?$/.test(rawHost)) {
+    return null;
+  }
+  const rpID = rawHost.split(":")[0].toLowerCase();
+  const isLocal = rpID === "localhost" || rpID === "127.0.0.1";
+  const protoHeader = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
+  const proto = isLocal ? (protoHeader === "https" ? "https" : "http") : "https";
+  return { rpID, expectedOrigin: `${proto}://${rawHost.toLowerCase()}` };
+}
+
+interface PendingWebAuthnChallenge {
+  challenge: string;
+  rpID: string;
+  expectedOrigin: string;
+  expiresAt: number;
+}
+const webauthnChallenges = new Map<string, PendingWebAuthnChallenge>();
+
+function pruneExpiredWebAuthnChallenges() {
+  const now = Date.now();
+  for (const [key, item] of webauthnChallenges.entries()) {
+    if (now > item.expiresAt) {
+      webauthnChallenges.delete(key);
+    }
+  }
+}
+
+app.get("/api/admin/auth-capabilities", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const ctx = getWebAuthnContext(req);
+  const matchingCreds = ctx
+    ? adminCredentialsState.webauthnCredentials.filter((c) => c.rpId === ctx.rpID)
+    : [];
+  const pinConfigured = hasAdminPinConfigured();
+  return res.json({
+    pinConfigured,
+    pinEnvConfigured: Boolean(getAdminPinEnv()),
+    canSetupInitialPin: !pinConfigured,
+    webauthnConfigured: matchingCreds.length > 0,
+    webauthnTotalCount: adminCredentialsState.webauthnCredentials.length,
+    webauthnRpId: ctx?.rpID || null,
+  });
+});
+
+// First-run PIN setup (locks permanently once claimed or when ADMIN_PIN env var is set)
+app.post("/api/admin/pin/setup", (req, res) => {
+  try {
+    if (hasAdminPinConfigured()) {
+      return res.status(403).json({
+        ok: false,
+        error: "Ya existe un PIN configurado. Usa tu PIN actual o Google para ingresar.",
+      });
+    }
+    const rawPin = typeof req.body?.pin === "string" ? req.body.pin.trim() : "";
+    if (!/^\d{4,12}$/.test(rawPin)) {
+      return res.status(400).json({
+        ok: false,
+        error: "El código numérico debe tener entre 4 y 12 dígitos.",
+      });
+    }
+    const salt = crypto.randomBytes(16).toString("hex");
+    adminCredentialsState.pinSalt = salt;
+    adminCredentialsState.pinHash = hashPinWithSalt(rawPin, salt);
+    adminCredentialsState.pinUpdatedAt = new Date().toISOString();
+    saveAdminCredentials();
+
+    const { token, expiresAt } = signAdminSessionToken("pin");
+    return res.json({ ok: true, token, expiresAt });
+  } catch (e) {
+    console.error("Error in /api/admin/pin/setup:", e);
+    return res.status(500).json({ ok: false, error: "No se pudo configurar el PIN." });
+  }
+});
+
+// Verify Numeric PIN and issue short-lived signed admin Bearer token (kept in memory only)
+app.post("/api/admin/pin/login", (req, res) => {
+  try {
+    const ip = getClientIpKey(req);
+    if (!checkAdminPinRateLimit(ip)) {
+      return res.status(429).json({
+        ok: false,
+        error: "Demasiados intentos fallidos. Espera 15 minutos antes de volver a intentar.",
+      });
+    }
+    if (!hasAdminPinConfigured()) {
+      return res.status(400).json({
+        ok: false,
+        error: "Todavía no hay un código numérico configurado.",
+      });
+    }
+    const rawPin = typeof req.body?.pin === "string" ? req.body.pin.trim() : "";
+    if (!/^\d{4,12}$/.test(rawPin) || !verifySubmittedAdminPin(rawPin)) {
+      recordAdminPinFailure(ip);
+      return res.status(401).json({
+        ok: false,
+        error: "Código numérico incorrecto.",
+      });
+    }
+    adminPinAttempts.delete(ip);
+    const { token, expiresAt } = signAdminSessionToken("pin");
+    return res.json({ ok: true, token, expiresAt });
+  } catch (e) {
+    console.error("Error in /api/admin/pin/login:", e);
+    return res.status(500).json({ ok: false, error: "Error verificando el PIN." });
+  }
+});
+
+// Change Numeric PIN (requires verified admin session via Google, PIN, or Biometric)
+app.post("/api/admin/pin/change", async (req, res) => {
+  try {
+    if (!(await verifyAdminBearerToken(req))) {
+      return res.status(403).json({ ok: false, error: "No autorizado" });
+    }
+    if (getAdminPinEnv()) {
+      return res.status(400).json({
+        ok: false,
+        error: "El PIN está fijado en los Secretos del servidor (ADMIN_PIN).",
+      });
+    }
+    const rawPin = typeof req.body?.pin === "string" ? req.body.pin.trim() : "";
+    if (!/^\d{4,12}$/.test(rawPin)) {
+      return res.status(400).json({
+        ok: false,
+        error: "El código numérico debe tener entre 4 y 12 dígitos.",
+      });
+    }
+    const salt = crypto.randomBytes(16).toString("hex");
+    adminCredentialsState.pinSalt = salt;
+    adminCredentialsState.pinHash = hashPinWithSalt(rawPin, salt);
+    adminCredentialsState.pinUpdatedAt = new Date().toISOString();
+    saveAdminCredentials();
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("Error in /api/admin/pin/change:", e);
+    return res.status(500).json({ ok: false, error: "No se pudo actualizar el PIN." });
+  }
+});
+
+// Register WebAuthn Fingerprint / Biometric Passkey (requires already-verified admin session)
+app.post("/api/admin/webauthn/register-options", async (req, res) => {
+  try {
+    if (!(await verifyAdminBearerToken(req))) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+    const ctx = getWebAuthnContext(req);
+    if (!ctx) {
+      return res.status(400).json({ error: "Dominio inválido para biometría." });
+    }
+
+    pruneExpiredWebAuthnChallenges();
+    const excludeCredentials = adminCredentialsState.webauthnCredentials
+      .filter((c) => c.rpId === ctx.rpID)
+      .map((c) => ({
+        id: c.id,
+        transports: c.transports as any,
+      }));
+
+    const toWebAuthnBytes = (bytes: Uint8Array): Uint8Array<ArrayBuffer> => {
+      const copy = new Uint8Array(new ArrayBuffer(bytes.byteLength));
+      copy.set(bytes);
+      return copy;
+    };
+
+    const options = await generateRegistrationOptions({
+      rpName: "Oráculo Akáshico • Propietaria",
+      rpID: ctx.rpID,
+      userName: OWNER_EMAIL,
+      userDisplayName: "Propietaria del Portal",
+      userID: toWebAuthnBytes(new TextEncoder().encode(OWNER_EMAIL)),
+      attestationType: "none",
+      excludeCredentials,
+      authenticatorSelection: {
+        authenticatorAttachment: "platform",
+        residentKey: "preferred",
+        userVerification: "required",
+      },
+    });
+
+    const challengeId = crypto.randomBytes(16).toString("hex");
+    webauthnChallenges.set(challengeId, {
+      challenge: options.challenge,
+      rpID: ctx.rpID,
+      expectedOrigin: ctx.expectedOrigin,
+      expiresAt: Date.now() + 2 * 60 * 1000,
+    });
+
+    return res.json({ challengeId, options });
+  } catch (e) {
+    console.error("Error in /api/admin/webauthn/register-options:", e);
+    return res.status(500).json({ error: "No se pudo iniciar el registro biométrico." });
+  }
+});
+
+app.post("/api/admin/webauthn/register-verify", async (req, res) => {
+  try {
+    if (!(await verifyAdminBearerToken(req))) {
+      return res.status(403).json({ ok: false, error: "No autorizado" });
+    }
+    const { challengeId, response, label } = req.body || {};
+    const pending = typeof challengeId === "string" ? webauthnChallenges.get(challengeId) : undefined;
+    if (typeof challengeId === "string") {
+      webauthnChallenges.delete(challengeId);
+    }
+    if (!pending || Date.now() > pending.expiresAt) {
+      return res.status(400).json({ ok: false, error: "La solicitud biométrica expiró. Intenta nuevamente." });
+    }
+
+    const verification = await verifyRegistrationResponse({
+      response,
+      expectedChallenge: pending.challenge,
+      expectedOrigin: pending.expectedOrigin,
+      expectedRPID: pending.rpID,
+      requireUserVerification: true,
+    });
+
+    if (!verification.verified || !verification.registrationInfo) {
+      return res.status(400).json({ ok: false, error: "No se pudo verificar la huella digital." });
+    }
+
+    const { credential } = verification.registrationInfo;
+    const credId = credential.id;
+    const publicKeyBase64 = Buffer.from(credential.publicKey).toString("base64");
+
+    const filtered = adminCredentialsState.webauthnCredentials.filter((c) => c.id !== credId);
+    filtered.push({
+      id: credId,
+      publicKeyBase64,
+      counter: credential.counter,
+      transports: Array.isArray(credential.transports) ? credential.transports : undefined,
+      rpId: pending.rpID,
+      label: typeof label === "string" ? label.trim().slice(0, 60) : "Dispositivo del Propietario",
+      createdAt: new Date().toISOString(),
+    });
+    // Keep up to 10 registered owner devices
+    adminCredentialsState.webauthnCredentials = filtered.slice(-10);
+    saveAdminCredentials();
+
+    return res.json({
+      ok: true,
+      webauthnConfigured: true,
+      webauthnTotalCount: adminCredentialsState.webauthnCredentials.length,
+    });
+  } catch (e) {
+    console.error("Error in /api/admin/webauthn/register-verify:", e);
+    return res.status(400).json({ ok: false, error: "No se pudo guardar la huella digital." });
+  }
+});
+
+// Authenticate with WebAuthn Fingerprint / Biometrics
+app.post("/api/admin/webauthn/login-options", async (req, res) => {
+  try {
+    const ctx = getWebAuthnContext(req);
+    if (!ctx) {
+      return res.status(400).json({ error: "Dominio inválido para biometría." });
+    }
+
+    const matchingCreds = adminCredentialsState.webauthnCredentials.filter(
+      (c) => c.rpId === ctx.rpID
+    );
+    if (matchingCreds.length === 0) {
+      return res.status(404).json({
+        error: "No hay una huella registrada todavía en este dominio. Ingresa con tu PIN o Google para activarla.",
+      });
+    }
+
+    pruneExpiredWebAuthnChallenges();
+    const options = await generateAuthenticationOptions({
+      rpID: ctx.rpID,
+      userVerification: "required",
+      allowCredentials: matchingCreds.map((c) => ({
+        id: c.id,
+        transports: c.transports as any,
+      })),
+    });
+
+    const challengeId = crypto.randomBytes(16).toString("hex");
+    webauthnChallenges.set(challengeId, {
+      challenge: options.challenge,
+      rpID: ctx.rpID,
+      expectedOrigin: ctx.expectedOrigin,
+      expiresAt: Date.now() + 2 * 60 * 1000,
+    });
+
+    return res.json({ challengeId, options });
+  } catch (e) {
+    console.error("Error in /api/admin/webauthn/login-options:", e);
+    return res.status(500).json({ error: "No se pudo iniciar la lectura biométrica." });
+  }
+});
+
+app.post("/api/admin/webauthn/login-verify", async (req, res) => {
+  try {
+    const ip = getClientIpKey(req);
+    if (!checkAdminPinRateLimit(ip)) {
+      return res.status(429).json({
+        ok: false,
+        error: "Demasiados intentos. Espera unos minutos antes de reintentar.",
+      });
+    }
+    const { challengeId, response } = req.body || {};
+    const pending = typeof challengeId === "string" ? webauthnChallenges.get(challengeId) : undefined;
+    if (typeof challengeId === "string") {
+      webauthnChallenges.delete(challengeId);
+    }
+    if (!pending || Date.now() > pending.expiresAt) {
+      return res.status(400).json({ ok: false, error: "La verificación biométrica expiró. Intenta nuevamente." });
+    }
+
+    const credId = typeof response?.id === "string" ? response.id : "";
+    const stored = adminCredentialsState.webauthnCredentials.find(
+      (c) => c.id === credId && c.rpId === pending.rpID
+    );
+    if (!stored) {
+      recordAdminPinFailure(ip);
+      return res.status(401).json({ ok: false, error: "Huella no reconocida en este dominio." });
+    }
+
+    const rawPk = Buffer.from(stored.publicKeyBase64, "base64");
+    const pkCopy = new Uint8Array(new ArrayBuffer(rawPk.byteLength));
+    pkCopy.set(rawPk);
+    const credential: WebAuthnCredential = {
+      id: stored.id,
+      publicKey: pkCopy,
+      counter: stored.counter,
+      transports: stored.transports as any,
+    };
+
+    const verification = await verifyAuthenticationResponse({
+      response,
+      expectedChallenge: pending.challenge,
+      expectedOrigin: pending.expectedOrigin,
+      expectedRPID: pending.rpID,
+      credential,
+      requireUserVerification: true,
+    });
+
+    if (!verification.verified) {
+      recordAdminPinFailure(ip);
+      return res.status(401).json({ ok: false, error: "Verificación biométrica rechazada." });
+    }
+
+    stored.counter = verification.authenticationInfo.newCounter;
+    saveAdminCredentials();
+    adminPinAttempts.delete(ip);
+
+    const { token, expiresAt } = signAdminSessionToken("webauthn");
+    return res.json({ ok: true, token, expiresAt });
+  } catch (e) {
+    console.error("Error in /api/admin/webauthn/login-verify:", e);
+    return res.status(400).json({ ok: false, error: "No se pudo verificar la huella digital." });
   }
 });
 

@@ -15,12 +15,20 @@ import {
   Stars,
   KeyRound,
   Globe,
+  Fingerprint,
 } from "lucide-react";
 import { audio } from "../lib/audio";
 import { useLanguage } from "../context/LanguageContext";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { VisitsStats } from "../types";
-import { deauthorizeAdmin, getAdminAuthHeaders } from "../lib/adminTracking";
+import {
+  deauthorizeAdmin,
+  getAdminAuthHeaders,
+  getAdminAuthCapabilities,
+  registerAdminBiometric,
+  changeAdminPin,
+  isBiometricSupported,
+} from "../lib/adminTracking";
 import { CANONICAL_PUBLIC_URL } from "../lib/constants";
 import {
   useMonetizationConfig,
@@ -128,6 +136,16 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
   const [saveStatus, setSaveStatus] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [isSavingCloud, setIsSavingCloud] = useState<boolean>(false);
 
+  // Owner biometric & PIN security settings
+  const [bioConfigured, setBioConfigured] = useState<boolean>(false);
+  const [bioTotalCount, setBioTotalCount] = useState<number>(0);
+  const [bioRegistering, setBioRegistering] = useState<boolean>(false);
+  const [bioFeedback, setBioFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+  const [pinEnvLocked, setPinEnvLocked] = useState<boolean>(false);
+  const [newOwnerPin, setNewOwnerPin] = useState<string>("");
+  const [pinSaving, setPinSaving] = useState<boolean>(false);
+  const [pinFeedback, setPinFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+
   useEffect(() => {
     setFormCfg(cloudConfig);
   }, [cloudConfig]);
@@ -143,6 +161,11 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
         }
       })
       .catch(() => {});
+    getAdminAuthCapabilities().then((authCaps) => {
+      setBioConfigured(Boolean(authCaps.webauthnConfigured));
+      setBioTotalCount(Number(authCaps.webauthnTotalCount) || 0);
+      setPinEnvLocked(Boolean(authCaps.pinEnvConfigured));
+    });
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -892,8 +915,111 @@ export const AdminConfigModal: React.FC<AdminConfigModalProps> = ({
               </p>
             </div>
 
+            {/* Creator Security: Fingerprint (WebAuthn) & Numeric PIN */}
+            <div className="p-3.5 rounded-2xl bg-emerald-950/25 border border-emerald-500/35 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 text-xs font-cinzel font-bold text-emerald-200">
+                  <Fingerprint className="w-4 h-4 text-emerald-400" />
+                  <span>Acceso Rápido: Huella Digital y PIN</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-500/30">
+                  {bioConfigured ? `Huella activa (${bioTotalCount})` : "Sin huella en este enlace"}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  disabled={bioRegistering || !isBiometricSupported()}
+                  onClick={async () => {
+                    triggerHaptic(HAPTIC_PATTERNS.click);
+                    setBioFeedback(null);
+                    setBioRegistering(true);
+                    const res = await registerAdminBiometric();
+                    setBioRegistering(false);
+                    if (res.ok) {
+                      setBioConfigured(true);
+                      setBioTotalCount((c) => c + 1);
+                      setBioFeedback({
+                        type: "ok",
+                        msg: "✓ ¡Huella registrada en este dispositivo! La próxima vez podrás entrar con un solo toque.",
+                      });
+                    } else {
+                      setBioFeedback({
+                        type: "err",
+                        msg: res.error || "No se pudo registrar la huella digital.",
+                      });
+                    }
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-emerald-600/85 hover:bg-emerald-500 disabled:opacity-60 text-white font-cinzel font-bold text-[11px] flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <Fingerprint className="w-4 h-4" />
+                  <span>
+                    {bioRegistering
+                      ? "Esperando huella del dispositivo..."
+                      : bioConfigured
+                      ? "Agregar otra Huella / Dispositivo"
+                      : "Activar Huella Digital / Face ID aquí"}
+                  </span>
+                </button>
+                {bioFeedback && (
+                  <p className={`text-[11px] font-gothic ${bioFeedback.type === "ok" ? "text-emerald-300" : "text-amber-200"}`}>
+                    {bioFeedback.msg}
+                  </p>
+                )}
+              </div>
+
+              {!pinEnvLocked && (
+                <div className="pt-2 border-t border-emerald-800/40 space-y-1.5">
+                  <label className="block text-[11px] font-cinzel text-amber-200">
+                    Cambiar tu Código Numérico (PIN de 4 a 12 dígitos)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={12}
+                      value={newOwnerPin}
+                      onChange={(e) => {
+                        setNewOwnerPin(e.target.value.replace(/\D/g, ""));
+                        if (pinFeedback) setPinFeedback(null);
+                      }}
+                      placeholder="Nuevo PIN numérico..."
+                      className="flex-1 px-2.5 py-1.5 rounded-lg bg-black/55 border border-emerald-500/35 text-xs font-mono tracking-widest text-emerald-100 placeholder:text-emerald-300/35 placeholder:tracking-normal focus:outline-none focus:border-emerald-400"
+                    />
+                    <button
+                      type="button"
+                      disabled={pinSaving || newOwnerPin.length < 4}
+                      onClick={async () => {
+                        triggerHaptic(HAPTIC_PATTERNS.click);
+                        setPinFeedback(null);
+                        setPinSaving(true);
+                        const res = await changeAdminPin(newOwnerPin);
+                        setPinSaving(false);
+                        if (res.ok) {
+                          setNewOwnerPin("");
+                          setPinFeedback({ type: "ok", msg: "✓ PIN numérico actualizado correctamente." });
+                        } else {
+                          setPinFeedback({ type: "err", msg: res.error || "No se pudo actualizar el PIN." });
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-cinzel font-bold text-[11px] transition cursor-pointer shrink-0"
+                    >
+                      {pinSaving ? "Guardando..." : "Guardar PIN"}
+                    </button>
+                  </div>
+                  {pinFeedback && (
+                    <p className={`text-[11px] font-gothic ${pinFeedback.type === "ok" ? "text-emerald-300" : "text-rose-300"}`}>
+                      {pinFeedback.msg}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="text-[11px] text-purple-300/70 pt-1 border-t border-purple-900/40">
-              💡 Para ingresar a este panel: Haz clic en el botón circular <strong className="text-amber-300">RA</strong> arriba a la izquierda e inicia sesión con tu cuenta de Google <strong className="text-amber-300">{OWNER_EMAIL}</strong>.
+              💡 Para ingresar a este panel: Haz clic en el botón circular <strong className="text-amber-300">RA</strong> arriba a la izquierda usando tu huella digital, código PIN o cuenta de Google <strong className="text-amber-300">{OWNER_EMAIL}</strong>.
             </div>
           </div>
         </div>

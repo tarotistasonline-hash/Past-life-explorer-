@@ -28,6 +28,7 @@ import {
 import { audio } from "../lib/audio";
 import { triggerHaptic, HAPTIC_PATTERNS } from "../lib/haptics";
 import { copyMysticShareText } from "../lib/parchmentExport";
+import { getAdminAuthHeaders, isAdminSession } from "../lib/adminTracking";
 import treeOfLifeImg from "../assets/images/kabbalah_tree_attractive_1795389197170.jpg";
 
 export const KABBALAH_STORAGE_KEY = "ouija_kabbalah_mission_v1";
@@ -395,13 +396,18 @@ export const KabbalahMissionSection: React.FC<KabbalahMissionSectionProps> = ({
     let finalReading: KabbalahReading = localReading;
 
     try {
+      const authHeaders = isAdminSession() ? await getAdminAuthHeaders() : {};
       const res = await fetch("/api/kabbalah/mission", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
         body: JSON.stringify({
           fullName: trimmedName,
           birthDate,
           language,
+          isAdmin: isAdminSession(),
         }),
       });
 

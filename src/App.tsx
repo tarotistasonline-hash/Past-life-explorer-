@@ -250,12 +250,17 @@ export default function App() {
       }
 
       const isAdmin = isAuthorizedAdmin() && isAdminSession();
-
+      let isNewSession = true;
       try {
-        const isNewSession = !sessionStorage.getItem("ouija_session_logged");
+        isNewSession = !sessionStorage.getItem("ouija_session_logged");
         if (isNewSession) {
           sessionStorage.setItem("ouija_session_logged", "true");
         }
+      } catch {
+        // ignore storage restrictions
+      }
+
+      try {
         const authHeaders = isAdmin ? await getAdminAuthHeaders() : {};
 
         const res = await fetch("/api/visits/hit", {
@@ -282,7 +287,7 @@ export default function App() {
       }
 
       // Direct Firestore transaction fallback if backend endpoint was unreachable
-      if (!isAdmin) {
+      if (!isAdmin && isNewSession) {
         try {
           const d = new Date();
           const todayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
