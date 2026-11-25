@@ -826,36 +826,36 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActivePortalPanel(null)}
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === null
-              ? "bg-purple-900/80 text-purple-100 border border-purple-500/60 shadow-md"
-              : "text-purple-400 hover:text-purple-200"
+              ? "bg-purple-900/80 text-purple-100 border-purple-400/75 shadow-[0_0_15px_rgba(168,85,247,0.35)]"
+              : "text-purple-300 hover:text-purple-100 hover:bg-purple-950/50 border-purple-500/35"
           }`}
         >
-          <Radio className="w-3.5 h-3.5 text-purple-400" />
+          <Radio className="w-3.5 h-3.5 text-purple-300" />
           <span>{t("navOuija")}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActivePortalPanel("TAROT")}
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === "TAROT"
-              ? "bg-gradient-to-r from-violet-600 to-purple-700 text-white border border-violet-300/60 shadow-md"
-              : "text-violet-300 hover:text-violet-100 hover:bg-purple-950/50"
+              ? "bg-gradient-to-r from-fuchsia-700 to-pink-700 text-white border-fuchsia-300/75 shadow-[0_0_15px_rgba(217,70,239,0.4)]"
+              : "text-fuchsia-300 hover:text-fuchsia-100 hover:bg-fuchsia-950/40 border-fuchsia-500/35"
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+          <Sparkles className="w-3.5 h-3.5 text-fuchsia-300" />
           <span>{t("navTarot")}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActivePortalPanel("NATAL")}
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === "NATAL"
-              ? "bg-purple-900/80 text-purple-100 border border-amber-400/60 shadow-md"
-              : "text-amber-200/90 hover:text-amber-100 hover:bg-purple-950/50"
+              ? "bg-amber-950/85 text-amber-100 border-amber-400/75 shadow-[0_0_15px_rgba(245,158,11,0.35)]"
+              : "text-amber-300 hover:text-amber-100 hover:bg-amber-950/40 border-amber-500/35"
           }`}
         >
           <Orbit className="w-3.5 h-3.5 text-amber-300" />
@@ -865,14 +865,14 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActivePortalPanel("CABALA")}
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === "CABALA"
-              ? "bg-amber-950/85 text-amber-100 border border-amber-400/75 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-              : "text-amber-200/90 hover:text-amber-100 hover:bg-amber-950/35 border border-amber-500/35"
+              ? "bg-emerald-950/85 text-emerald-100 border-emerald-400/75 shadow-[0_0_15px_rgba(16,185,129,0.35)]"
+              : "text-emerald-300 hover:text-emerald-100 hover:bg-emerald-950/40 border-emerald-500/35"
           }`}
           title="Tu Misión de Vida según la Cábala (Árbol de la Vida)"
         >
-          <Compass className="w-3.5 h-3.5 text-amber-300" />
+          <Compass className="w-3.5 h-3.5 text-emerald-300" />
           <span>Misión Cábala</span>
         </button>
 
@@ -880,13 +880,13 @@ export default function App() {
           type="button"
           onClick={() => setActivePortalPanel("QUIROLOGIA")}
           title="Abrir Panel de Quirología Mística"
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === "QUIROLOGIA"
-              ? "bg-amber-950/85 text-amber-100 border border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.4)]"
-              : "text-amber-300 hover:text-amber-100 hover:bg-amber-950/40 border border-amber-500/35"
+              ? "bg-rose-950/85 text-rose-100 border-rose-400/80 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+              : "text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 border-rose-500/35"
           }`}
         >
-          <Hand className="w-3.5 h-3.5 text-amber-300" />
+          <Hand className="w-3.5 h-3.5 text-rose-300" />
           <span>Quirología</span>
         </button>
 
@@ -894,10 +894,10 @@ export default function App() {
           type="button"
           onClick={() => setActivePortalPanel("ANTENA")}
           title="Abrir Panel de Antena Dimensional"
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === "ANTENA"
-              ? "bg-cyan-950/90 text-cyan-200 border border-cyan-400/80 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
-              : "text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40 border border-cyan-500/35"
+              ? "bg-cyan-950/90 text-cyan-200 border-cyan-400/80 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
+              : "text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40 border-cyan-500/35"
           }`}
         >
           <Antenna className="w-3.5 h-3.5 text-cyan-300" />
@@ -1087,17 +1087,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("TAROT")}
-                  className="group text-left p-4 rounded-2xl bg-[#100820]/90 hover:bg-[#180d2f] border border-violet-500/40 hover:border-violet-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#180820]/90 hover:bg-[#240c30] border border-fuchsia-500/40 hover:border-fuchsia-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
                 >
                   <div className="flex items-center justify-between">
-                    <Sparkles className="w-5 h-5 text-violet-300" />
-                    <ArrowUpRight className="w-4 h-4 text-violet-400/70 group-hover:text-violet-200 transition" />
+                    <Sparkles className="w-5 h-5 text-fuchsia-300" />
+                    <ArrowUpRight className="w-4 h-4 text-fuchsia-400/70 group-hover:text-fuchsia-200 transition" />
                   </div>
                   <div>
-                    <div className="font-cinzel font-bold text-sm text-purple-100">
+                    <div className="font-cinzel font-bold text-sm text-fuchsia-200">
                       {t("navTarot")}
                     </div>
-                    <p className="text-xs font-gothic text-purple-300/80 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-fuchsia-100/75 mt-0.5 leading-snug">
                       {launcherCopy.tarotDesc}
                     </p>
                   </div>
@@ -1106,17 +1106,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("NATAL")}
-                  className="group text-left p-4 rounded-2xl bg-[#100820]/90 hover:bg-[#180d2f] border border-amber-500/40 hover:border-amber-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#1a1206]/90 hover:bg-[#261a08] border border-amber-500/40 hover:border-amber-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
                 >
                   <div className="flex items-center justify-between">
                     <Orbit className="w-5 h-5 text-amber-300" />
                     <ArrowUpRight className="w-4 h-4 text-amber-400/70 group-hover:text-amber-200 transition" />
                   </div>
                   <div>
-                    <div className="font-cinzel font-bold text-sm text-amber-100">
+                    <div className="font-cinzel font-bold text-sm text-amber-200">
                       {t("navNatal")}
                     </div>
-                    <p className="text-xs font-gothic text-purple-300/80 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-amber-100/75 mt-0.5 leading-snug">
                       {launcherCopy.natalDesc}
                     </p>
                   </div>
@@ -1125,17 +1125,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("CABALA")}
-                  className="group text-left p-4 rounded-2xl bg-[#100820]/90 hover:bg-[#180d2f] border border-amber-500/40 hover:border-amber-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#071813]/90 hover:bg-[#0b261d] border border-emerald-500/40 hover:border-emerald-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
                 >
                   <div className="flex items-center justify-between">
-                    <Compass className="w-5 h-5 text-amber-300" />
-                    <ArrowUpRight className="w-4 h-4 text-amber-400/70 group-hover:text-amber-200 transition" />
+                    <Compass className="w-5 h-5 text-emerald-300" />
+                    <ArrowUpRight className="w-4 h-4 text-emerald-400/70 group-hover:text-emerald-200 transition" />
                   </div>
                   <div>
-                    <div className="font-cinzel font-bold text-sm text-amber-100">
+                    <div className="font-cinzel font-bold text-sm text-emerald-200">
                       {launcherCopy.cabalaTitle}
                     </div>
-                    <p className="text-xs font-gothic text-purple-300/80 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-emerald-100/75 mt-0.5 leading-snug">
                       {launcherCopy.cabalaDesc}
                     </p>
                   </div>
@@ -1144,17 +1144,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("QUIROLOGIA")}
-                  className="group text-left p-4 rounded-2xl bg-[#100820]/90 hover:bg-[#180d2f] border border-amber-500/40 hover:border-amber-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#1d0812]/90 hover:bg-[#2b0c1b] border border-rose-500/40 hover:border-rose-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
                 >
                   <div className="flex items-center justify-between">
-                    <Hand className="w-5 h-5 text-amber-300" />
-                    <ArrowUpRight className="w-4 h-4 text-amber-400/70 group-hover:text-amber-200 transition" />
+                    <Hand className="w-5 h-5 text-rose-300" />
+                    <ArrowUpRight className="w-4 h-4 text-rose-400/70 group-hover:text-rose-200 transition" />
                   </div>
                   <div>
-                    <div className="font-cinzel font-bold text-sm text-amber-100">
+                    <div className="font-cinzel font-bold text-sm text-rose-200">
                       {launcherCopy.quirologiaTitle}
                     </div>
-                    <p className="text-xs font-gothic text-purple-300/80 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-rose-100/75 mt-0.5 leading-snug">
                       {launcherCopy.quirologiaDesc}
                     </p>
                   </div>
@@ -1170,10 +1170,10 @@ export default function App() {
                     <ArrowUpRight className="w-4 h-4 text-cyan-400/70 group-hover:text-cyan-200 transition" />
                   </div>
                   <div>
-                    <div className="font-cinzel font-bold text-sm text-cyan-100">
+                    <div className="font-cinzel font-bold text-sm text-cyan-200">
                       {launcherCopy.antenaTitle}
                     </div>
-                    <p className="text-xs font-gothic text-cyan-200/75 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-cyan-100/75 mt-0.5 leading-snug">
                       {launcherCopy.antenaDesc}
                     </p>
                   </div>

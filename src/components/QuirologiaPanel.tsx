@@ -75,7 +75,7 @@ export const QuirologiaPanel: React.FC = () => {
     <section
       id="quirologia-section"
       aria-label={copy.title}
-      className="w-full max-w-4xl rounded-3xl border-2 border-amber-400/60 shadow-[0_0_50px_rgba(245,158,11,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300"
+      className="w-full max-w-4xl rounded-3xl border-2 border-rose-400/60 shadow-[0_0_50px_rgba(244,63,94,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300"
       style={{
         backgroundImage: `url(${FALLBACK_BG_IMAGE})`,
         backgroundSize: "cover",
@@ -93,38 +93,38 @@ export const QuirologiaPanel: React.FC = () => {
 
         {/* Soft atmospheric gradients */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#060212]/95 via-[#060212]/30 to-black/30 pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(245,158,11,0.25),transparent_65%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(244,63,94,0.22),transparent_65%)] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(168,85,247,0.2),transparent_60%)] pointer-events-none" />
       </div>
 
       {/* Top Bar Badges */}
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-2.5">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 border border-amber-400/60 text-xs font-cinzel font-semibold uppercase tracking-[0.18em] text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.3)] backdrop-blur-md">
-          <Hand className="w-4 h-4 text-amber-300 animate-pulse" />
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 border border-rose-400/60 text-xs font-cinzel font-semibold uppercase tracking-[0.18em] text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.3)] backdrop-blur-md">
+          <Hand className="w-4 h-4 text-rose-300 animate-pulse" />
           <span>{copy.eyebrow}</span>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/80 border border-amber-500/40 text-[11px] font-mono text-amber-300/90 shadow-sm backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-950/80 border border-rose-500/40 text-[11px] font-mono text-rose-200/90 shadow-sm backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping inline-block" />
           <span>{copy.badge}</span>
         </div>
       </div>
 
       {/* Center visual breathing space */}
       <div className="relative z-10 my-auto py-4 pointer-events-none flex justify-center items-center">
-        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border border-amber-400/20 animate-ping opacity-25" />
+        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border border-rose-400/20 animate-ping opacity-25" />
       </div>
 
       {/* Bottom Floating Glass Card */}
-      <div className="relative z-10 bg-black/80 sm:bg-black/70 border border-amber-500/50 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.8)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="relative z-10 bg-black/80 sm:bg-black/70 border border-rose-500/50 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.8)] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1.5 max-w-xl">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-300" />
-            <h3 className="font-cinzel font-bold text-lg sm:text-2xl text-white tracking-wide drop-shadow-md">
+            <Sparkles className="w-4 h-4 text-rose-300" />
+            <h3 className="font-cinzel font-bold text-lg sm:text-2xl text-rose-100 tracking-wide drop-shadow-md">
               {copy.title}
             </h3>
           </div>
-          <p className="font-gothic text-xs sm:text-sm text-amber-100/90 leading-relaxed drop-shadow">
+          <p className="font-gothic text-xs sm:text-sm text-rose-100/90 leading-relaxed drop-shadow">
             {copy.description}
           </p>
         </div>
@@ -134,13 +134,13 @@ export const QuirologiaPanel: React.FC = () => {
             href={QUIRO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-slate-950 font-cinzel font-bold text-xs sm:text-sm tracking-wide border border-amber-200/90 shadow-[0_0_25px_rgba(245,158,11,0.5)] transition flex items-center justify-center gap-2.5 whitespace-nowrap transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-rose-700 hover:from-rose-400 hover:via-pink-500 hover:to-rose-600 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wide border border-rose-200/80 shadow-[0_0_25px_rgba(244,63,94,0.45)] transition flex items-center justify-center gap-2.5 whitespace-nowrap transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <Hand className="w-4 h-4" />
             <span>{copy.cta}</span>
             <ExternalLink className="w-4 h-4" />
           </a>
-          <span className="text-[11px] font-mono text-amber-300/80 text-center sm:text-right drop-shadow-sm">
+          <span className="text-[11px] font-mono text-rose-300/85 text-center sm:text-right drop-shadow-sm">
             quirologia-astral.app
           </span>
         </div>
