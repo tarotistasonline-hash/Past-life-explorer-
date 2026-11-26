@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
-import { X, Sparkles, Orbit, Compass, Antenna, Hand, ScanFace, ArrowLeft } from "lucide-react";
+import { X, Sparkles, Orbit, Compass, Antenna, Hand, ScanFace, PenTool, ArrowLeft } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 
-export type PortalPanelId = "TAROT" | "NATAL" | "CABALA" | "ANTENA" | "QUIROLOGIA" | "RASGOS";
+export type PortalPanelId = "TAROT" | "NATAL" | "CABALA" | "ANTENA" | "QUIROLOGIA" | "RASGOS" | "LETRA";
 
 interface PortalModuleModalProps {
   activePanel: PortalPanelId | null;
@@ -20,6 +20,7 @@ const MODAL_TITLES: Record<
     ANTENA: string;
     QUIROLOGIA: string;
     RASGOS: string;
+    LETRA: string;
     backToOuija: string;
     close: string;
   }
@@ -30,7 +31,8 @@ const MODAL_TITLES: Record<
     CABALA: "Kabalah",
     ANTENA: "Antena Dimensional",
     QUIROLOGIA: "Tus manos hablan",
-    RASGOS: "Tus rasgos expresan",
+    RASGOS: "Tu rostro dice mucho",
+    LETRA: "Tu letra te delata",
     backToOuija: "Volver a la Tabla Ouija",
     close: "Cerrar panel",
   },
@@ -41,6 +43,7 @@ const MODAL_TITLES: Record<
     ANTENA: "Dimensional Antenna",
     QUIROLOGIA: "Your Hands Speak",
     RASGOS: "Your Features Express",
+    LETRA: "Your Handwriting Reveals You",
     backToOuija: "Back to Ouija Board",
     close: "Close panel",
   },
@@ -51,6 +54,7 @@ const MODAL_TITLES: Record<
     ANTENA: "Antena Dimensional",
     QUIROLOGIA: "Suas mãos falam",
     RASGOS: "Seus traços expressam",
+    LETRA: "Sua letra te revela",
     backToOuija: "Voltar ao Tabuleiro Ouija",
     close: "Fechar painel",
   },
@@ -61,6 +65,7 @@ const MODAL_TITLES: Record<
     ANTENA: "Antenne Dimensionnelle",
     QUIROLOGIA: "Vos mains parlent",
     RASGOS: "Vos traits expriment",
+    LETRA: "Votre écriture vous trahit",
     backToOuija: "Retour à la Planche Ouija",
     close: "Fermer le panneau",
   },
@@ -71,6 +76,7 @@ const MODAL_TITLES: Record<
     ANTENA: "Antenna Dimensionale",
     QUIROLOGIA: "Le tue mani parlano",
     RASGOS: "I tuoi tratti esprimono",
+    LETRA: "La tua scrittura ti rivela",
     backToOuija: "Torna alla Tavola Ouija",
     close: "Chiudi pannello",
   },
@@ -81,6 +87,7 @@ const MODAL_TITLES: Record<
     ANTENA: "Dimensionale Antenne",
     QUIROLOGIA: "Deine Hände sprechen",
     RASGOS: "Deine Züge drücken aus",
+    LETRA: "Deine Handschrift verrät dich",
     backToOuija: "Zurück zum Ouija-Brett",
     close: "Panel schließen",
   },
@@ -165,6 +172,13 @@ export const PortalModuleModal: React.FC<PortalModuleModalProps> = ({
       activeClass: "bg-cyan-950/85 text-cyan-100 border-cyan-400/75 shadow-md",
       inactiveClass: "text-cyan-300/85 hover:text-cyan-100 border-cyan-500/25 hover:bg-cyan-950/40",
     },
+    {
+      id: "LETRA",
+      label: copy.LETRA,
+      icon: <PenTool className="w-3.5 h-3.5 text-purple-300" />,
+      activeClass: "bg-purple-950/85 text-purple-100 border-purple-400/75 shadow-md",
+      inactiveClass: "text-purple-300/85 hover:text-purple-100 border-purple-500/25 hover:bg-purple-950/40",
+    },
   ];
 
   return (
@@ -179,7 +193,7 @@ export const PortalModuleModal: React.FC<PortalModuleModalProps> = ({
         }
       }}
     >
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl bg-[#0c0716]/98 border border-amber-500/35 shadow-[0_0_50px_rgba(124,58,237,0.3)] overflow-hidden">
+      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl bg-[#0c0716]/98 border-2 border-amber-400/80 shadow-[0_0_60px_rgba(245,158,11,0.35)] overflow-hidden">
         {/* Sticky Modal Header with Module Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-3 border-b border-purple-900/50 bg-[#120a21]/95 shrink-0">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">

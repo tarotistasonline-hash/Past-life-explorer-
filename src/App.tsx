@@ -6,6 +6,7 @@ import { PastLifeModal } from "./components/PastLifeModal";
 import { AntenaDimensionalPanel } from "./components/AntenaDimensionalPanel";
 import { QuirologiaPanel } from "./components/QuirologiaPanel";
 import { TusRasgosPanel } from "./components/TusRasgosPanel";
+import { TuLetraPanel } from "./components/TuLetraPanel";
 import { AtmosphereControls } from "./components/AtmosphereControls";
 import { DailyTarotCard } from "./components/DailyTarotCard";
 import { NatalChartSection, NatalRequestPayload } from "./components/NatalChartSection";
@@ -15,7 +16,7 @@ import { StarfieldBackground } from "./components/StarfieldBackground";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, Hand, ScanFace, ArrowUpRight } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, Hand, ScanFace, PenTool, ArrowUpRight } from "lucide-react";
 import { PortalModuleModal, PortalPanelId } from "./components/PortalModuleModal";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminAuthHeaders, isAuthorizedAdmin, subscribeAdminAuth } from "./lib/adminTracking";
@@ -907,7 +908,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActivePortalPanel("RASGOS")}
-          title="Abrir Panel Tus rasgos expresan"
+          title="Abrir Panel Tu rostro dice mucho"
           className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === "RASGOS"
               ? "bg-blue-950/85 text-blue-100 border-blue-400/80 shadow-[0_0_15px_rgba(59,130,246,0.4)]"
@@ -915,7 +916,7 @@ export default function App() {
           }`}
         >
           <ScanFace className="w-3.5 h-3.5 text-blue-300" />
-          <span>Tus rasgos expresan</span>
+          <span>Tu rostro dice mucho</span>
         </button>
 
         <button
@@ -930,6 +931,20 @@ export default function App() {
         >
           <Antenna className="w-3.5 h-3.5 text-cyan-300" />
           <span>Antena Dimensional</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActivePortalPanel("LETRA")}
+          title="Abrir Panel Tu letra te delata"
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
+            activePortalPanel === "LETRA"
+              ? "bg-purple-950/90 text-purple-200 border-purple-400/80 shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+              : "text-purple-300 hover:text-purple-100 hover:bg-purple-950/40 border-purple-500/35"
+          }`}
+        >
+          <PenTool className="w-3.5 h-3.5 text-purple-300" />
+          <span>Tu letra te delata</span>
         </button>
       </nav>
 
@@ -1022,7 +1037,7 @@ export default function App() {
             language === "en"
               ? {
                   heading: "Other Portal Panels",
-                  sub: "Open Tarot, Natal Chart, Kabalah, Your Hands Speak, Facial Traits, or Antenna in its own panel to keep the screen compact.",
+                  sub: "Open Tarot, Natal Chart, Kabalah, Your Hands Speak, Facial Traits, Antenna, or Handwriting in its own panel to keep the screen compact.",
                   tarotDesc: "Daily arcana, 3-card karmic spread, and 22 voice-guided cards.",
                   natalDesc: "Planetary wheel, Sun, Moon, Ascendant, voice, and PDF export.",
                   cabalaTitle: "Kabalah",
@@ -1033,11 +1048,13 @@ export default function App() {
                   rasgosDesc: "Facial physiognomy, gaze essence and energetic traits.",
                   antenaTitle: "Dimensional Antenna",
                   antenaDesc: "Interstellar frequency and cosmic consciousness portal.",
+                  letraTitle: "Your Handwriting Reveals You",
+                  letraDesc: "Analyze your strokes, slope, pressure, and subconscious.",
                 }
               : language === "pt"
               ? {
                   heading: "Outros Painéis do Portal",
-                  sub: "Abra Tarot, Mapa Astral, Kabalah, Suas Mãos Falam, Traços ou Antena em seu próprio painel para manter a tela compacta.",
+                  sub: "Abra Tarot, Mapa Astral, Kabalah, Suas Mãos Falam, Traços, Antena ou Letra em seu próprio painel para manter a tela compacta.",
                   tarotDesc: "Arcano do dia, tiragem de 3 cartas e 22 arcanos com voz.",
                   natalDesc: "Roda planetária, Sol, Lua, Ascendente, voz e PDF.",
                   cabalaTitle: "Kabalah",
@@ -1048,11 +1065,13 @@ export default function App() {
                   rasgosDesc: "Fisiognomia facial, essência do olhar e vibração.",
                   antenaTitle: "Antena Dimensional",
                   antenaDesc: "Portal de frequência interestelar e contato cósmico.",
+                  letraTitle: "Sua letra te revela",
+                  letraDesc: "Analise seus traços, inclinação, pressão e subconsciente.",
                 }
               : language === "fr"
               ? {
                   heading: "Autres Panneaux du Portail",
-                  sub: "Ouvrez Tarot, Thème Natal, Kabalah, Vos Mains Parlent, Traits ou Antenne dans un panneau dédié pour garder l'écran compact.",
+                  sub: "Ouvrez Tarot, Thème Natal, Kabalah, Vos Mains Parlent, Traits, Antenne ou Écriture dans un panneau dédié.",
                   tarotDesc: "Arcane du jour, tirage à 3 cartes et 22 arcanes avec voix.",
                   natalDesc: "Roue planétaire, Soleil, Lune, Ascendant, voix et PDF.",
                   cabalaTitle: "Kabalah",
@@ -1063,11 +1082,13 @@ export default function App() {
                   rasgosDesc: "Physiognomonie faciale, essence du regard et vibration.",
                   antenaTitle: "Antenne Dimensionnelle",
                   antenaDesc: "Portail de fréquence interstellaire et contact cosmique.",
+                  letraTitle: "Votre écriture vous trahit",
+                  letraDesc: "Analysez vos traits, votre inclinaison et votre pression.",
                 }
               : language === "it"
               ? {
                   heading: "Altri Pannelli del Portale",
-                  sub: "Apri Tarocchi, Tema Natale, Kabalah, Le Tue Mani Parlano, Tratti o Antenna in un pannello dedicato per mantenere la schermata compatta.",
+                  sub: "Apri Tarocchi, Tema Natale, Kabalah, Le Tue Mani Parlano, Tratti, Antenna o Scrittura in un pannello dedicato.",
                   tarotDesc: "Arcano del giorno, stesa a 3 carte e 22 arcani con voce.",
                   natalDesc: "Ruota planetaria, Sole, Luna, Ascendente, voce e PDF.",
                   cabalaTitle: "Kabalah",
@@ -1078,11 +1099,13 @@ export default function App() {
                   rasgosDesc: "Fisiognomica del viso, essenza dello sguardo e vibrazione.",
                   antenaTitle: "Antenna Dimensionale",
                   antenaDesc: "Portale di frequenza interstellare e contatto cosmico.",
+                  letraTitle: "La tua scrittura ti rivela",
+                  letraDesc: "Analizza i tuoi tratti, l'inclinazione e la pressione.",
                 }
               : language === "de"
               ? {
                   heading: "Weitere Portal-Panels",
-                  sub: "Öffne Tarot, Geburtshoroskop, Kabalah, Deine Hände Sprechen, Züge oder Antenne im eigenen Panel für eine kompakte Ansicht.",
+                  sub: "Öffne Tarot, Geburtshoroskop, Kabalah, Deine Hände Sprechen, Züge, Antenne oder Handschrift im eigenen Panel.",
                   tarotDesc: "Tagesarkana, 3-Karten-Legung und 22 Arkana mit Stimme.",
                   natalDesc: "Planetenrad, Sonne, Mond, Aszendent, Stimme und PDF.",
                   cabalaTitle: "Kabalah",
@@ -1093,51 +1116,55 @@ export default function App() {
                   rasgosDesc: "Physiognomie des Gesichts, Ausstrahlung und Energie.",
                   antenaTitle: "Dimensionale Antenne",
                   antenaDesc: "Interstellares Frequenzportal und kosmischer Kontakt.",
+                  letraTitle: "Deine Handschrift verrät dich",
+                  letraDesc: "Analysiere deine Striche, Neigung und Druck.",
                 }
               : {
                   heading: "Otros Paneles del Portal",
-                  sub: "Abre Tarot, Carta Natal, Kabalah, Tus manos hablan, Tus rasgos expresan o Antena en su propio panel para mantener la pantalla compacta.",
+                  sub: "Abre Tarot, Carta Natal, Kabalah, Tus manos hablan, Tu rostro dice mucho, Antena o Tu letra te delata en su propio panel para mantener la pantalla compacta.",
                   tarotDesc: "Arcano del día, tirada de 3 cartas y 22 arcanos con voz.",
                   natalDesc: "Rueda planetaria, Sol, Luna, Ascendente y PDF.",
                   cabalaTitle: "Kabalah",
                   cabalaDesc: "Árbol de la Vida, Sefirá natal, Gematría y Tikkún.",
                   quirologiaTitle: "Tus manos hablan",
                   quirologiaDesc: "Lectura de manos, líneas astrales y montes planetarios.",
-                  rasgosTitle: "Tus rasgos expresan",
+                  rasgosTitle: "Tu rostro dice mucho",
                   rasgosDesc: "Fisiognomía mística, esencia de tu mirada y vibración.",
                   antenaTitle: "Antena Dimensional",
                   antenaDesc: "Portal de frecuencia interestelar y contacto cósmico.",
+                  letraTitle: "Tu letra te delata",
+                  letraDesc: "Grafología mística, análisis de trazos, presión y subconsciente.",
                 };
 
           return (
             <section
               aria-label={launcherCopy.heading}
-              className="w-full max-w-4xl border-t border-purple-900/40 pt-5 space-y-3"
+              className="w-full max-w-4xl border-t-2 border-amber-500/60 pt-5 space-y-3"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
-                <h2 className="font-cinzel font-bold text-sm text-amber-200 tracking-wide">
+                <h2 className="font-cinzel font-bold text-sm text-amber-300 tracking-wide">
                   {launcherCopy.heading}
                 </h2>
-                <p className="text-xs font-gothic text-purple-300/75">
+                <p className="text-xs font-gothic text-purple-200/85">
                   {launcherCopy.sub}
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("TAROT")}
-                  className="group text-left p-4 rounded-2xl bg-[#180820]/90 hover:bg-[#240c30] border border-fuchsia-500/40 hover:border-fuchsia-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#1e0a2d]/95 hover:bg-[#290d40] border-2 border-fuchsia-400/80 hover:border-fuchsia-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(217,70,239,0.25)] hover:shadow-[0_0_35px_rgba(217,70,239,0.4)]"
                 >
                   <div className="flex items-center justify-between">
                     <Sparkles className="w-5 h-5 text-fuchsia-300" />
-                    <ArrowUpRight className="w-4 h-4 text-fuchsia-400/70 group-hover:text-fuchsia-200 transition" />
+                    <ArrowUpRight className="w-4 h-4 text-fuchsia-300 group-hover:text-white transition" />
                   </div>
                   <div>
                     <div className="font-cinzel font-bold text-sm text-fuchsia-200">
                       {t("navTarot")}
                     </div>
-                    <p className="text-xs font-gothic text-fuchsia-100/75 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-fuchsia-100/80 mt-0.5 leading-snug">
                       {launcherCopy.tarotDesc}
                     </p>
                   </div>
@@ -1146,17 +1173,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("NATAL")}
-                  className="group text-left p-4 rounded-2xl bg-[#1a1206]/90 hover:bg-[#261a08] border border-amber-500/40 hover:border-amber-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#211708]/95 hover:bg-[#2e210b] border-2 border-amber-400/80 hover:border-amber-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(245,158,11,0.25)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)]"
                 >
                   <div className="flex items-center justify-between">
                     <Orbit className="w-5 h-5 text-amber-300" />
-                    <ArrowUpRight className="w-4 h-4 text-amber-400/70 group-hover:text-amber-200 transition" />
+                    <ArrowUpRight className="w-4 h-4 text-amber-300 group-hover:text-white transition" />
                   </div>
                   <div>
                     <div className="font-cinzel font-bold text-sm text-amber-200">
                       {t("navNatal")}
                     </div>
-                    <p className="text-xs font-gothic text-amber-100/75 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-amber-100/80 mt-0.5 leading-snug">
                       {launcherCopy.natalDesc}
                     </p>
                   </div>
@@ -1165,17 +1192,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("CABALA")}
-                  className="group text-left p-4 rounded-2xl bg-[#071813]/90 hover:bg-[#0b261d] border border-emerald-500/40 hover:border-emerald-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#072219]/95 hover:bg-[#0b3326] border-2 border-emerald-400/80 hover:border-emerald-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:shadow-[0_0_35px_rgba(16,185,129,0.4)]"
                 >
                   <div className="flex items-center justify-between">
                     <Compass className="w-5 h-5 text-emerald-300" />
-                    <ArrowUpRight className="w-4 h-4 text-emerald-400/70 group-hover:text-emerald-200 transition" />
+                    <ArrowUpRight className="w-4 h-4 text-emerald-300 group-hover:text-white transition" />
                   </div>
                   <div>
                     <div className="font-cinzel font-bold text-sm text-emerald-200">
                       {launcherCopy.cabalaTitle}
                     </div>
-                    <p className="text-xs font-gothic text-emerald-100/75 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-emerald-100/80 mt-0.5 leading-snug">
                       {launcherCopy.cabalaDesc}
                     </p>
                   </div>
@@ -1184,17 +1211,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("QUIROLOGIA")}
-                  className="group text-left p-4 rounded-2xl bg-[#1d0812]/90 hover:bg-[#2b0c1b] border border-rose-500/40 hover:border-rose-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#260918]/95 hover:bg-[#380d24] border-2 border-rose-400/80 hover:border-rose-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(244,63,94,0.25)] hover:shadow-[0_0_35px_rgba(244,63,94,0.4)]"
                 >
                   <div className="flex items-center justify-between">
                     <Hand className="w-5 h-5 text-rose-300" />
-                    <ArrowUpRight className="w-4 h-4 text-rose-400/70 group-hover:text-rose-200 transition" />
+                    <ArrowUpRight className="w-4 h-4 text-rose-300 group-hover:text-white transition" />
                   </div>
                   <div>
                     <div className="font-cinzel font-bold text-sm text-rose-200">
                       {launcherCopy.quirologiaTitle}
                     </div>
-                    <p className="text-xs font-gothic text-rose-100/75 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-rose-100/80 mt-0.5 leading-snug">
                       {launcherCopy.quirologiaDesc}
                     </p>
                   </div>
@@ -1203,17 +1230,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("RASGOS")}
-                  className="group text-left p-4 rounded-2xl bg-[#071024]/90 hover:bg-[#0c1a38] border border-blue-500/40 hover:border-blue-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#081532]/95 hover:bg-[#0c2049] border-2 border-blue-400/80 hover:border-blue-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(59,130,246,0.25)] hover:shadow-[0_0_35px_rgba(59,130,246,0.4)]"
                 >
                   <div className="flex items-center justify-between">
                     <ScanFace className="w-5 h-5 text-blue-300" />
-                    <ArrowUpRight className="w-4 h-4 text-blue-400/70 group-hover:text-blue-200 transition" />
+                    <ArrowUpRight className="w-4 h-4 text-blue-300 group-hover:text-white transition" />
                   </div>
                   <div>
                     <div className="font-cinzel font-bold text-sm text-blue-200">
                       {launcherCopy.rasgosTitle}
                     </div>
-                    <p className="text-xs font-gothic text-blue-100/75 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-blue-100/80 mt-0.5 leading-snug">
                       {launcherCopy.rasgosDesc}
                     </p>
                   </div>
@@ -1222,18 +1249,37 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActivePortalPanel("ANTENA")}
-                  className="group text-left p-4 rounded-2xl bg-[#0a1420]/90 hover:bg-[#0e1d2f] border border-cyan-500/40 hover:border-cyan-400/80 transition cursor-pointer flex flex-col justify-between gap-3 shadow-lg"
+                  className="group text-left p-4 rounded-2xl bg-[#091b2c]/95 hover:bg-[#0e273f] border-2 border-cyan-400/80 hover:border-cyan-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(34,211,238,0.25)] hover:shadow-[0_0_35px_rgba(34,211,238,0.4)]"
                 >
                   <div className="flex items-center justify-between">
                     <Antenna className="w-5 h-5 text-cyan-300" />
-                    <ArrowUpRight className="w-4 h-4 text-cyan-400/70 group-hover:text-cyan-200 transition" />
+                    <ArrowUpRight className="w-4 h-4 text-cyan-300 group-hover:text-white transition" />
                   </div>
                   <div>
                     <div className="font-cinzel font-bold text-sm text-cyan-200">
                       {launcherCopy.antenaTitle}
                     </div>
-                    <p className="text-xs font-gothic text-cyan-100/75 mt-0.5 leading-snug">
+                    <p className="text-xs font-gothic text-cyan-100/80 mt-0.5 leading-snug">
                       {launcherCopy.antenaDesc}
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActivePortalPanel("LETRA")}
+                  className="group text-left p-4 rounded-2xl bg-[#1b0a2f]/95 hover:bg-[#280e46] border-2 border-purple-400/80 hover:border-purple-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(168,85,247,0.25)] hover:shadow-[0_0_35px_rgba(168,85,247,0.4)]"
+                >
+                  <div className="flex items-center justify-between">
+                    <PenTool className="w-5 h-5 text-purple-300" />
+                    <ArrowUpRight className="w-4 h-4 text-purple-300 group-hover:text-white transition" />
+                  </div>
+                  <div>
+                    <div className="font-cinzel font-bold text-sm text-purple-200">
+                      {launcherCopy.letraTitle}
+                    </div>
+                    <p className="text-xs font-gothic text-purple-100/80 mt-0.5 leading-snug">
+                      {launcherCopy.letraDesc}
                     </p>
                   </div>
                 </button>
@@ -1294,6 +1340,8 @@ export default function App() {
         {activePortalPanel === "RASGOS" && <TusRasgosPanel />}
 
         {activePortalPanel === "ANTENA" && <AntenaDimensionalPanel />}
+
+        {activePortalPanel === "LETRA" && <TuLetraPanel />}
       </PortalModuleModal>
 
       {/* Past Life Revelation Modal */}
