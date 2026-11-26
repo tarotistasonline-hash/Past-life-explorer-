@@ -4,7 +4,7 @@ import { useLanguage } from "../context/LanguageContext";
 import type { SupportedLanguage } from "../types";
 import antenaBgImg from "../assets/images/antena_dimensional_bg.jpg";
 
-const ANTENA_URL = "https://antena-dimensional.vercel.app/";
+const ANTENA_URL = "https://ais-pre-nyechboxmcgvyajxokompy-172786148761.us-east1.run.app/";
 const FALLBACK_BG_IMAGE = "/assets/aistudio/Screenshot_20261120_225226_Chrome_b06f130e.jpg";
 
 interface AntenaCopy {
@@ -18,49 +18,49 @@ interface AntenaCopy {
 const COPY: Record<SupportedLanguage, AntenaCopy> = {
   es: {
     eyebrow: "Frecuencia Interestelar • Portal Externo",
-    title: "Antena Dimensional",
+    title: "Receptor Interestelar",
     description:
-      "¿Listo para ir más allá del plano terrestre? Sintoniza la Antena Dimensional para contactar con otras inteligencias, conciencias cósmicas y civilizaciones estelares.",
+      "¿Listo para ir más allá del plano terrestre? Sintoniza el Receptor Interestelar para contactar con otras inteligencias, conciencias cósmicas y civilizaciones estelares.",
     cta: "Contactar con Otras Inteligencias",
     badge: "Transceptor Activo • 432Hz Astral",
   },
   en: {
     eyebrow: "Interstellar Frequency • External Portal",
-    title: "Dimensional Antenna",
+    title: "Interstellar Receiver",
     description:
-      "Ready to reach beyond the earthly veil? Tune into the Dimensional Antenna to connect with cosmic intelligences and distant civilizations.",
+      "Ready to reach beyond the earthly veil? Tune into the Interstellar Receiver to connect with cosmic intelligences and distant civilizations.",
     cta: "Contact Other Intelligences",
     badge: "Transceiver Active • 432Hz Astral",
   },
   pt: {
     eyebrow: "Frequência Interestelar • Portal Externo",
-    title: "Antena Dimensional",
+    title: "Receptor Interestelar",
     description:
-      "Pronto para ir além do plano terrestre? Sintonize a Antena Dimensional para contatar outras inteligências e civilizações cósmicas.",
+      "Pronto para ir além do plano terrestre? Sintonize o Receptor Interestelar para contatar outras inteligências e civilizações cósmicas.",
     cta: "Contatar Outras Inteligências",
     badge: "Transceptor Ativo • 432Hz Astral",
   },
   fr: {
     eyebrow: "Fréquence Interstellaire • Portail Externe",
-    title: "Antenne Dimensionnelle",
+    title: "Récepteur Interstellaire",
     description:
-      "Prêt à dépasser le plan terrestre ? Syntonisez l'Antenne Dimensionnelle pour contacter d'autres intelligences et civilisations cosmiques.",
+      "Prêt à dépasser le plan terrestre ? Syntonisez le Récepteur Interstellaire pour contacter d'autres intelligences et civilisations cosmiques.",
     cta: "Contacter d'Autres Intelligences",
     badge: "Émetteur-Récepteur Actif • 432Hz Astral",
   },
   it: {
     eyebrow: "Frequenza Interstellare • Portale Esterno",
-    title: "Antenna Dimensionale",
+    title: "Ricevitore Interstellare",
     description:
-      "Pronto a superare il piano terrestre? Sintonizzati sull'Antenna Dimensionale per contattare altre intelligenze e civiltà cosmiche.",
+      "Pronto a superare il piano terrestre? Sintonizzati sul Ricevitore Interstellare per contattare altre intelligenze e civiltà cosmiche.",
     cta: "Contatta Altre Intelligenze",
-    badge: "Ricetrasmettitore Attivo • 432Hz Astrale",
+    badge: "Ricetrasmettitore Attivo • 432Hz Astral",
   },
   de: {
     eyebrow: "Interstellare Frequenz • Externes Portal",
-    title: "Dimensionale Antenne",
+    title: "Interstellarer Empfänger",
     description:
-      "Bereit, über die irdische Ebene hinauszugehen? Verbinde dich über die Dimensionale Antenne mit kosmischen Intelligenzen und fremden Zivilisationen.",
+      "Bereit, über die irdische Ebene hinauszugehen? Verbinde dich über den Interstellaren Empfänger mit kosmischen Intelligenzen und fremden Zivilisationen.",
     cta: "Andere Intelligenzen Kontaktieren",
     badge: "Transceiver Aktiv • 432Hz Astral",
   },
@@ -86,7 +86,7 @@ export const AntenaDimensionalPanel: React.FC = () => {
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <img
           src={imgSrc}
-          alt="Antena Dimensional - Contacto Interestelar"
+          alt="Receptor Interestelar - Contacto Interestelar"
           onError={() => setImgSrc(FALLBACK_BG_IMAGE)}
           className="w-full h-full object-cover object-[center_30%] filter brightness-95 contrast-105 saturate-110 transition-transform duration-700 ease-out group-hover:scale-105"
         />
@@ -141,7 +141,7 @@ export const AntenaDimensionalPanel: React.FC = () => {
             <ExternalLink className="w-4 h-4" />
           </a>
           <span className="text-[11px] font-mono text-cyan-300/80 text-center sm:text-right drop-shadow-sm">
-            antena-dimensional.vercel.app
+            receptor-interestelar.app
           </span>
         </div>
       </div>

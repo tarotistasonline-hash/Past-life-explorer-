@@ -922,7 +922,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActivePortalPanel("ANTENA")}
-          title="Abrir Panel de Antena Dimensional"
+          title="Abrir Panel de Receptor Interestelar"
           className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
             activePortalPanel === "ANTENA"
               ? "bg-cyan-950/90 text-cyan-200 border-cyan-400/80 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
@@ -930,7 +930,7 @@ export default function App() {
           }`}
         >
           <Antenna className="w-3.5 h-3.5 text-cyan-300" />
-          <span>Antena Dimensional</span>
+          <span>Receptor Interestelar</span>
         </button>
 
         <button
@@ -1037,7 +1037,7 @@ export default function App() {
             language === "en"
               ? {
                   heading: "Other Portal Panels",
-                  sub: "Open Tarot, Natal Chart, Kabalah, Your Hands Speak, Facial Traits, Antenna, or Handwriting in its own panel to keep the screen compact.",
+                  sub: "Open Tarot, Natal Chart, Kabalah, Your Hands Speak, Facial Traits, Interstellar Receiver, or Handwriting in its own panel to keep the screen compact.",
                   tarotDesc: "Daily arcana, 3-card karmic spread, and 22 voice-guided cards.",
                   natalDesc: "Planetary wheel, Sun, Moon, Ascendant, voice, and PDF export.",
                   cabalaTitle: "Kabalah",
@@ -1046,7 +1046,7 @@ export default function App() {
                   quirologiaDesc: "Hand reading, astral lines and planetary mounts.",
                   rasgosTitle: "Your Features Express",
                   rasgosDesc: "Facial physiognomy, gaze essence and energetic traits.",
-                  antenaTitle: "Dimensional Antenna",
+                  antenaTitle: "Interstellar Receiver",
                   antenaDesc: "Interstellar frequency and cosmic consciousness portal.",
                   letraTitle: "Your Handwriting Reveals You",
                   letraDesc: "Analyze your strokes, slope, pressure, and subconscious.",
@@ -1054,7 +1054,7 @@ export default function App() {
               : language === "pt"
               ? {
                   heading: "Outros Painéis do Portal",
-                  sub: "Abra Tarot, Mapa Astral, Kabalah, Suas Mãos Falam, Traços, Antena ou Letra em seu próprio painel para manter a tela compacta.",
+                  sub: "Abra Tarot, Mapa Astral, Kabalah, Suas Mãos Falam, Traços, Receptor Interestelar ou Letra em seu próprio painel para manter a tela compacta.",
                   tarotDesc: "Arcano do dia, tiragem de 3 cartas e 22 arcanos com voz.",
                   natalDesc: "Roda planetária, Sol, Lua, Ascendente, voz e PDF.",
                   cabalaTitle: "Kabalah",
@@ -1063,7 +1063,7 @@ export default function App() {
                   quirologiaDesc: "Leitura de mãos, linhas astrais e montes planetários.",
                   rasgosTitle: "Seus traços expressam",
                   rasgosDesc: "Fisiognomia facial, essência do olhar e vibração.",
-                  antenaTitle: "Antena Dimensional",
+                  antenaTitle: "Receptor Interestelar",
                   antenaDesc: "Portal de frequência interestelar e contato cósmico.",
                   letraTitle: "Sua letra te revela",
                   letraDesc: "Analise seus traços, inclinação, pressão e subconsciente.",
@@ -1071,7 +1071,7 @@ export default function App() {
               : language === "fr"
               ? {
                   heading: "Autres Panneaux du Portail",
-                  sub: "Ouvrez Tarot, Thème Natal, Kabalah, Vos Mains Parlent, Traits, Antenne ou Écriture dans un panneau dédié.",
+                  sub: "Ouvrez Tarot, Thème Natal, Kabalah, Vos Mains Parlent, Traits, Récepteur Interstellaire ou Écriture dans un panneau dédié.",
                   tarotDesc: "Arcane du jour, tirage à 3 cartes et 22 arcanes avec voix.",
                   natalDesc: "Roue planétaire, Soleil, Lune, Ascendant, voix et PDF.",
                   cabalaTitle: "Kabalah",
@@ -1080,7 +1080,7 @@ export default function App() {
                   quirologiaDesc: "Lecture des mains, lignes astrales et monts planétaires.",
                   rasgosTitle: "Vos traits expriment",
                   rasgosDesc: "Physiognomonie faciale, essence du regard et vibration.",
-                  antenaTitle: "Antenne Dimensionnelle",
+                  antenaTitle: "Récepteur Interstellaire",
                   antenaDesc: "Portail de fréquence interstellaire et contact cosmique.",
                   letraTitle: "Votre écriture vous trahit",
                   letraDesc: "Analysez vos traits, votre inclinaison et votre pression.",
@@ -1088,7 +1088,7 @@ export default function App() {
               : language === "it"
               ? {
                   heading: "Altri Pannelli del Portale",
-                  sub: "Apri Tarocchi, Tema Natale, Kabalah, Le Tue Mani Parlano, Tratti, Antenna o Scrittura in un pannello dedicato.",
+                  sub: "Apri Tarocchi, Tema Natale, Kabalah, Le Tue Mani Parlano, Tratti, Ricevitore Interstellare o Scrittura in un pannello dedicato.",
                   tarotDesc: "Arcano del giorno, stesa a 3 carte e 22 arcani con voce.",
                   natalDesc: "Ruota planetaria, Sole, Luna, Ascendente, voce e PDF.",
                   cabalaTitle: "Kabalah",
@@ -1097,7 +1097,7 @@ export default function App() {
                   quirologiaDesc: "Lettura della mano, linee astrali e monti planetari.",
                   rasgosTitle: "I tuoi tratti esprimono",
                   rasgosDesc: "Fisiognomica del viso, essenza dello sguardo e vibrazione.",
-                  antenaTitle: "Antenna Dimensionale",
+                  antenaTitle: "Ricevitore Interstellare",
                   antenaDesc: "Portale di frequenza interstellare e contatto cosmico.",
                   letraTitle: "La tua scrittura ti rivela",
                   letraDesc: "Analizza i tuoi tratti, l'inclinazione e la pressione.",
@@ -1105,7 +1105,7 @@ export default function App() {
               : language === "de"
               ? {
                   heading: "Weitere Portal-Panels",
-                  sub: "Öffne Tarot, Geburtshoroskop, Kabalah, Deine Hände Sprechen, Züge, Antenne oder Handschrift im eigenen Panel.",
+                  sub: "Öffne Tarot, Geburtshoroskop, Kabalah, Deine Hände Sprechen, Züge, Interstellarer Empfänger oder Handschrift im eigenen Panel.",
                   tarotDesc: "Tagesarkana, 3-Karten-Legung und 22 Arkana mit Stimme.",
                   natalDesc: "Planetenrad, Sonne, Mond, Aszendent, Stimme und PDF.",
                   cabalaTitle: "Kabalah",
@@ -1114,14 +1114,14 @@ export default function App() {
                   quirologiaDesc: "Handlesen, astrale Linien und Planetenberge.",
                   rasgosTitle: "Deine Züge drücken aus",
                   rasgosDesc: "Physiognomie des Gesichts, Ausstrahlung und Energie.",
-                  antenaTitle: "Dimensionale Antenne",
+                  antenaTitle: "Interstellarer Empfänger",
                   antenaDesc: "Interstellares Frequenzportal und kosmischer Kontakt.",
                   letraTitle: "Deine Handschrift verrät dich",
                   letraDesc: "Analysiere deine Striche, Neigung und Druck.",
                 }
               : {
                   heading: "Otros Paneles del Portal",
-                  sub: "Abre Tarot, Carta Natal, Kabalah, Tus manos hablan, Tu rostro dice mucho, Antena o Tu letra te delata en su propio panel para mantener la pantalla compacta.",
+                  sub: "Abre Tarot, Carta Natal, Kabalah, Tus manos hablan, Tu rostro dice mucho, Receptor Interestelar o Tu letra te delata en su propio panel para mantener la pantalla compacta.",
                   tarotDesc: "Arcano del día, tirada de 3 cartas y 22 arcanos con voz.",
                   natalDesc: "Rueda planetaria, Sol, Luna, Ascendente y PDF.",
                   cabalaTitle: "Kabalah",
@@ -1130,7 +1130,7 @@ export default function App() {
                   quirologiaDesc: "Lectura de manos, líneas astrales y montes planetarios.",
                   rasgosTitle: "Tu rostro dice mucho",
                   rasgosDesc: "Fisiognomía mística, esencia de tu mirada y vibración.",
-                  antenaTitle: "Antena Dimensional",
+                  antenaTitle: "Receptor Interestelar",
                   antenaDesc: "Portal de frecuencia interestelar y contacto cósmico.",
                   letraTitle: "Tu letra te delata",
                   letraDesc: "Grafología mística, análisis de trazos, presión y subconsciente.",
