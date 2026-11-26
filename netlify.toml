@@ -1,6 +1,0 @@
-[build.environment]
-  # The Firebase web config (apiKey "AIza...") is a public client identifier by design,
-  # not a secret. It lives in firebase-applet-config.json and is bundled into the client JS,
-  # which triggers Netlify's smart secret detection. Exclude only those locations.
-  # Access is protected by firestore.rules, not by hiding this key.
-  SECRETS_SCAN_OMIT_PATHS = "firebase-applet-config.json,dist/assets/*.js"
