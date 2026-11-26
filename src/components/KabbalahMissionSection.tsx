@@ -12,6 +12,7 @@ import {
   Compass,
   BookOpen,
   Download,
+  Lock,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import type { SupportedLanguage } from "../types";
@@ -35,6 +36,13 @@ export const KABBALAH_STORAGE_KEY = "ouija_kabbalah_mission_v1";
 
 interface KabbalahMissionSectionProps {
   onSendToOuija?: (query: string) => void;
+  isPaywallEnabled?: boolean;
+  freeLimit?: number;
+  remainingFree?: number;
+  isPassUnlocked?: boolean;
+  isCreatorUnlimited?: boolean;
+  onOpenPaywall?: () => void;
+  onConsumeFreeConsultation?: () => void;
 }
 
 interface KabbalahCopy {
@@ -300,6 +308,13 @@ const COPY: Record<SupportedLanguage, KabbalahCopy> = {
 
 export const KabbalahMissionSection: React.FC<KabbalahMissionSectionProps> = ({
   onSendToOuija,
+  isPaywallEnabled = false,
+  freeLimit = 2,
+  remainingFree = 2,
+  isPassUnlocked = false,
+  isCreatorUnlimited = false,
+  onOpenPaywall,
+  onConsumeFreeConsultation,
 }) => {
   const { language } = useLanguage();
   const copy = COPY[language] || COPY.es;
@@ -380,6 +395,14 @@ export const KabbalahMissionSection: React.FC<KabbalahMissionSectionProps> = ({
       return;
     }
 
+    if (isPaywallEnabled && !isCreatorUnlimited && !isPassUnlocked && remainingFree <= 0) {
+      onOpenPaywall?.();
+      return;
+    }
+    if (!isCreatorUnlimited && !isPassUnlocked) {
+      onConsumeFreeConsultation?.();
+    }
+
     setFormError("");
     triggerHaptic(HAPTIC_PATTERNS.click);
     audio.fadeOutForSelection();
@@ -418,6 +441,7 @@ export const KabbalahMissionSection: React.FC<KabbalahMissionSectionProps> = ({
         setProfile(finalProfile);
         setReading(finalReading);
         setInspectedSephira(finalProfile.primarySephira);
+        window.dispatchEvent(new CustomEvent("ouija-consultation-recorded"));
         try {
           localStorage.setItem(
             KABBALAH_STORAGE_KEY,
@@ -964,6 +988,77 @@ export const KabbalahMissionSection: React.FC<KabbalahMissionSectionProps> = ({
           )}
         </div>
       </div>
+
+      {/* Unified Consultation Pass Status Bar */}
+      {isPaywallEnabled && (
+        <div className="pt-3 border-t border-purple-900/40 text-[11px] font-gothic">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {isCreatorUnlimited ? (
+              <>
+                <span className="text-amber-300 flex items-center space-x-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>
+                    {language === "en"
+                      ? "Creator Mode active: unlimited Kabbalah readings & PDF enabled."
+                      : "Modo Creador activo: lecturas de Cábala y PDF ilimitadas."}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)]"
+                >
+                  {language === "en" ? "Unlock Panel" : "Panel de Desbloqueo"}
+                </button>
+              </>
+            ) : isPassUnlocked ? (
+              <span className="text-emerald-300 flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>
+                  {language === "en"
+                    ? "Akashic Pass active: unlimited Kabbalah & portal readings unlocked."
+                    : "Pase Akáshico activo: Cábala y todas las consultas desbloqueadas."}
+                </span>
+              </span>
+            ) : remainingFree > 0 ? (
+              <>
+                <span className="text-purple-300/85">
+                  {language === "en"
+                    ? `Free consultations remaining (valid for all portal readings): ${remainingFree} of ${freeLimit}`
+                    : `Consultas gratuitas disponibles (para todo tipo de consultas): ${remainingFree} de ${freeLimit}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1.5"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>{language === "en" ? "Unlock" : "Desbloqueo"}</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-amber-300 flex items-center space-x-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>
+                    {language === "en"
+                      ? `Free consultations used (${freeLimit}/${freeLimit})`
+                      : `Consultas gratuitas agotadas (${freeLimit}/${freeLimit})`}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_18px_rgba(245,158,11,0.45)] flex items-center space-x-1.5"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>{language === "en" ? "Unlock" : "Desbloqueo"}</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       </div>
     </section>
   );

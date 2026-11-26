@@ -579,6 +579,12 @@ async function incrementConsultation(req?: express.Request) {
   }
 }
 
+app.post("/api/visits/consultation", async (req, res) => {
+  await incrementConsultation(req);
+  const stats = await getAuthoritativeVisitsStats();
+  return res.json(stats);
+});
+
 // Initialize GenAI client safely
 let aiAuthCooldownUntil = 0;
 
@@ -1655,7 +1661,7 @@ const DEFAULT_SERVER_MONETIZATION: ServerMonetizationConfig = {
   paypalLinkEur: DEFAULT_PAYPAL_EUR_LINK,
   paypalLinkGbp: DEFAULT_PAYPAL_GBP_LINK,
   paywallEnabled: true,
-  freeConsultationsLimit: 1,
+  freeConsultationsLimit: 2,
   passPriceArs: "$6.000 ARS",
   passAmountArs: 6000,
   autoReturnTokenHash: "",
@@ -1801,7 +1807,7 @@ function readLocalMonetizationFile(): ServerMonetizationConfig | null {
       freeConsultationsLimit:
         typeof raw.freeConsultationsLimit === "number"
           ? Math.min(10, Math.max(1, Math.round(raw.freeConsultationsLimit)))
-          : 1,
+          : 2,
       passPriceArs:
         typeof raw.passPriceArs === "string"
           ? raw.passPriceArs.trim().slice(0, 32)

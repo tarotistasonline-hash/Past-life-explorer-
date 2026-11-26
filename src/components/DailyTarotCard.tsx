@@ -31,14 +31,31 @@ import {
   Calendar,
   Layers,
   Download,
-  X
+  X,
+  Lock
 } from "lucide-react";
 
 interface DailyTarotCardProps {
   onSendToOuija?: (cardName: string) => void;
+  isPaywallEnabled?: boolean;
+  freeLimit?: number;
+  remainingFree?: number;
+  isPassUnlocked?: boolean;
+  isCreatorUnlimited?: boolean;
+  onOpenPaywall?: () => void;
+  onConsumeFreeConsultation?: () => void;
 }
 
-export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija }) => {
+export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({
+  onSendToOuija,
+  isPaywallEnabled = false,
+  freeLimit = 2,
+  remainingFree = 2,
+  isPassUnlocked = false,
+  isCreatorUnlimited = false,
+  onOpenPaywall,
+  onConsumeFreeConsultation,
+}) => {
   const { t, language } = useLanguage();
   const [currentArcana, setCurrentArcana] = useState<DailyArcana>(() => getUniversalArcanaForDate());
   const [isFlipped, setIsFlipped] = useState(true);
@@ -237,8 +254,39 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     }, 700);
   };
 
+  const tryConsumeTarotConsultation = (): boolean => {
+    if (isPaywallEnabled && !isCreatorUnlimited && !isPassUnlocked && remainingFree <= 0) {
+      onOpenPaywall?.();
+      return false;
+    }
+    if (!isCreatorUnlimited && !isPassUnlocked) {
+      onConsumeFreeConsultation?.();
+    }
+    return true;
+  };
+
+  const recordClientTarotConsultation = async () => {
+    try {
+      const adminExclude = isAdminSession();
+      const authHeaders = adminExclude ? await getAdminAuthHeaders() : {};
+      await fetch("/api/visits/consultation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+        body: JSON.stringify({ isAdmin: adminExclude }),
+      });
+      window.dispatchEvent(new CustomEvent("ouija-consultation-recorded"));
+    } catch {
+      // ignore counter error
+    }
+  };
+
   const handleShuffleDeck = () => {
     if (isShuffling) return;
+    if (!tryConsumeTarotConsultation()) return;
+    void recordClientTarotConsultation();
     audio.fadeOutForSelection();
     audio.primeSpeech();
     triggerHaptic(HAPTIC_PATTERNS.tarotShuffle);
@@ -266,6 +314,7 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
   const handleDrawPersonalCard = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isShuffling || isDrawing) return;
+    if (!tryConsumeTarotConsultation()) return;
     audio.fadeOutForSelection();
     audio.primeSpeech();
     setIsDrawing(true);
@@ -400,8 +449,10 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     setShowArcanarioWrittenDesc(false);
   };
 
-  const handleSelectCardFromDeck = (card: DailyArcana) => {
-    if (isShuffling) return;
+  const handleSelectCardFromDeck = (card: DailyArcana): boolean => {
+    if (isShuffling) return false;
+    if (!tryConsumeTarotConsultation()) return false;
+    void recordClientTarotConsultation();
     const localized = getLocalizedArcana(card, language);
     audio.fadeOutForSelection();
     if (autoNarrateTimeoutRef.current) clearTimeout(autoNarrateTimeoutRef.current);
@@ -412,10 +463,15 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
 
     // Start narration synchronously inside tap handler so mobile Chrome/Safari allows automatic voice playback
     startNaturalNarration(localized);
+    return true;
   };
 
   const handleRevealArcanarioCard = (card: DailyArcana) => {
     const localized = getLocalizedArcana(card, language);
+    if (!handleSelectCardFromDeck(localized)) {
+      setShowArcanario(false);
+      return;
+    }
     triggerHaptic(HAPTIC_PATTERNS.tarotCardFlip);
     setRevealedArcanarioIds([localized.id]);
     setJustFlippedArcanarioId(localized.id);
@@ -424,7 +480,6 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
     setTimeout(() => {
       setJustFlippedArcanarioId((prev) => (prev === localized.id ? null : prev));
     }, 750);
-    handleSelectCardFromDeck(localized);
   };
 
   const handleCopyMessage = async () => {
@@ -570,7 +625,16 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
 
       {/* Render 3-Card Karmic Spread If Selected */}
       {viewMode === "KARMIC_SPREAD" ? (
-        <KarmicThreeCardSpread onSendToOuija={onSendToOuija} />
+        <KarmicThreeCardSpread
+          onSendToOuija={onSendToOuija}
+          isPaywallEnabled={isPaywallEnabled}
+          freeLimit={freeLimit}
+          remainingFree={remainingFree}
+          isPassUnlocked={isPassUnlocked}
+          isCreatorUnlimited={isCreatorUnlimited}
+          onOpenPaywall={onOpenPaywall}
+          onConsumeFreeConsultation={onConsumeFreeConsultation}
+        />
       ) : (
         <>
           {/* Personal Draw Form If Personal Mode */}
@@ -1080,6 +1144,77 @@ export const DailyTarotCard: React.FC<DailyTarotCardProps> = ({ onSendToOuija })
         </div>
       </div>
         </>
+      )}
+
+      {/* Unified Consultation Pass Status Bar */}
+      {isPaywallEnabled && (
+        <div className="relative z-10 mt-5 pt-3 border-t border-purple-900/40 text-[11px] font-gothic">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {isCreatorUnlimited ? (
+              <>
+                <span className="text-amber-300 flex items-center space-x-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>
+                    {language === "en"
+                      ? "Creator Mode active: unlimited Tarot & spreads enabled."
+                      : "Modo Creador activo: tiradas de Tarot y arcanos ilimitados."}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)]"
+                >
+                  {language === "en" ? "Unlock Panel" : "Panel de Desbloqueo"}
+                </button>
+              </>
+            ) : isPassUnlocked ? (
+              <span className="text-emerald-300 flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>
+                  {language === "en"
+                    ? "Akashic Pass active: unlimited Tarot & portal readings unlocked."
+                    : "Pase Akáshico activo: tiradas de Tarot y todas las consultas desbloqueadas."}
+                </span>
+              </span>
+            ) : remainingFree > 0 ? (
+              <>
+                <span className="text-purple-300/85">
+                  {language === "en"
+                    ? `Free consultations remaining (valid for all portal readings): ${remainingFree} of ${freeLimit}`
+                    : `Consultas gratuitas disponibles (para todo tipo de consultas): ${remainingFree} de ${freeLimit}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.4)] flex items-center space-x-1.5"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>{language === "en" ? "Unlock" : "Desbloqueo"}</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-amber-300 flex items-center space-x-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>
+                    {language === "en"
+                      ? `Free consultations used (${freeLimit}/${freeLimit})`
+                      : `Consultas gratuitas agotadas (${freeLimit}/${freeLimit})`}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenPaywall?.()}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 hover:from-amber-300 hover:via-orange-400 hover:to-amber-500 text-neutral-950 border border-amber-200/70 font-cinzel font-bold text-[10px] uppercase tracking-wider transition cursor-pointer shadow-[0_0_18px_rgba(245,158,11,0.45)] flex items-center space-x-1.5"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>{language === "en" ? "Unlock" : "Desbloqueo"}</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Arcanario Panel Modal (rendered in document.body so parent overflow/backdrop-blur never clips it) */}

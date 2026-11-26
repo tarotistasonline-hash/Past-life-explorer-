@@ -495,16 +495,16 @@ export const SpiritOracleForm: React.FC<SpiritOracleFormProps> = ({
               <>
                 <span className="text-purple-300/85">
                   {language === "es"
-                    ? `Consultas gratuitas disponibles: ${remainingFree} de ${freeLimit}`
+                    ? `Consultas gratuitas disponibles (para todo tipo de consultas): ${remainingFree} de ${freeLimit}`
                     : language === "pt"
-                    ? `Consultas gratuitas disponíveis: ${remainingFree} de ${freeLimit}`
+                    ? `Consultas gratuitas disponíveis (para todo tipo de consulta): ${remainingFree} de ${freeLimit}`
                     : language === "fr"
-                    ? `Consultations gratuites restantes : ${remainingFree} sur ${freeLimit}`
+                    ? `Consultations gratuites restantes (tous types confondus) : ${remainingFree} sur ${freeLimit}`
                     : language === "it"
-                    ? `Consulti gratuiti disponibili: ${remainingFree} su ${freeLimit}`
+                    ? `Consulti gratuiti disponibili (per ogni tipo di consulto): ${remainingFree} su ${freeLimit}`
                     : language === "de"
-                    ? `Kostenlose Abfragen übrig: ${remainingFree} von ${freeLimit}`
-                    : `Free consultations remaining: ${remainingFree} of ${freeLimit}`}
+                    ? `Kostenlose Abfragen übrig (für alle Abfragearten): ${remainingFree} von ${freeLimit}`
+                    : `Free consultations remaining (valid for all portal readings): ${remainingFree} of ${freeLimit}`}
                 </span>
                 <button
                   type="button"

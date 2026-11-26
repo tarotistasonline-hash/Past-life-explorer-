@@ -78,16 +78,16 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleUpgrade: "Panel de Desbloqueo · Pase Ilimitado",
     subtitle: (n) =>
       n === 1
-        ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea lecturas ilimitadas e instalación de App con Mercado Pago o PayPal."
-        : `Disfruta de tus primeras ${n} consultas 100% gratis. Desbloquea lecturas ilimitadas e instalación de App con Mercado Pago o PayPal.`,
+        ? "Tu primera consulta en cualquier área del portal (Vidas Pasadas, Ouija, Carta Natal, Tarot o Kabalah) es 100% gratis. Desbloquea lecturas ilimitadas e instalación de App con Mercado Pago o PayPal."
+        : `Disfruta de tus primeras ${n} consultas 100% gratis en TODO tipo de consultas (Vidas Pasadas, Ouija, Carta Natal, Tarot y Kabalah). Desbloquea lecturas ilimitadas e instalación de App con Mercado Pago o PayPal.`,
     queuedPastLife: "Tu lectura de vida pasada está lista y comenzará automáticamente al desbloquear.",
     queuedQuestion: "Tu pregunta a la Tabla Ouija está lista y se responderá automáticamente al desbloquear.",
     queuedNatalChart: "Tu Carta Natal completa (voz, rueda y PDF) está lista y se revelará automáticamente al desbloquear.",
     includes1: (n) =>
       n === 1
-        ? "Primera consulta 100% gratuita en carta natal, vidas pasadas o tabla ouija."
-        : `Primeras ${n} consultas 100% gratuitas en vidas pasadas, tabla ouija y carta natal.`,
-    includes2: "Lecturas ilimitadas de vidas pasadas, preguntas akáshicas y cartas natales con PDF.",
+        ? "Primera consulta 100% gratuita válida para cualquier consulta del portal (Vidas Pasadas, Ouija, Carta Natal, Tarot o Kabalah)."
+        : `Primeras ${n} consultas 100% gratuitas aplicables a TODO tipo de consultas: Vidas Pasadas, Ouija, Carta Natal, Tarot, Tirada de 3 Cartas y Kabalah.`,
+    includes2: "Lecturas ilimitadas en todas las secciones: Vidas Pasadas, Tabla Ouija, Carta Natal con PDF, Tarot de Marsella y Kabalah.",
     includes3: "Instalación directa como App en tu celular (Android / iPhone) o computadora.",
     includes4: "Elige Mercado Pago (Argentina) o PayPal Internacional (USD / EUR / GBP + código).",
     payMp: "Pagar con Mercado Pago",
@@ -106,16 +106,16 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleUpgrade: "Unlock Panel · Unlimited Pass",
     subtitle: (n) =>
       n === 1
-        ? "Your first consultation (Natal Chart, Ouija, or Past Life) is 100% free. Unlock unlimited readings and App installation via Mercado Pago or PayPal."
-        : `Enjoy your first ${n} consultations 100% free. Unlock unlimited readings and App installation via Mercado Pago or PayPal.`,
+        ? "Your first consultation in any section (Past Lives, Ouija, Natal Chart, Tarot, or Kabbalah) is 100% free. Unlock unlimited readings and App installation via Mercado Pago or PayPal."
+        : `Enjoy your first ${n} consultations 100% free across ALL consultation types (Past Lives, Ouija, Natal Chart, Tarot & Kabbalah). Unlock unlimited readings and App installation via Mercado Pago or PayPal.`,
     queuedPastLife: "Your past-life reading is queued and will start automatically once unlocked.",
     queuedQuestion: "Your Ouija question is queued and will be answered automatically once unlocked.",
     queuedNatalChart: "Your complete Natal Chart (voice, wheel & PDF) is ready and will unlock automatically.",
     includes1: (n) =>
       n === 1
-        ? "First consultation 100% free for natal charts, past lives, or Ouija."
-        : `First ${n} consultations 100% free for past lives, Ouija, and natal charts.`,
-    includes2: "Unlimited past-life readings, Akashic questions, and natal charts with PDF export.",
+        ? "First consultation 100% free across all reading types (Past Lives, Ouija, Natal Chart, Tarot, or Kabbalah)."
+        : `First ${n} consultations 100% free across ALL reading types: Past Lives, Ouija, Natal Chart, Tarot, 3-Card Spread & Kabbalah.`,
+    includes2: "Unlimited access across all modules: Past Lives, Ouija Oracle, Natal Chart with PDF, Marseille Tarot & Kabbalah.",
     includes3: "Installable as a standalone App on Android, iPhone, or desktop.",
     includes4: "Choose Mercado Pago (Argentina) or International PayPal (USD / EUR / GBP + unlock code).",
     payMp: "Pay with Mercado Pago",
@@ -134,16 +134,16 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleUpgrade: "Painel de Desbloqueio · Passe Ilimitado",
     subtitle: (n) =>
       n === 1
-        ? "Sua primeira consulta é 100% gratuita. Desbloqueie leituras ilimitadas e instalação como App via Mercado Pago ou PayPal."
-        : `Aproveite suas primeiras ${n} consultas 100% gratuitas. Desbloqueie leituras ilimitadas via Mercado Pago ou PayPal.`,
+        ? "Sua primeira consulta em qualquer área do portal (Vidas Passadas, Ouija, Mapa Astral, Tarô ou Cabala) é 100% gratuita. Desbloqueie leituras ilimitadas via Mercado Pago ou PayPal."
+        : `Aproveite suas primeiras ${n} consultas 100% gratuitas em TODO tipo de consulta (Vidas Passadas, Ouija, Mapa Astral, Tarô e Cabala). Desbloqueie leituras ilimitadas via Mercado Pago ou PayPal.`,
     queuedPastLife: "Sua leitura de vida passada está pronta e começará automaticamente após o desbloqueio.",
     queuedQuestion: "Sua pergunta na Tábua Ouija está pronta e será respondida automaticamente após o desbloqueio.",
     queuedNatalChart: "Seu Mapa Astral completo (voz, roda e PDF) está pronto e será revelado após o desbloqueio.",
     includes1: (n) =>
       n === 1
-        ? "Primeira consulta 100% gratuita em mapa astral, vidas passadas ou Ouija."
-        : `Primeiras ${n} consultas 100% gratuitas em vidas passadas, Ouija e mapa astral.`,
-    includes2: "Leituras ilimitadas de vidas passadas, perguntas akáshicas e mapas astrais com PDF.",
+        ? "Primeira consulta 100% gratuita válida para qualquer leitura do portal (Vidas Passadas, Ouija, Mapa Astral, Tarô ou Cabala)."
+        : `Primeiras ${n} consultas 100% gratuitas válidas para TODO tipo de consulta: Vidas Passadas, Ouija, Mapa Astral, Tarô e Cabala.`,
+    includes2: "Leituras ilimitadas em todas as seções: vidas passadas, Ouija, mapas astrais com PDF, Tarô e Cabala.",
     includes3: "Instalação como App no celular (Android / iPhone) ou computador.",
     includes4: "Escolha Mercado Pago (Argentina) ou PayPal Internacional (USD / EUR / GBP + código).",
     payMp: "Pagar com Mercado Pago",
@@ -162,16 +162,16 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleUpgrade: "Panneau de Déblocage · Pass Illimité",
     subtitle: (n) =>
       n === 1
-        ? "Votre première consultation est 100% gratuite. Débloquez les lectures illimitées via Mercado Pago ou PayPal."
-        : `Profitez de vos ${n} premières consultations 100% gratuites. Débloquez l'accès illimité via Mercado Pago ou PayPal.`,
+        ? "Votre première consultation dans n'importe quel module (Vies Antérieures, Ouija, Thème Natal, Tarot ou Kabbale) est 100% gratuite. Débloquez l'accès illimité via Mercado Pago ou PayPal."
+        : `Profitez de vos ${n} premières consultations 100% gratuites pour TOUS les types de consultations (Vies Antérieures, Ouija, Thème Natal, Tarot et Kabbale). Débloquez l'accès illimité via Mercado Pago ou PayPal.`,
     queuedPastLife: "Votre lecture de vie antérieure est prête et démarrera automatiquement.",
     queuedQuestion: "Votre question Ouija est prête et recevra sa réponse automatiquement.",
     queuedNatalChart: "Votre Thème Natal complet (voix, roue et PDF) est prêt et s'ouvrira dès confirmation.",
     includes1: (n) =>
       n === 1
-        ? "1ère consultation 100% gratuite pour thème natal, vies antérieures ou Ouija."
-        : `${n} premières consultations 100% gratuites pour vies antérieures, Ouija et thème natal.`,
-    includes2: "Lectures illimitées de vies antérieures, questions akashiques et thèmes natals en PDF.",
+        ? "1ère consultation 100% gratuite valable pour tout type de lecture (Vies Antérieures, Ouija, Thème Natal, Tarot ou Kabbale)."
+        : `${n} premières consultations 100% gratuites valables pour TOUS les types de consultations : Vies Antérieures, Ouija, Thème Natal, Tarot et Kabbale.`,
+    includes2: "Lectures illimitées dans toutes les sections : vies antérieures, Ouija, thèmes natals PDF, Tarot et Kabbale.",
     includes3: "Installation directe en tant qu'application sur mobile ou ordinateur.",
     includes4: "Choisissez Mercado Pago ou PayPal International (USD / EUR / GBP + code).",
     payMp: "Payer avec Mercado Pago",
@@ -190,16 +190,16 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleUpgrade: "Pannello di Sblocco · Pass Illimitato",
     subtitle: (n) =>
       n === 1
-        ? "Il tuo primo consulto è 100% gratuito. Sblocca letture illimitate e l'app tramite Mercado Pago o PayPal."
-        : `Goditi i primi ${n} consulti 100% gratuiti. Sblocca l'accesso illimitato tramite Mercado Pago o PayPal.`,
+        ? "Il tuo primo consulto in qualsiasi sezione (Vite Passate, Ouija, Tema Natale, Tarocchi o Kabbalah) è 100% gratuito. Sblocca letture illimitate tramite Mercado Pago o PayPal."
+        : `Goditi i primi ${n} consulti 100% gratuiti per OGNI tipo di consulto (Vite Passate, Ouija, Tema Natale, Tarocchi e Kabbalah). Sblocca l'accesso illimitato tramite Mercado Pago o PayPal.`,
     queuedPastLife: "La tua lettura delle vite passate è pronta e inizierà automaticamente.",
     queuedQuestion: "La tua domanda Ouija è pronta e riceverà risposta automaticamente.",
     queuedNatalChart: "Il tuo Tema Natale completo (voce, ruota e PDF) è pronto e si sbloccherà dopo il pagamento.",
     includes1: (n) =>
       n === 1
-        ? "Primo consulto 100% gratuito per tema natale, vite passate o Ouija."
-        : `Primi ${n} consulti 100% gratuiti per vite passate, Ouija e tema natale.`,
-    includes2: "Letture illimitate delle vite passate, domande akashiche e temi natali in PDF.",
+        ? "Primo consulto 100% gratuito valido per qualsiasi lettura (Vite Passate, Ouija, Tema Natale, Tarocchi o Kabbalah)."
+        : `Primi ${n} consulti 100% gratuiti validi per OGNI tipo di consulto: Vite Passate, Ouija, Tema Natale, Tarocchi e Kabbalah.`,
+    includes2: "Letture illimitate in ogni sezione: vite passate, Ouija, temi natali in PDF, Tarocchi e Kabbalah.",
     includes3: "Installabile come App dedicata su cellulare (Android / iPhone) o PC.",
     includes4: "Scegli Mercado Pago o PayPal Internazionale (USD / EUR / GBP + codice).",
     payMp: "Paga con Mercado Pago",
@@ -218,16 +218,16 @@ const COPY: Record<SupportedLanguage, PaywallCopy> = {
     titleUpgrade: "Freischalt-Panel · Unbegrenzter Pass",
     subtitle: (n) =>
       n === 1
-        ? "Deine erste Abfrage ist 100% kostenlos. Schalte unbegrenzte Lesungen und die App-Installation per Mercado Pago oder PayPal frei."
-        : `Genieße deine ersten ${n} Abfragen 100% kostenlos. Unbegrenzter Zugang per Mercado Pago oder PayPal.`,
+        ? "Deine erste Abfrage in jedem Bereich (Frühere Leben, Ouija, Geburtshoroskop, Tarot oder Kabbala) ist 100% kostenlos. Schalte unbegrenzte Lesungen per Mercado Pago oder PayPal frei."
+        : `Genieße deine ersten ${n} Abfragen 100% kostenlos für ALLE Abfragearten (Frühere Leben, Ouija, Geburtshoroskop, Tarot & Kabbala). Unbegrenzter Zugang per Mercado Pago oder PayPal.`,
     queuedPastLife: "Deine Lesung über ein früheres Leben steht bereit und startet automatisch.",
     queuedQuestion: "Deine Ouija-Frage steht bereit und wird automatisch beantwortet.",
     queuedNatalChart: "Dein vollständiges Geburtshoroskop (Stimme, Rad & PDF) wird nach Zahlung sofort freigeschaltet.",
     includes1: (n) =>
       n === 1
-        ? "Erste Abfrage 100% kostenlos für Geburtshoroskop, frühere Leben oder Ouija."
-        : `Erste ${n} Abfragen 100% kostenlos für frühere Leben, Ouija und Geburtshoroskop.`,
-    includes2: "Unbegrenzte Lesungen früherer Leben, Akasha-Fragen und Geburtshoroskope als PDF.",
+        ? "Erste Abfrage 100% kostenlos für jede Art von Lesung (Frühere Leben, Ouija, Geburtshoroskop, Tarot oder Kabbala)."
+        : `Erste ${n} Abfragen 100% kostenlos für ALLE Lesungsarten: Frühere Leben, Ouija, Geburtshoroskop, Tarot und Kabbala.`,
+    includes2: "Unbegrenzte Lesungen in allen Modulen: Frühere Leben, Ouija, Geburtshoroskop als PDF, Tarot & Kabbala.",
     includes3: "Direkt als App auf Smartphone (Android / iPhone) oder Desktop installierbar.",
     includes4: "Wähle Mercado Pago oder International PayPal (USD / EUR / GBP + Code).",
     payMp: "Mit Mercado Pago zahlen",

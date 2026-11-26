@@ -26,9 +26,24 @@ import {
 
 interface KarmicThreeCardSpreadProps {
   onSendToOuija?: (cardName: string) => void;
+  isPaywallEnabled?: boolean;
+  freeLimit?: number;
+  remainingFree?: number;
+  isPassUnlocked?: boolean;
+  isCreatorUnlimited?: boolean;
+  onOpenPaywall?: () => void;
+  onConsumeFreeConsultation?: () => void;
 }
 
-export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ onSendToOuija }) => {
+export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({
+  onSendToOuija,
+  isPaywallEnabled = false,
+  remainingFree = 2,
+  isPassUnlocked = false,
+  isCreatorUnlimited = false,
+  onOpenPaywall,
+  onConsumeFreeConsultation,
+}) => {
   const { t, language } = useLanguage();
   const [seekerName, setSeekerName] = useState("");
   const [queryTopic, setQueryTopic] = useState("");
@@ -51,6 +66,14 @@ export const KarmicThreeCardSpread: React.FC<KarmicThreeCardSpreadProps> = ({ on
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const handleStartDraw = async () => {
+    if (isDrawing) return;
+    if (isPaywallEnabled && !isCreatorUnlimited && !isPassUnlocked && remainingFree <= 0) {
+      onOpenPaywall?.();
+      return;
+    }
+    if (!isCreatorUnlimited && !isPassUnlocked) {
+      onConsumeFreeConsultation?.();
+    }
     setIsDrawing(true);
     triggerHaptic(HAPTIC_PATTERNS.tarotShuffle);
     audio.playMysticSwell();

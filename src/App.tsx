@@ -38,7 +38,7 @@ import {
 } from "./lib/monetization";
 import { ConsultationPaywallModal } from "./components/ConsultationPaywallModal";
 import { doc, onSnapshot, runTransaction } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "./lib/firebase";
+import { auth, db, handleFirestoreError, OperationType } from "./lib/firebase";
 
 const CACHE_VISITS_KEY = "ouija_real_visits_clean";
 
@@ -248,6 +248,12 @@ export default function App() {
         }
       } catch {
         // ignore storage restrictions
+      }
+
+      try {
+        await auth.authStateReady();
+      } catch {
+        // ignore auth init timing
       }
 
       const isAdmin = isAuthorizedAdmin() && isAdminSession();
@@ -1296,7 +1302,19 @@ export default function App() {
         onClose={() => setActivePortalPanel(null)}
       >
         {activePortalPanel === "TAROT" && (
-          <DailyTarotCard onSendToOuija={handleSendCardToOuija} />
+          <DailyTarotCard
+            onSendToOuija={handleSendCardToOuija}
+            isPaywallEnabled={monetizationCfg.paywallEnabled}
+            freeLimit={monetizationCfg.freeConsultationsLimit}
+            remainingFree={remainingFree}
+            isPassUnlocked={isPassUnlocked}
+            isCreatorUnlimited={isCreatorOrAdmin}
+            onOpenPaywall={() => setIsPaywallOpen(true)}
+            onConsumeFreeConsultation={() => {
+              incrementFreeConsultationsUsed();
+              setAllowanceTick((v) => v + 1);
+            }}
+          />
         )}
 
         {activePortalPanel === "NATAL" && (
@@ -1332,7 +1350,19 @@ export default function App() {
         )}
 
         {activePortalPanel === "CABALA" && (
-          <KabbalahMissionSection onSendToOuija={handleSendNatalToOuija} />
+          <KabbalahMissionSection
+            onSendToOuija={handleSendNatalToOuija}
+            isPaywallEnabled={monetizationCfg.paywallEnabled}
+            freeLimit={monetizationCfg.freeConsultationsLimit}
+            remainingFree={remainingFree}
+            isPassUnlocked={isPassUnlocked}
+            isCreatorUnlimited={isCreatorOrAdmin}
+            onOpenPaywall={() => setIsPaywallOpen(true)}
+            onConsumeFreeConsultation={() => {
+              incrementFreeConsultationsUsed();
+              setAllowanceTick((v) => v + 1);
+            }}
+          />
         )}
 
         {activePortalPanel === "QUIROLOGIA" && <QuirologiaPanel />}
@@ -1391,7 +1421,9 @@ export default function App() {
                 <p className="text-purple-300/85 text-xs leading-relaxed">
                   Tienes acceso completo sin cobro. Tus visitantes ven las opciones de Mercado Pago (Argentina) y PayPal (USD / EUR / GBP) dentro del Panel de Desbloqueo tras{" "}
                   {monetizationCfg.freeConsultationsLimit}{" "}
-                  {monetizationCfg.freeConsultationsLimit === 1 ? "consulta gratuita" : "consultas gratuitas"}.
+                  {monetizationCfg.freeConsultationsLimit === 1
+                    ? "consulta gratuita en cualquier módulo del portal (Vidas Pasadas, Ouija, Carta Natal, Tarot o Kabalah)."
+                    : "consultas gratuitas combinadas entre todo tipo de consultas (Vidas Pasadas, Ouija, Carta Natal, Tarot o Kabalah)."}
                 </p>
               </div>
               <button
@@ -1411,8 +1443,8 @@ export default function App() {
                 </span>
                 <p className="text-purple-300/85 text-xs leading-relaxed">
                   {monetizationCfg.freeConsultationsLimit === 1
-                    ? "Tu primera consulta (Carta Natal, Ouija o Vida Pasada) es 100% gratis. Desbloquea el acceso completo con Mercado Pago o PayPal (USD / EUR / GBP)."
-                    : `Primeras ${monetizationCfg.freeConsultationsLimit} consultas 100% gratis. Desbloquea el acceso completo con Mercado Pago o PayPal (USD / EUR / GBP).`}
+                    ? "Tu primera consulta en cualquier área del portal (Vidas Pasadas, Ouija, Carta Natal, Tarot o Kabalah) es 100% gratis. Desbloquea el acceso completo con Mercado Pago o PayPal (USD / EUR / GBP)."
+                    : `Tus primeras ${monetizationCfg.freeConsultationsLimit} consultas (válidas para TODO tipo de consultas: Vidas Pasadas, Ouija, Carta Natal, Tarot y Kabalah) son 100% gratis. Desbloquea el acceso completo con Mercado Pago o PayPal (USD / EUR / GBP).`}
                 </p>
               </div>
               <button

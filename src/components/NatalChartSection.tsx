@@ -1304,8 +1304,8 @@ export const NatalChartSection: React.FC<NatalChartSectionProps> = ({
               <>
                 <span className="text-purple-300/85">
                   {language === "en"
-                    ? `Free consultations remaining: ${remainingFree} of ${freeLimit}`
-                    : `Consultas gratuitas disponibles (incluye Carta Natal): ${remainingFree} de ${freeLimit}`}
+                    ? `Free consultations remaining (valid for all portal readings): ${remainingFree} of ${freeLimit}`
+                    : `Consultas gratuitas disponibles (para todo tipo de consultas): ${remainingFree} de ${freeLimit}`}
                 </span>
                 <button
                   type="button"

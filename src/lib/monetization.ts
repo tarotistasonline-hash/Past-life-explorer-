@@ -25,7 +25,7 @@ export const DEFAULT_MONETIZATION_CONFIG: MonetizationConfig = {
   paypalLinkEur: DEFAULT_PAYPAL_EUR_LINK,
   paypalLinkGbp: DEFAULT_PAYPAL_GBP_LINK,
   paywallEnabled: true,
-  freeConsultationsLimit: 1,
+  freeConsultationsLimit: 2,
   passPriceArs: "$8.000 ARS",
   passAmountArs: 8000,
   autoReturnTokenHash: "",
@@ -133,7 +133,7 @@ export function sanitizeMonetizationConfig(input: Partial<MonetizationConfig>): 
   const rawLimit = Number(input.freeConsultationsLimit);
   const clampedLimit = Number.isFinite(rawLimit)
     ? Math.min(10, Math.max(1, Math.round(rawLimit)))
-    : 1;
+    : 2;
 
   const rawAmount = Number(input.passAmountArs);
   const clampedAmount = Number.isFinite(rawAmount) && rawAmount >= 0
