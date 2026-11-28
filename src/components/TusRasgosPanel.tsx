@@ -20,7 +20,7 @@ interface RasgosCopy {
 const COPY: Record<SupportedLanguage, RasgosCopy> = {
   es: {
     eyebrow: "Fisiognomía Mística • Lectura del Alma",
-    title: "Tu rostro dice mucho",
+    title: "Tu rostro dice más aún",
     description:
       "Descubre qué revelan la forma de tu rostro, tu mirada, tus facciones y gestos sobre tu esencia interior, carácter astral y vibración energética.",
     cta: "Ingresar al Oráculo",
@@ -108,7 +108,7 @@ export const TusRasgosPanel: React.FC = () => {
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <img
           src={imgSrc}
-          alt="Tu rostro dice mucho - Fisiognomía Mística"
+          alt="Tu rostro dice más aún - Fisiognomía Mística"
           referrerPolicy="no-referrer"
           onError={() => setImgSrc(FALLBACK_BG_IMAGE)}
           className="w-full h-full object-cover object-[center_30%] filter brightness-95 contrast-105 saturate-110 transition-transform duration-700 ease-out group-hover:scale-105"

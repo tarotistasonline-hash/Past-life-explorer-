@@ -31,7 +31,7 @@ const MODAL_TITLES: Record<
     CABALA: "Kabalah",
     ANTENA: "Receptor Interestelar",
     QUIROLOGIA: "Tus manos dicen mucho",
-    RASGOS: "Tu rostro dice mucho",
+    RASGOS: "Tu rostro dice más aún",
     LETRA: "Tu letra te delata",
     backToOuija: "Volver a la Tabla Ouija",
     close: "Cerrar panel",
