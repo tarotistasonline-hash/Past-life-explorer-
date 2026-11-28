@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { PenTool, ExternalLink, Sparkles } from "lucide-react";
+import { PenTool, ExternalLink, Sparkles, Copy, Check } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import type { SupportedLanguage } from "../types";
 
@@ -12,6 +12,8 @@ interface LetraCopy {
   description: string;
   cta: string;
   badge: string;
+  copyBtn: string;
+  copiedBtn: string;
 }
 
 const COPY: Record<SupportedLanguage, LetraCopy> = {
@@ -20,48 +22,60 @@ const COPY: Record<SupportedLanguage, LetraCopy> = {
     title: "Tu letra te delata",
     description:
       "Analiza la forma de tus trazos, la inclinación, presión y espacios de tu escritura para descubrir los secretos más profundos de tu personalidad y estado mental.",
-    cta: "Analizar Tu Letra",
+    cta: "Ingresar al Oráculo",
     badge: "Grafología Activa • Mente",
+    copyBtn: "Copiar Link",
+    copiedBtn: "¡Copiado!",
   },
   en: {
     eyebrow: "Mystical Graphology • Handwriting & Subconscious",
     title: "Your Handwriting Reveals You",
     description:
       "Analyze your strokes, slope, pressure, and spacing to uncover the deepest secrets of your personality and state of mind.",
-    cta: "Analyze Handwriting",
+    cta: "Enter Oracle",
     badge: "Handwriting Geometry Active",
+    copyBtn: "Copy Link",
+    copiedBtn: "Copied!",
   },
   pt: {
     eyebrow: "Grafologia Mística • Escrita e Subconsciente",
     title: "Sua letra te revela",
     description:
       "Analise seus traços, inclinação, pressão e espaçamento para descobrir os segredos mais profundos de sua personalidade.",
-    cta: "Analisar Letra",
+    cta: "Entrar no Oráculo",
     badge: "Grafologia Ativa",
+    copyBtn: "Copiar Link",
+    copiedBtn: "Copiado!",
   },
   fr: {
     eyebrow: "Graphologie Mystique • Écriture et Subconscient",
     title: "Votre écriture vous trahit",
     description:
       "Analysez vos traits, votre inclinaison et votre pression pour découvrir les secrets les plus profonds de votre personnalité.",
-    cta: "Analyser l'Écriture",
+    cta: "Entrer dans l'Oracle",
     badge: "Graphologie Active",
+    copyBtn: "Copier le Lien",
+    copiedBtn: "Copié !",
   },
   it: {
     eyebrow: "Grafologia Mistica • Scrittura e Subconscio",
     title: "La tua scrittura ti rivela",
     description:
       "Analizza i tuoi tratti, l'inclinazione e la pressione per scoprire i segreti più profondi della tua personalità.",
-    cta: "Analizza Scrittura",
+    cta: "Entra nell'Oracolo",
     badge: "Grafologia Attiva",
+    copyBtn: "Copia Link",
+    copiedBtn: "Copiato!",
   },
   de: {
     eyebrow: "Mystische Graphologie • Handschrift & Unterbewusstsein",
     title: "Deine Handschrift verrät dich",
     description:
       "Analysiere deine Striche, Neigung und Druck, um die tiefsten Geheimnisse deiner Persönlichkeit zu entdecken.",
-    cta: "Handschrift Analysieren",
+    cta: "Orakel Betreten",
     badge: "Graphologie Aktiv",
+    copyBtn: "Link Kopieren",
+    copiedBtn: "Kopiert!",
   },
 };
 
@@ -69,12 +83,20 @@ export const TuLetraPanel: React.FC = () => {
   const { language } = useLanguage();
   const copy = COPY[language] || COPY.es;
   const [imgSrc, setImgSrc] = useState<string>(FALLBACK_BG_IMAGE);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(LETRA_URL).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
 
   return (
     <section
       id="tu-letra-section"
       aria-label={copy.title}
-      className="w-full max-w-4xl rounded-3xl border-2 border-purple-400/60 shadow-[0_0_50px_rgba(168,85,247,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300"
+      className="w-full max-w-4xl rounded-3xl border-2 border-purple-400/60 shadow-[0_0_50px_rgba(168,85,247,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300 my-4"
       style={{
         backgroundImage: `url(${FALLBACK_BG_IMAGE})`,
         backgroundSize: "cover",
@@ -115,8 +137,8 @@ export const TuLetraPanel: React.FC = () => {
       </div>
 
       {/* Bottom Floating Glass Card */}
-      <div className="relative z-10 bg-black/80 sm:bg-black/70 border border-purple-500/50 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.8)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1.5 max-w-xl">
+      <div className="relative z-10 bg-black/85 sm:bg-black/80 border border-purple-500/60 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.85)] flex flex-col gap-4">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-purple-300" />
             <h3 className="font-cinzel font-bold text-lg sm:text-2xl text-purple-100 tracking-wide drop-shadow-md">
@@ -128,20 +150,33 @@ export const TuLetraPanel: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+        {/* Real URL Box and Actions */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-purple-900/60">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-950/70 border border-purple-700/60 overflow-hidden flex-1">
+            <span className="text-[11px] font-mono text-purple-300 truncate select-all">
+              {LETRA_URL}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="ml-auto px-2.5 py-1 rounded-lg bg-purple-900 hover:bg-purple-800 text-amber-200 text-xs font-cinzel font-semibold flex items-center gap-1 cursor-pointer shrink-0 transition"
+              title="Copiar enlace"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-amber-300" />}
+              <span>{copied ? copy.copiedBtn : copy.copyBtn}</span>
+            </button>
+          </div>
+
           <a
             href={LETRA_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-500 via-fuchsia-600 to-indigo-700 hover:from-purple-400 hover:via-fuchsia-500 hover:to-indigo-600 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wide border border-purple-200/80 shadow-[0_0_25px_rgba(168,85,247,0.45)] transition flex items-center justify-center gap-2.5 whitespace-nowrap transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-500 via-fuchsia-600 to-indigo-700 hover:from-purple-400 hover:via-fuchsia-500 hover:to-indigo-600 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wider uppercase border border-purple-200/80 shadow-[0_0_25px_rgba(168,85,247,0.45)] transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
           >
-            <PenTool className="w-4 h-4" />
+            <PenTool className="w-4 h-4 text-amber-300" />
             <span>{copy.cta}</span>
             <ExternalLink className="w-4 h-4" />
           </a>
-          <span className="text-[11px] font-mono text-purple-300/85 text-center sm:text-right drop-shadow-sm">
-            tu-letra-te-delata.app
-          </span>
         </div>
       </div>
     </section>

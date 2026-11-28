@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Hand, ExternalLink, Sparkles } from "lucide-react";
+import { Hand, ExternalLink, Sparkles, Copy, Check } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import type { SupportedLanguage } from "../types";
 import quiroBgImg from "../assets/images/quirologia_hands_bg_1795565782727.jpg";
@@ -13,6 +13,8 @@ interface QuiroCopy {
   description: string;
   cta: string;
   badge: string;
+  copyBtn: string;
+  copiedBtn: string;
 }
 
 const COPY: Record<SupportedLanguage, QuiroCopy> = {
@@ -21,48 +23,60 @@ const COPY: Record<SupportedLanguage, QuiroCopy> = {
     title: "Tus manos hablan",
     description:
       "Descubre los secretos ocultos en las líneas de tus manos, montes planetarios y geometría astral. Explora el mapa de tu destino grabado en tus palmas.",
-    cta: "Iniciar Lectura de Manos",
+    cta: "Ingresar al Oráculo",
     badge: "Líneas Astrales Activas • Quiromancia",
+    copyBtn: "Copiar Link",
+    copiedBtn: "¡Copiado!",
   },
   en: {
     eyebrow: "Astral Palmistry • Hand Reading",
     title: "Your Hands Speak",
     description:
       "Discover the hidden secrets within the lines of your hands, planetary mounts, and astral geometry. Explore the map of your destiny written in your palms.",
-    cta: "Start Palm Reading",
+    cta: "Enter Oracle",
     badge: "Astral Lines Active • Palmistry",
+    copyBtn: "Copy Link",
+    copiedBtn: "Copied!",
   },
   pt: {
     eyebrow: "Quiromancia Astral • Leitura de Mãos",
     title: "Suas mãos falam",
     description:
       "Descubra os segredos ocultos nas linhas de suas mãos, montes planetários e geometria astral. Explore o mapa do seu destino gravado em suas palmas.",
-    cta: "Iniciar Leitura de Mãos",
+    cta: "Entrar no Oráculo",
     badge: "Linhas Astrais Ativas • Quiromancia",
+    copyBtn: "Copiar Link",
+    copiedBtn: "Copiado!",
   },
   fr: {
     eyebrow: "Chiromancie Astrale • Lecture des Mains",
     title: "Vos mains parlent",
     description:
       "Découvrez les secrets cachés dans les lignes de vos mains, monts planétaires et géométrie astrale. Explorez la carte de votre destin gravée dans vos paumes.",
-    cta: "Commencer la Lecture de Main",
+    cta: "Entrer dans l'Oracle",
     badge: "Lignes Astrales Actives • Chiromancie",
+    copyBtn: "Copier le Lien",
+    copiedBtn: "Copié !",
   },
   it: {
     eyebrow: "Chiromanzia Astrale • Lettura della Mano",
     title: "Le tue mani parlano",
     description:
       "Scopri i segreti nascosti nelle linee delle tue mani, monti planetari e geometria astrale. Esplora la mappa del tuo destino scritta nei tuoi palmi.",
-    cta: "Inizia Lettura della Mano",
+    cta: "Entra nell'Oracolo",
     badge: "Linee Astrali Attive • Chiromanzia",
+    copyBtn: "Copia Link",
+    copiedBtn: "Copiato!",
   },
   de: {
     eyebrow: "Astrale Handlesekunst • Handlesen",
     title: "Deine Hände sprechen",
     description:
       "Entdecke die verborgenen Geheimnisse in den Linien deiner Hände, Planetenberge und astralischen Geometrie. Erforsche die Karte deines Schicksals.",
-    cta: "Handlesung Starten",
+    cta: "Orakel Betreten",
     badge: "Astrale Linien Aktiv • Handlesen",
+    copyBtn: "Link Kopieren",
+    copiedBtn: "Kopiert!",
   },
 };
 
@@ -70,12 +84,20 @@ export const QuirologiaPanel: React.FC = () => {
   const { language } = useLanguage();
   const copy = COPY[language] || COPY.es;
   const [imgSrc, setImgSrc] = useState<string>(quiroBgImg || FALLBACK_BG_IMAGE);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(QUIRO_URL).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
 
   return (
     <section
       id="quirologia-section"
       aria-label={copy.title}
-      className="w-full max-w-4xl rounded-3xl border-2 border-rose-400/60 shadow-[0_0_50px_rgba(244,63,94,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300"
+      className="w-full max-w-4xl rounded-3xl border-2 border-rose-400/60 shadow-[0_0_50px_rgba(244,63,94,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300 my-4"
       style={{
         backgroundImage: `url(${FALLBACK_BG_IMAGE})`,
         backgroundSize: "cover",
@@ -116,8 +138,8 @@ export const QuirologiaPanel: React.FC = () => {
       </div>
 
       {/* Bottom Floating Glass Card */}
-      <div className="relative z-10 bg-black/80 sm:bg-black/70 border border-rose-500/50 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.8)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1.5 max-w-xl">
+      <div className="relative z-10 bg-black/85 sm:bg-black/80 border border-rose-500/60 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.85)] flex flex-col gap-4">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-rose-300" />
             <h3 className="font-cinzel font-bold text-lg sm:text-2xl text-rose-100 tracking-wide drop-shadow-md">
@@ -129,20 +151,33 @@ export const QuirologiaPanel: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+        {/* Real URL Box and Actions */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-rose-900/60">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-950/70 border border-rose-700/60 overflow-hidden flex-1">
+            <span className="text-[11px] font-mono text-rose-300 truncate select-all">
+              {QUIRO_URL}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="ml-auto px-2.5 py-1 rounded-lg bg-rose-900 hover:bg-rose-800 text-amber-200 text-xs font-cinzel font-semibold flex items-center gap-1 cursor-pointer shrink-0 transition"
+              title="Copiar enlace"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-amber-300" />}
+              <span>{copied ? copy.copiedBtn : copy.copyBtn}</span>
+            </button>
+          </div>
+
           <a
             href={QUIRO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-rose-700 hover:from-rose-400 hover:via-pink-500 hover:to-rose-600 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wide border border-rose-200/80 shadow-[0_0_25px_rgba(244,63,94,0.45)] transition flex items-center justify-center gap-2.5 whitespace-nowrap transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-rose-700 hover:from-rose-400 hover:via-pink-500 hover:to-rose-600 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wider uppercase border border-rose-200/80 shadow-[0_0_25px_rgba(244,63,94,0.45)] transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
           >
-            <Hand className="w-4 h-4" />
+            <Hand className="w-4 h-4 text-amber-300" />
             <span>{copy.cta}</span>
             <ExternalLink className="w-4 h-4" />
           </a>
-          <span className="text-[11px] font-mono text-rose-300/85 text-center sm:text-right drop-shadow-sm">
-            quirologia-astral.app
-          </span>
         </div>
       </div>
     </section>

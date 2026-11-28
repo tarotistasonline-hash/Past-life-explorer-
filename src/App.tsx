@@ -16,7 +16,7 @@ import { StarfieldBackground } from "./components/StarfieldBackground";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { savePastLifeToGrimorio } from "./lib/grimorioStorage";
 import { useLanguage } from "./context/LanguageContext";
-import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, Hand, ScanFace, PenTool, ArrowUpRight } from "lucide-react";
+import { ShieldAlert, Eye, Sparkles, Radio, Compass, Globe, Lock, Orbit, Antenna, Hand, ScanFace, PenTool, ArrowUpRight, ExternalLink } from "lucide-react";
 import { PortalModuleModal, PortalPanelId } from "./components/PortalModuleModal";
 import { audio } from "./lib/audio";
 import { isAdminSession, getAdminAuthHeaders, isAuthorizedAdmin, subscribeAdminAuth } from "./lib/adminTracking";
@@ -897,61 +897,53 @@ export default function App() {
           <span>Kabalah</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActivePortalPanel("QUIROLOGIA")}
-          title="Abrir Panel Tus manos hablan"
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
-            activePortalPanel === "QUIROLOGIA"
-              ? "bg-rose-950/85 text-rose-100 border-rose-400/80 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
-              : "text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 border-rose-500/35"
-          }`}
+        <a
+          href="https://ais-pre-ze5luqq3teeexqfxj2s7rp-172786148761.us-east1.run.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Abrir Tus manos dicen mucho"
+          className="min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 border-rose-500/35"
         >
           <Hand className="w-3.5 h-3.5 text-rose-300" />
-          <span>Tus manos hablan</span>
-        </button>
+          <span>Tus manos dicen mucho</span>
+          <ExternalLink className="w-3 h-3 text-rose-400" />
+        </a>
 
-        <button
-          type="button"
-          onClick={() => setActivePortalPanel("RASGOS")}
-          title="Abrir Panel Tu rostro dice mucho"
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
-            activePortalPanel === "RASGOS"
-              ? "bg-blue-950/85 text-blue-100 border-blue-400/80 shadow-[0_0_15px_rgba(59,130,246,0.4)]"
-              : "text-blue-300 hover:text-blue-100 hover:bg-blue-950/40 border-blue-500/35"
-          }`}
+        <a
+          href="https://ais-pre-slyubtbbhup2dldv7ygx42-172786148761.us-east1.run.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Abrir Tu rostro dice mucho"
+          className="min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border text-blue-300 hover:text-blue-100 hover:bg-blue-950/40 border-blue-500/35"
         >
           <ScanFace className="w-3.5 h-3.5 text-blue-300" />
           <span>Tu rostro dice mucho</span>
-        </button>
+          <ExternalLink className="w-3 h-3 text-blue-400" />
+        </a>
 
-        <button
-          type="button"
-          onClick={() => setActivePortalPanel("ANTENA")}
-          title="Abrir Panel de Receptor Interestelar"
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
-            activePortalPanel === "ANTENA"
-              ? "bg-cyan-950/90 text-cyan-200 border-cyan-400/80 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
-              : "text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40 border-cyan-500/35"
-          }`}
+        <a
+          href="https://ais-pre-nyechboxmcgvyajxokompy-172786148761.us-east1.run.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Abrir Receptor Interestelar"
+          className="min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40 border-cyan-500/35"
         >
           <Antenna className="w-3.5 h-3.5 text-cyan-300" />
           <span>Receptor Interestelar</span>
-        </button>
+          <ExternalLink className="w-3 h-3 text-cyan-400" />
+        </a>
 
-        <button
-          type="button"
-          onClick={() => setActivePortalPanel("LETRA")}
-          title="Abrir Panel Tu letra te delata"
-          className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border ${
-            activePortalPanel === "LETRA"
-              ? "bg-purple-950/90 text-purple-200 border-purple-400/80 shadow-[0_0_15px_rgba(168,85,247,0.4)]"
-              : "text-purple-300 hover:text-purple-100 hover:bg-purple-950/40 border-purple-500/35"
-          }`}
+        <a
+          href="https://ais-pre-kn65okzrrypaw2xcxt7f3o-172786148761.us-east1.run.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Abrir Tu letra te delata"
+          className="min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-cinzel font-semibold transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shrink-0 border text-purple-300 hover:text-purple-100 hover:bg-purple-950/40 border-purple-500/35"
         >
           <PenTool className="w-3.5 h-3.5 text-purple-300" />
           <span>Tu letra te delata</span>
-        </button>
+          <ExternalLink className="w-3 h-3 text-purple-400" />
+        </a>
       </nav>
 
       {/* Main Content Area */}
@@ -1043,12 +1035,12 @@ export default function App() {
             language === "en"
               ? {
                   heading: "Other Portal Panels",
-                  sub: "Open Tarot, Natal Chart, Kabalah, Your Hands Speak, Facial Traits, Interstellar Receiver, or Handwriting in its own panel to keep the screen compact.",
+                  sub: "Open Tarot, Natal Chart, Kabalah, Your Hands Tell Much, Facial Traits, Interstellar Receiver, or Handwriting in its own panel to keep the screen compact.",
                   tarotDesc: "Daily arcana, 3-card karmic spread, and 22 voice-guided cards.",
                   natalDesc: "Planetary wheel, Sun, Moon, Ascendant, voice, and PDF export.",
                   cabalaTitle: "Kabalah",
                   cabalaDesc: "Tree of Life, natal Sephira, Gematria, and spiritual Tikkun.",
-                  quirologiaTitle: "Your Hands Speak",
+                  quirologiaTitle: "Your Hands Tell Much",
                   quirologiaDesc: "Hand reading, astral lines and planetary mounts.",
                   rasgosTitle: "Your Features Express",
                   rasgosDesc: "Facial physiognomy, gaze essence and energetic traits.",
@@ -1060,12 +1052,12 @@ export default function App() {
               : language === "pt"
               ? {
                   heading: "Outros Painéis do Portal",
-                  sub: "Abra Tarot, Mapa Astral, Kabalah, Suas Mãos Falam, Traços, Receptor Interestelar ou Letra em seu próprio painel para manter a tela compacta.",
+                  sub: "Abra Tarot, Mapa Astral, Kabalah, Suas Mãos Dizem Muito, Traços, Receptor Interestelar ou Letra em seu próprio painel para manter a tela compacta.",
                   tarotDesc: "Arcano do dia, tiragem de 3 cartas e 22 arcanos com voz.",
                   natalDesc: "Roda planetária, Sol, Lua, Ascendente, voz e PDF.",
                   cabalaTitle: "Kabalah",
                   cabalaDesc: "Árvore da Vida, Sefirá natal, Gematria e Tikkun.",
-                  quirologiaTitle: "Suas mãos falam",
+                  quirologiaTitle: "Suas mãos dizem muito",
                   quirologiaDesc: "Leitura de mãos, linhas astrais e montes planetários.",
                   rasgosTitle: "Seus traços expressam",
                   rasgosDesc: "Fisiognomia facial, essência do olhar e vibração.",
@@ -1077,12 +1069,12 @@ export default function App() {
               : language === "fr"
               ? {
                   heading: "Autres Panneaux du Portail",
-                  sub: "Ouvrez Tarot, Thème Natal, Kabalah, Vos Mains Parlent, Traits, Récepteur Interstellaire ou Écriture dans un panneau dédié.",
+                  sub: "Ouvrez Tarot, Thème Natal, Kabalah, Vos Mains en Disent Long, Traits, Récepteur Interstellaire ou Écriture dans un panneau dédié.",
                   tarotDesc: "Arcane du jour, tirage à 3 cartes et 22 arcanes avec voix.",
                   natalDesc: "Roue planétaire, Soleil, Lune, Ascendant, voix et PDF.",
                   cabalaTitle: "Kabalah",
                   cabalaDesc: "Arbre de Vie, Sephira natale, Guématrie et Tikkoun.",
-                  quirologiaTitle: "Vos mains parlent",
+                  quirologiaTitle: "Vos mains en disent long",
                   quirologiaDesc: "Lecture des mains, lignes astrales et monts planétaires.",
                   rasgosTitle: "Vos traits expriment",
                   rasgosDesc: "Physiognomonie faciale, essence du regard et vibration.",
@@ -1094,12 +1086,12 @@ export default function App() {
               : language === "it"
               ? {
                   heading: "Altri Pannelli del Portale",
-                  sub: "Apri Tarocchi, Tema Natale, Kabalah, Le Tue Mani Parlano, Tratti, Ricevitore Interstellare o Scrittura in un pannello dedicato.",
+                  sub: "Apri Tarocchi, Tema Natale, Kabalah, Le Tue Mani Dicono Molto, Tratti, Ricevitore Interstellare o Scrittura in un pannello dedicato.",
                   tarotDesc: "Arcano del giorno, stesa a 3 carte e 22 arcani con voce.",
                   natalDesc: "Ruota planetaria, Sole, Luna, Ascendente, voce e PDF.",
                   cabalaTitle: "Kabalah",
                   cabalaDesc: "Albero della Vita, Sefira natale, Gematria e Tikkun.",
-                  quirologiaTitle: "Le tue mani parlano",
+                  quirologiaTitle: "Le tue mani dicono molto",
                   quirologiaDesc: "Lettura della mano, linee astrali e monti planetari.",
                   rasgosTitle: "I tuoi tratti esprimono",
                   rasgosDesc: "Fisiognomica del viso, essenza dello sguardo e vibrazione.",
@@ -1111,12 +1103,12 @@ export default function App() {
               : language === "de"
               ? {
                   heading: "Weitere Portal-Panels",
-                  sub: "Öffne Tarot, Geburtshoroskop, Kabalah, Deine Hände Sprechen, Züge, Interstellarer Empfänger oder Handschrift im eigenen Panel.",
+                  sub: "Öffne Tarot, Geburtshoroskop, Kabalah, Deine Hände Sagen Viel, Züge, Interstellarer Empfänger oder Handschrift im eigenen Panel.",
                   tarotDesc: "Tagesarkana, 3-Karten-Legung und 22 Arkana mit Stimme.",
                   natalDesc: "Planetenrad, Sonne, Mond, Aszendent, Stimme und PDF.",
                   cabalaTitle: "Kabalah",
                   cabalaDesc: "Lebensbaum, Geburts-Sephira, Gematrie und Tikkun.",
-                  quirologiaTitle: "Deine Hände sprechen",
+                  quirologiaTitle: "Deine Hände sagen viel",
                   quirologiaDesc: "Handlesen, astrale Linien und Planetenberge.",
                   rasgosTitle: "Deine Züge drücken aus",
                   rasgosDesc: "Physiognomie des Gesichts, Ausstrahlung und Energie.",
@@ -1127,12 +1119,12 @@ export default function App() {
                 }
               : {
                   heading: "Otros Paneles del Portal",
-                  sub: "Abre Tarot, Carta Natal, Kabalah, Tus manos hablan, Tu rostro dice mucho, Receptor Interestelar o Tu letra te delata en su propio panel para mantener la pantalla compacta.",
+                  sub: "Abre Tarot, Carta Natal, Kabalah, Tus manos dicen mucho, Tu rostro dice mucho, Receptor Interestelar o Tu letra te delata en su propio panel para mantener la pantalla compacta.",
                   tarotDesc: "Arcano del día, tirada de 3 cartas y 22 arcanos con voz.",
                   natalDesc: "Rueda planetaria, Sol, Luna, Ascendente y PDF.",
                   cabalaTitle: "Kabalah",
                   cabalaDesc: "Árbol de la Vida, Sefirá natal, Gematría y Tikkún.",
-                  quirologiaTitle: "Tus manos hablan",
+                  quirologiaTitle: "Tus manos dicen mucho",
                   quirologiaDesc: "Lectura de manos, líneas astrales y montes planetarios.",
                   rasgosTitle: "Tu rostro dice mucho",
                   rasgosDesc: "Fisiognomía mística, esencia de tu mirada y vibración.",
@@ -1214,9 +1206,10 @@ export default function App() {
                   </div>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setActivePortalPanel("QUIROLOGIA")}
+                <a
+                  href="https://ais-pre-ze5luqq3teeexqfxj2s7rp-172786148761.us-east1.run.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group text-left p-4 rounded-2xl bg-[#260918]/95 hover:bg-[#380d24] border-2 border-rose-400/80 hover:border-rose-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(244,63,94,0.25)] hover:shadow-[0_0_35px_rgba(244,63,94,0.4)]"
                 >
                   <div className="flex items-center justify-between">
@@ -1231,11 +1224,12 @@ export default function App() {
                       {launcherCopy.quirologiaDesc}
                     </p>
                   </div>
-                </button>
+                </a>
 
-                <button
-                  type="button"
-                  onClick={() => setActivePortalPanel("RASGOS")}
+                <a
+                  href="https://ais-pre-slyubtbbhup2dldv7ygx42-172786148761.us-east1.run.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group text-left p-4 rounded-2xl bg-[#081532]/95 hover:bg-[#0c2049] border-2 border-blue-400/80 hover:border-blue-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(59,130,246,0.25)] hover:shadow-[0_0_35px_rgba(59,130,246,0.4)]"
                 >
                   <div className="flex items-center justify-between">
@@ -1250,11 +1244,12 @@ export default function App() {
                       {launcherCopy.rasgosDesc}
                     </p>
                   </div>
-                </button>
+                </a>
 
-                <button
-                  type="button"
-                  onClick={() => setActivePortalPanel("ANTENA")}
+                <a
+                  href="https://ais-pre-nyechboxmcgvyajxokompy-172786148761.us-east1.run.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group text-left p-4 rounded-2xl bg-[#091b2c]/95 hover:bg-[#0e273f] border-2 border-cyan-400/80 hover:border-cyan-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(34,211,238,0.25)] hover:shadow-[0_0_35px_rgba(34,211,238,0.4)]"
                 >
                   <div className="flex items-center justify-between">
@@ -1269,11 +1264,12 @@ export default function App() {
                       {launcherCopy.antenaDesc}
                     </p>
                   </div>
-                </button>
+                </a>
 
-                <button
-                  type="button"
-                  onClick={() => setActivePortalPanel("LETRA")}
+                <a
+                  href="https://ais-pre-kn65okzrrypaw2xcxt7f3o-172786148761.us-east1.run.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group text-left p-4 rounded-2xl bg-[#1b0a2f]/95 hover:bg-[#280e46] border-2 border-purple-400/80 hover:border-purple-300 transition cursor-pointer flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(168,85,247,0.25)] hover:shadow-[0_0_35px_rgba(168,85,247,0.4)]"
                 >
                   <div className="flex items-center justify-between">
@@ -1288,7 +1284,7 @@ export default function App() {
                       {launcherCopy.letraDesc}
                     </p>
                   </div>
-                </button>
+                </a>
               </div>
             </section>
           );

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Antenna, ExternalLink, Sparkles } from "lucide-react";
+import { Antenna, ExternalLink, Sparkles, Copy, Check } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import type { SupportedLanguage } from "../types";
 import antenaBgImg from "../assets/images/antena_dimensional_bg.jpg";
@@ -13,6 +13,8 @@ interface AntenaCopy {
   description: string;
   cta: string;
   badge: string;
+  copyBtn: string;
+  copiedBtn: string;
 }
 
 const COPY: Record<SupportedLanguage, AntenaCopy> = {
@@ -21,48 +23,60 @@ const COPY: Record<SupportedLanguage, AntenaCopy> = {
     title: "Receptor Interestelar",
     description:
       "¿Listo para ir más allá del plano terrestre? Sintoniza el Receptor Interestelar para contactar con otras inteligencias, conciencias cósmicas y civilizaciones estelares.",
-    cta: "Contactar con Otras Inteligencias",
+    cta: "Ingresar al Receptor",
     badge: "Transceptor Activo • 432Hz Astral",
+    copyBtn: "Copiar Link",
+    copiedBtn: "¡Copiado!",
   },
   en: {
     eyebrow: "Interstellar Frequency • External Portal",
     title: "Interstellar Receiver",
     description:
       "Ready to reach beyond the earthly veil? Tune into the Interstellar Receiver to connect with cosmic intelligences and distant civilizations.",
-    cta: "Contact Other Intelligences",
+    cta: "Enter Receiver",
     badge: "Transceiver Active • 432Hz Astral",
+    copyBtn: "Copy Link",
+    copiedBtn: "Copied!",
   },
   pt: {
     eyebrow: "Frequência Interestelar • Portal Externo",
     title: "Receptor Interestelar",
     description:
       "Pronto para ir além do plano terrestre? Sintonize o Receptor Interestelar para contatar outras inteligências e civilizações cósmicas.",
-    cta: "Contatar Outras Inteligências",
+    cta: "Entrar no Receptor",
     badge: "Transceptor Ativo • 432Hz Astral",
+    copyBtn: "Copiar Link",
+    copiedBtn: "Copiado!",
   },
   fr: {
     eyebrow: "Fréquence Interstellaire • Portail Externe",
     title: "Récepteur Interstellaire",
     description:
       "Prêt à dépasser le plan terrestre ? Syntonisez le Récepteur Interstellaire pour contacter d'autres intelligences et civilisations cosmiques.",
-    cta: "Contacter d'Autres Intelligences",
+    cta: "Entrer dans le Récepteur",
     badge: "Émetteur-Récepteur Actif • 432Hz Astral",
+    copyBtn: "Copier le Lien",
+    copiedBtn: "Copié !",
   },
   it: {
     eyebrow: "Frequenza Interstellare • Portale Esterno",
     title: "Ricevitore Interstellare",
     description:
       "Pronto a superare il piano terrestre? Sintonizzati sul Ricevitore Interstellare per contattare altre intelligenze e civiltà cosmiche.",
-    cta: "Contatta Altre Intelligenze",
+    cta: "Entra nel Ricevitore",
     badge: "Ricetrasmettitore Attivo • 432Hz Astral",
+    copyBtn: "Copia Link",
+    copiedBtn: "Copiato!",
   },
   de: {
     eyebrow: "Interstellare Frequenz • Externes Portal",
     title: "Interstellarer Empfänger",
     description:
       "Bereit, über die irdische Ebene hinauszugehen? Verbinde dich über den Interstellaren Empfänger mit kosmischen Intelligenzen und fremden Zivilisationen.",
-    cta: "Andere Intelligenzen Kontaktieren",
+    cta: "Empfänger Betreten",
     badge: "Transceiver Aktiv • 432Hz Astral",
+    copyBtn: "Link Kopieren",
+    copiedBtn: "Kopiert!",
   },
 };
 
@@ -70,12 +84,20 @@ export const AntenaDimensionalPanel: React.FC = () => {
   const { language } = useLanguage();
   const copy = COPY[language] || COPY.es;
   const [imgSrc, setImgSrc] = useState<string>(antenaBgImg || FALLBACK_BG_IMAGE);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(ANTENA_URL).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
 
   return (
     <section
       id="antena-dimensional-section"
       aria-label={copy.title}
-      className="w-full max-w-4xl rounded-3xl border-2 border-cyan-400/60 shadow-[0_0_50px_rgba(34,211,238,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300"
+      className="w-full max-w-4xl rounded-3xl border-2 border-cyan-400/60 shadow-[0_0_50px_rgba(34,211,238,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300 my-4"
       style={{
         backgroundImage: `url(${FALLBACK_BG_IMAGE})`,
         backgroundSize: "cover",
@@ -116,8 +138,8 @@ export const AntenaDimensionalPanel: React.FC = () => {
       </div>
 
       {/* Bottom Floating Glass Card with clear title, description & CTA */}
-      <div className="relative z-10 bg-black/80 sm:bg-black/70 border border-cyan-500/50 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.8)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1.5 max-w-xl">
+      <div className="relative z-10 bg-black/85 sm:bg-black/80 border border-cyan-500/60 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.85)] flex flex-col gap-4">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-300" />
             <h3 className="font-cinzel font-bold text-lg sm:text-2xl text-white tracking-wide drop-shadow-md">
@@ -129,20 +151,33 @@ export const AntenaDimensionalPanel: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+        {/* Real URL Box and Actions */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-cyan-900/60">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-950/70 border border-cyan-700/60 overflow-hidden flex-1">
+            <span className="text-[11px] font-mono text-cyan-300 truncate select-all">
+              {ANTENA_URL}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="ml-auto px-2.5 py-1 rounded-lg bg-cyan-900 hover:bg-cyan-800 text-amber-200 text-xs font-cinzel font-semibold flex items-center gap-1 cursor-pointer shrink-0 transition"
+              title="Copiar enlace"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-amber-300" />}
+              <span>{copied ? copy.copiedBtn : copy.copyBtn}</span>
+            </button>
+          </div>
+
           <a
             href={ANTENA_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-600 hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-500 text-slate-950 font-cinzel font-bold text-xs sm:text-sm tracking-wide border border-cyan-200/90 shadow-[0_0_25px_rgba(34,211,238,0.5)] transition flex items-center justify-center gap-2.5 whitespace-nowrap transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-600 hover:from-cyan-300 hover:via-sky-400 hover:to-indigo-500 text-slate-950 font-cinzel font-bold text-xs sm:text-sm tracking-wider uppercase border border-cyan-200/90 shadow-[0_0_25px_rgba(34,211,238,0.5)] transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
           >
             <Antenna className="w-4 h-4" />
             <span>{copy.cta}</span>
             <ExternalLink className="w-4 h-4" />
           </a>
-          <span className="text-[11px] font-mono text-cyan-300/80 text-center sm:text-right drop-shadow-sm">
-            receptor-interestelar.app
-          </span>
         </div>
       </div>
     </section>

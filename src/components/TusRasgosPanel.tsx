@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScanFace, ExternalLink, Sparkles } from "lucide-react";
+import { ScanFace, ExternalLink, Sparkles, Copy, Check } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import type { SupportedLanguage } from "../types";
 import rasgosBgImg from "../assets/images/tus_rasgos_expresan_bg_1795620362355.jpg";
@@ -13,6 +13,8 @@ interface RasgosCopy {
   description: string;
   cta: string;
   badge: string;
+  copyBtn: string;
+  copiedBtn: string;
 }
 
 const COPY: Record<SupportedLanguage, RasgosCopy> = {
@@ -21,48 +23,60 @@ const COPY: Record<SupportedLanguage, RasgosCopy> = {
     title: "Tu rostro dice mucho",
     description:
       "Descubre qué revelan la forma de tu rostro, tu mirada, tus facciones y gestos sobre tu esencia interior, carácter astral y vibración energética.",
-    cta: "Explorar Tu Rostro",
+    cta: "Ingresar al Oráculo",
     badge: "Geometría Facial Activa • Esencia",
+    copyBtn: "Copiar Link",
+    copiedBtn: "¡Copiado!",
   },
   en: {
     eyebrow: "Mystical Physiognomy • Soul Reading",
     title: "Your Features Express",
     description:
       "Discover what the contours of your face, gaze, features, and expression reveal about your inner essence, astral character, and energetic vibration.",
-    cta: "Explore Your Features",
+    cta: "Enter Oracle",
     badge: "Facial Geometry Active • Essence",
+    copyBtn: "Copy Link",
+    copiedBtn: "Copied!",
   },
   pt: {
     eyebrow: "Fisiognomia Mística • Leitura da Alma",
     title: "Seus traços expressam",
     description:
       "Descubra o que o formato do seu rosto, olhar, traços e gestos revelam sobre sua essência interior, caráter astral e vibração energética.",
-    cta: "Explorar Seus Traços",
+    cta: "Entrar no Oráculo",
     badge: "Geometria Facial Ativa • Essência",
+    copyBtn: "Copiar Link",
+    copiedBtn: "Copiado!",
   },
   fr: {
     eyebrow: "Physiognomonie Mystique • Lecture de l'Âme",
     title: "Vos traits expriment",
     description:
       "Découvrez ce que la forme de votre visage, votre regard et vos expressions révèlent sur votre essence intérieure, votre caractère astral et votre vibration.",
-    cta: "Explorer Vos Traits",
+    cta: "Entrer dans l'Oracle",
     badge: "Géométrie Faciale Active • Essence",
+    copyBtn: "Copier le Lien",
+    copiedBtn: "Copié !",
   },
   it: {
     eyebrow: "Fisiognomica Mistica • Lettura dell'Anima",
     title: "I tuoi tratti esprimono",
     description:
       "Scopri cosa rivelano la forma del tuo viso, il tuo sguardo e le tue espressioni sulla tua essenza interiore, sul carattere astrale e sulla tua vibrazione.",
-    cta: "Esplora i Tuoi Tratti",
+    cta: "Entra nell'Oracolo",
     badge: "Geometria Facciale Attiva • Essenza",
+    copyBtn: "Copia Link",
+    copiedBtn: "Copiato!",
   },
   de: {
     eyebrow: "Mystische Physiognomie • Seelenlesung",
     title: "Deine Züge drücken aus",
     description:
       "Entdecke, was die Konturen deines Gesichts, dein Blick und deine Mimik über dein inneres Wesen, deinen astralen Charakter und deine Energie verraten.",
-    cta: "Deine Züge Erkunden",
+    cta: "Orakel Betreten",
     badge: "Gesichtsgeometrie Aktiv • Essenz",
+    copyBtn: "Link Kopieren",
+    copiedBtn: "Kopiert!",
   },
 };
 
@@ -70,12 +84,20 @@ export const TusRasgosPanel: React.FC = () => {
   const { language } = useLanguage();
   const copy = COPY[language] || COPY.es;
   const [imgSrc, setImgSrc] = useState<string>(rasgosBgImg || FALLBACK_BG_IMAGE);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(RASGOS_URL).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
 
   return (
     <section
       id="tus-rasgos-section"
       aria-label={copy.title}
-      className="w-full max-w-4xl rounded-3xl border-2 border-blue-400/60 shadow-[0_0_50px_rgba(59,130,246,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300"
+      className="w-full max-w-4xl rounded-3xl border-2 border-blue-400/60 shadow-[0_0_50px_rgba(59,130,246,0.28)] relative overflow-hidden min-h-[380px] sm:min-h-[460px] flex flex-col justify-between p-4 sm:p-7 group transition-all duration-300 my-4"
       style={{
         backgroundImage: `url(${FALLBACK_BG_IMAGE})`,
         backgroundSize: "cover",
@@ -117,8 +139,8 @@ export const TusRasgosPanel: React.FC = () => {
       </div>
 
       {/* Bottom Floating Glass Card */}
-      <div className="relative z-10 bg-black/80 sm:bg-black/70 border border-blue-500/50 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.8)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1.5 max-w-xl">
+      <div className="relative z-10 bg-black/85 sm:bg-black/80 border border-blue-500/60 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-[0_10px_35px_rgba(0,0,0,0.85)] flex flex-col gap-4">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-blue-300" />
             <h3 className="font-cinzel font-bold text-lg sm:text-2xl text-blue-100 tracking-wide drop-shadow-md">
@@ -130,20 +152,33 @@ export const TusRasgosPanel: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+        {/* Real URL Box and Actions */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-blue-900/60">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-950/70 border border-blue-700/60 overflow-hidden flex-1">
+            <span className="text-[11px] font-mono text-blue-300 truncate select-all">
+              {RASGOS_URL}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="ml-auto px-2.5 py-1 rounded-lg bg-blue-900 hover:bg-blue-800 text-amber-200 text-xs font-cinzel font-semibold flex items-center gap-1 cursor-pointer shrink-0 transition"
+              title="Copiar enlace"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-amber-300" />}
+              <span>{copied ? copy.copiedBtn : copy.copyBtn}</span>
+            </button>
+          </div>
+
           <a
             href={RASGOS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 via-indigo-600 to-blue-700 hover:from-blue-400 hover:via-indigo-500 hover:to-blue-600 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wide border border-blue-200/80 shadow-[0_0_25px_rgba(59,130,246,0.45)] transition flex items-center justify-center gap-2.5 whitespace-nowrap transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 via-indigo-600 to-blue-700 hover:from-blue-400 hover:via-indigo-500 hover:to-blue-600 text-white font-cinzel font-bold text-xs sm:text-sm tracking-wider uppercase border border-blue-200/80 shadow-[0_0_25px_rgba(59,130,246,0.45)] transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
           >
-            <ScanFace className="w-4 h-4" />
+            <ScanFace className="w-4 h-4 text-amber-300" />
             <span>{copy.cta}</span>
             <ExternalLink className="w-4 h-4" />
           </a>
-          <span className="text-[11px] font-mono text-blue-300/85 text-center sm:text-right drop-shadow-sm">
-            tu-rostro-dice-mucho.app
-          </span>
         </div>
       </div>
     </section>
